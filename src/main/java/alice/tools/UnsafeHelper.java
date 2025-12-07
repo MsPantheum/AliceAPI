@@ -54,4 +54,12 @@ public class UnsafeHelper {
     public static byte getByte(long address) {
         return unsafe.getByte(address);
     }
+
+    public static byte[] readBytes(long address, int numBytes) {
+        byte[] bytes = new byte[numBytes];
+        for (int i = 0; i < numBytes; i++) {
+            bytes[i] = getByte(address + i);
+        }
+        return bytes;
+    }
 }
