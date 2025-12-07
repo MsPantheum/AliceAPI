@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+}
+
+group = 'alice'
+version = '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation(files("${System.getProperty("java.home").substring(0, System.getProperty("java.home").lastIndexOf(File.separator))}${File.separator}lib${File.separator}sa-jdi.jar"))
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+}
