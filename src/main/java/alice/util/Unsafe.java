@@ -7,7 +7,6 @@ import java.lang.reflect.InvocationTargetException;
 public class Unsafe {
     private static final sun.misc.Unsafe UNSAFE;
 
-
     static {
         try {
             Constructor<sun.misc.Unsafe> constructor = sun.misc.Unsafe.class.getDeclaredConstructor();
@@ -17,6 +16,9 @@ public class Unsafe {
             throw new RuntimeException(e);
         }
     }
+
+    public static final int ADDRESS_SIZE = addressSize();
+    public static final int PAGE_SIZE = pageSize();
 
     public static <T> T allocateInstance(Class<T> cls){
         try {
@@ -54,12 +56,24 @@ public class Unsafe {
         return UNSAFE.getInt(o, offset);
     }
 
+    public static int getInt(long address){
+        return UNSAFE.getInt(address);
+    }
+
     public static long getLongVolatile(Object o,long offset){
         return UNSAFE.getLongVolatile(o, offset);
     }
 
     public static long getLong(Object o,long offset){
         return UNSAFE.getLong(o, offset);
+    }
+
+    public static long getLong(long address){
+        return UNSAFE.getLong(address);
+    }
+
+    public static void putLong(long address,long value){
+        UNSAFE.putLong(address, value);
     }
 
     public static void putObjectVolatile(Object o, long offset, Object x){
@@ -86,4 +100,60 @@ public class Unsafe {
         UNSAFE.putInt(o, offset, x);
     }
 
+    public static int pageSize(){
+        return UNSAFE.pageSize();
+    }
+
+    public static int addressSize(){
+        return UNSAFE.addressSize();
+    }
+
+    public static long getAddress(long address){
+        return UNSAFE.getAddress(address);
+    }
+
+    public static void putAddress(long address, long value){
+        UNSAFE.putAddress(address, value);
+    }
+
+    public static short getShort(long address){
+        return UNSAFE.getShort(address);
+    }
+
+    public static void putShort(long address, short value){
+        UNSAFE.putShort(address, value);
+    }
+
+    public static long getAddress(Object obj){
+        Object[] array = new Object[]{obj};
+
+
+        long baseOffset = UNSAFE.arrayBaseOffset(Object[].class);
+
+        int addressSize = UNSAFE.addressSize();
+
+        long location;
+
+        switch (addressSize) {
+
+            case 4:
+
+                location = UNSAFE.getInt(array, baseOffset);
+
+                break;
+
+            case 8:
+
+                location = UNSAFE.getLong(array, baseOffset);
+
+                break;
+
+            default:
+
+                throw new Error("unsupported address size: " + addressSize);
+
+        }
+
+        return (location) * 8L;
+    }
 }

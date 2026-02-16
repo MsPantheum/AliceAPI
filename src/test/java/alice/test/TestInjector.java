@@ -12,7 +12,7 @@ public class TestInjector {
     @Test
     public void test(){
         String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
-        NativeLibrary lib = new NativeLibrary(libjvm,false);
+        NativeLibrary lib = NativeLibrary.load(libjvm,false);
         System.out.println(ProcessUtil.getPID());
         long gHotSpotVMTypes = lib.find("gHotSpotVMTypes");
         assert gHotSpotVMTypes != 0;

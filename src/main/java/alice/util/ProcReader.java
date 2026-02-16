@@ -9,7 +9,12 @@ import java.util.Map;
 
 public class ProcReader {
 
+    private static final Map<Object,Map<String,SymbolInfo>> cache = new HashMap<>();
+
     public static Map<String, SymbolInfo> readElf(String elf){
+        if(cache.containsKey(elf)){
+            return cache.get(elf);
+        }
         try {
             Map<String, SymbolInfo> map = new HashMap<>();
             ProcessBuilder processBuilder = new ProcessBuilder("/bin/nm","-a",elf);
@@ -30,6 +35,7 @@ public class ProcReader {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            cache.put(elf,map);
             return map;
         } catch (IOException e) {
             throw new RuntimeException(e);

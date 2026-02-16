@@ -63,4 +63,7 @@ public class FileUtil {
         return HOME.endsWith("jre") ? HOME.substring(0, HOME.length()-3) : HOME;
     }
 
+    public static boolean exists(String filePath) {
+        return Files.exists(Paths.get(filePath));
+    }
 }
