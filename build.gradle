@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group = 'alice'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation(files("libs/jelf-0.11.0.jar"))
+    implementation(files("${System.getProperty("java.home").substring(0, System.getProperty("java.home").lastIndexOf(File.separator))}${File.separator}lib${File.separator}sa-jdi.jar"))
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation("org.ow2.asm:asm:9.9.1")
+    implementation("org.ow2.asm:asm-util:9.9.1")
+    implementation("org.ow2.asm:asm-commons:9.9.1")
+    implementation("org.ow2.asm:asm-tree:9.9.1")
+    implementation("org.ow2.asm:asm-analysis:9.9.1")
+}
+
+test {
+    useJUnitPlatform()
+}
