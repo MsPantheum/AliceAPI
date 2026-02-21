@@ -1,6 +1,7 @@
 package alice.injector.patch;
 
-import com.sun.org.apache.bcel.internal.generic.ACONST_NULL;
+import alice.util.FileUtil;
+import alice.util.Unsafe;
 import org.objectweb.asm.*;
 import org.objectweb.asm.Opcodes.*;
 
@@ -13,25 +14,46 @@ public class LinuxDebuggerLocalPatcher {
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 
                 switch (name) {
-                    case "detach0":
+                    case "detach0": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, null);
+
+                        mv.visitInsn(Opcodes.RETURN);
+                        mv.visitMaxs(0,1);
+                        return null;
+                    }
                     case "attach0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.RETURN);
+                        mv.visitMaxs(0,descriptor.contains("L") ? 3 : 2);
                         return null;
                     }//Don't need to attach as we are in the same process.
                     case "getCDebugger": {
                         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.ACONST_NULL);
                         mv.visitInsn(Opcodes.ARETURN);
+                        mv.visitMaxs(1,1);
                         return null;
                     }//No we won't implement this.
-
+                    case "getAddressSize": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name, descriptor, signature, exceptions);
+                        int size = Unsafe.ADDRESS_SIZE;
+                        if(size == 4){
+                            mv.visitInsn(Opcodes.ICONST_4);
+                        } else {
+                            mv.visitLdcInsn(size);
+                        }
+                        mv.visitInsn(Opcodes.IRETURN);
+                        mv.visitMaxs(1,1);
+                        return null;
+                    }
                 }
                 return super.visitMethod(access, name, descriptor, signature, exceptions);
             }
         };
 
         cr.accept(cv,0);
-        return cw.toByteArray();
+        byte[] ret = cw.toByteArray();
+        FileUtil.write("LinuxDebuggerLocal.class",ret);
+        return ret;
     }
 }

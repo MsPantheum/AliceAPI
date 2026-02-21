@@ -40,7 +40,7 @@ public class NativeLibrary {
             f = NATIVE_LIBRARY_CLASS.getDeclaredField("handle");
             handle_offset = Unsafe.objectFieldOffset(f);
             f = ClassLoader.class.getDeclaredField("nativeLibraryContext");
-            nativeLibraryContext = (Stack<Object>) Unsafe.getObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f));
+            nativeLibraryContext = Unsafe.getObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f));
         } catch (ClassNotFoundException | NoSuchFieldException e) {
             throw new RuntimeException(e);
         }

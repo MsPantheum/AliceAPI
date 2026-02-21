@@ -40,12 +40,14 @@ public class Unsafe {
         return UNSAFE.staticFieldBase(f);
     }
 
-    public static Object getObjectVolatile(Object o,long offset){
-        return UNSAFE.getObjectVolatile(o, offset);
+    @SuppressWarnings("unchecked")
+    public static <T> T getObjectVolatile(Object o,long offset){
+        return (T) UNSAFE.getObjectVolatile(o, offset);
     }
 
-    public static Object getObject(Object o,long offset){
-        return UNSAFE.getObject(o, offset);
+    @SuppressWarnings("unchecked")
+    public static <T> T getObject(Object o,long offset){
+        return (T) UNSAFE.getObject(o, offset);
     }
 
     public static int getIntVolatile(Object o,long offset){
