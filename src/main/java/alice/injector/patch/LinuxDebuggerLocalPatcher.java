@@ -2,6 +2,7 @@ package alice.injector.patch;
 
 import alice.util.FileUtil;
 import alice.util.Unsafe;
+import com.sun.org.apache.bcel.internal.generic.INVOKESTATIC;
 import org.objectweb.asm.*;
 import org.objectweb.asm.Opcodes.*;
 
@@ -44,6 +45,24 @@ public class LinuxDebuggerLocalPatcher {
                         }
                         mv.visitInsn(Opcodes.IRETURN);
                         mv.visitMaxs(1,1);
+                        return null;
+                    }
+                    case "lookupByName0": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
+                        mv.visitVarInsn(Opcodes.ALOAD,1);
+                        mv.visitVarInsn(Opcodes.ALOAD,2);
+                        mv.visitMethodInsn(Opcodes.INVOKESTATIC,"alice/injector/SymbolLookup","lookup","(Ljava/lang/String;Ljava/lang/String;)J",false);
+                        mv.visitInsn(Opcodes.LRETURN);
+                        mv.visitMaxs(2,3);
+                        return null;
+                    }
+                    case "readBytesFromProcess0": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
+                        mv.visitVarInsn(Opcodes.LLOAD,1);
+                        mv.visitVarInsn(Opcodes.LLOAD,3);
+                        mv.visitMethodInsn(Opcodes.INVOKESTATIC,"alice/util/Unsafe","readBytes","(JJ)[B",false);
+                        mv.visitInsn(Opcodes.ARETURN);
+                        mv.visitMaxs(4,5);
                         return null;
                     }
                 }

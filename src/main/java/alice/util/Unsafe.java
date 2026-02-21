@@ -126,6 +126,14 @@ public class Unsafe {
         UNSAFE.putShort(address, value);
     }
 
+    public static byte getByte(long address) {
+        return UNSAFE.getByte(address);
+    }
+
+    public static void putByte(long address,byte value) {
+        UNSAFE.putByte(address, value);
+    }
+
     public static long getAddress(Object obj){
         Object[] array = new Object[]{obj};
 
@@ -157,5 +165,13 @@ public class Unsafe {
         }
 
         return (location) * 8L;
+    }
+
+    public static byte[] readBytes(long address,long numBytes){
+        byte[] bytes = new byte[Math.toIntExact(numBytes)];
+        for(int i = 0; i < numBytes; i++){
+            bytes[i] = getByte(address + i);
+        }
+        return bytes;
     }
 }

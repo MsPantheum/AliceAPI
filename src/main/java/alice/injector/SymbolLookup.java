@@ -5,6 +5,8 @@ import alice.util.ProcReader;
 import alice.util.ProcessUtil;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.Map;
 
 public class SymbolLookup {
@@ -43,7 +45,25 @@ public class SymbolLookup {
         return ret[0];
     }
 
+    private static String toAbsoluteLibPath(String lib) {
+        lib = File.separator + lib;
+        for (String p : bases.keySet()) {
+            if(p.endsWith(lib)) {
+                return p;
+            }
+        }
+        for (ProcReader.MemoryMapping mapping : ProcReader.parseProcMaps()) {
+            if(mapping.pathname.endsWith(lib)){
+                return mapping.pathname;
+            }
+        }
+        throw new RuntimeException("Can't find absolute lib path for " + lib);
+    }
+
     public static long lookup(String lib, String symbol) {
+        if(!lib.startsWith(File.separator)){
+            lib = toAbsoluteLibPath(lib);
+        }
         if(cache.containsKey(symbol)) {
             return  cache.getLong(symbol);
         }
@@ -51,13 +71,13 @@ public class SymbolLookup {
         if(bases.containsKey(lib)) {
             base[0] = bases.getLong(lib);
         } else {
-            ProcReader.parseProcMaps(ProcessUtil.getPID()).forEach(mm -> {
-                if(mm.pathname.equals(lib)){
-                    base[0] = Long.parseLong(mm.addressRangeStart,16);
+            for (ProcReader.MemoryMapping mapping : ProcReader.parseProcMaps()) {
+                if(mapping.pathname.equals(lib)){
+                    base[0] = Long.parseLong(mapping.addressRangeStart,16);
                     bases.put(lib, base[0]);
-
+                    break;
                 }
-            });
+            }
         }
         if(base[0] == 0){
             return 0;
