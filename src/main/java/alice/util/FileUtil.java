@@ -63,6 +63,10 @@ public class FileUtil {
         return HOME.endsWith("jre") ? HOME.substring(0, HOME.length()-3) : HOME;
     }
 
+    public static Path getHSDB(){
+        return search(getJavaHome(),"sa-jdi.jar");
+    }
+
     public static boolean exists(String filePath) {
         return Files.exists(Paths.get(filePath));
     }

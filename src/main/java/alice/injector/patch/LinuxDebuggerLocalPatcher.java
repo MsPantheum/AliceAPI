@@ -1,8 +1,6 @@
 package alice.injector.patch;
 
-import alice.util.FileUtil;
 import alice.util.Unsafe;
-import com.sun.org.apache.bcel.internal.generic.INVOKESTATIC;
 import org.objectweb.asm.*;
 import org.objectweb.asm.Opcodes.*;
 
@@ -71,8 +69,6 @@ public class LinuxDebuggerLocalPatcher {
         };
 
         cr.accept(cv,0);
-        byte[] ret = cw.toByteArray();
-        FileUtil.write("LinuxDebuggerLocal.class",ret);
-        return ret;
+        return cw.toByteArray();
     }
 }
