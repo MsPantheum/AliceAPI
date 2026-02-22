@@ -23,17 +23,17 @@ public class JavaAgent {
     }
 
     public static void main(String[] args){
-        if(args.length < 1){
+        if(args.length < 2){
             throw new IllegalArgumentException("Please provide a pid!");
         }
         try {
-            Integer.parseInt(args[0]);
+            Integer.parseInt(args[1]);
         } catch (NumberFormatException e) {
             System.err.println("Not a number!");
             System.exit(1);
         }
         try {
-            VirtualMachine vm = VirtualMachine.attach(args[0]);
+            VirtualMachine vm = VirtualMachine.attach(args[1]);
             vm.loadAgentPath(ClassUtil.getPath(JavaAgent.class));
         } catch (AttachNotSupportedException | IOException | AgentLoadException | AgentInitializationException e) {
             throw new RuntimeException(e);

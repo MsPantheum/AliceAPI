@@ -28,6 +28,14 @@ public class Unsafe {
         }
     }
 
+    public static void ensureClassInitialized(Class<?> cls){
+        UNSAFE.ensureClassInitialized(cls);
+    }
+
+    public static boolean shouldBeInitialized(Class<?> cls){
+        return UNSAFE.shouldBeInitialized(cls);
+    }
+
     public static long staticFieldOffset(Field f){
         return UNSAFE.staticFieldOffset(f);
     }

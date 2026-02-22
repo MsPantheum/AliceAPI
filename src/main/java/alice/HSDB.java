@@ -26,4 +26,8 @@ public class HSDB {
             throw new RuntimeException(e);
         }
     }
+
+    public static TypeDataBase getTypeDataBase() {
+        return typeDataBase;
+    }
 }

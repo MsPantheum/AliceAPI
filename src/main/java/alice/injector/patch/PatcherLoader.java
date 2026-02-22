@@ -40,8 +40,9 @@ public class PatcherLoader {
             @Override
             public byte[] process(String name, byte[] classBytes) {
                 switch (name) {
+                    case "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class":
                     case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal.class": {
-                        return LinuxDebuggerLocalPatcher.patch(classBytes);
+                        return DebuggerLocalPatcher.patch(classBytes,name);
                     }
                     default: {
                         return ClassByteProcessor.super.process(name, classBytes);

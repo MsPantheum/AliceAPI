@@ -15,6 +15,10 @@ public class TestSymbolLookup {
         long read2 = NativeLibrary.load(libjvm,false).find("gHotSpotVMTypes");
         if(read2 == read1){
             System.out.println("Test passed.");
-        } else throw new RuntimeException("Meow?");
+        } else {
+            System.err.println(read1);
+            System.err.println(read2);
+            throw new RuntimeException("Meow?");
+        }
     }
 }

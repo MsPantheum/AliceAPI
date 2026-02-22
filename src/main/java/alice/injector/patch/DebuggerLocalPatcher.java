@@ -1,11 +1,11 @@
 package alice.injector.patch;
 
+import alice.util.FileUtil;
 import alice.util.Unsafe;
 import org.objectweb.asm.*;
-import org.objectweb.asm.Opcodes.*;
 
-public class LinuxDebuggerLocalPatcher {
-    public static byte[] patch(byte[] data){
+public class DebuggerLocalPatcher {
+    public static byte[] patch(byte[] data,String name){
         ClassReader cr = new ClassReader(data);
         ClassWriter cw = new ClassWriter(cr,0);
         ClassVisitor cv = new ClassVisitor(Opcodes.ASM5,cw) {
@@ -15,7 +15,6 @@ public class LinuxDebuggerLocalPatcher {
                 switch (name) {
                     case "detach0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, null);
-
                         mv.visitInsn(Opcodes.RETURN);
                         mv.visitMaxs(0,1);
                         return null;
@@ -63,12 +62,34 @@ public class LinuxDebuggerLocalPatcher {
                         mv.visitMaxs(4,5);
                         return null;
                     }
+                    case "initIDs": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, name, descriptor, signature, exceptions);
+                        mv.visitInsn(Opcodes.RETURN);
+                        mv.visitMaxs(0,1);
+                        return null;
+                    }
+                    case "consoleExecuteCommand0": {
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
+                        mv.visitLdcInsn("");
+                        mv.visitInsn(Opcodes.ARETURN);
+                        mv.visitMaxs(1,2);
+                        return null;
+                    }
+                    case "getThreadIdFromSysId0": {//TODO implement this... Maybe we need JNA?
+                        MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
+                        mv.visitInsn(Opcodes.LCONST_0);
+                        mv.visitInsn(Opcodes.LRETURN);
+                        mv.visitMaxs(2,3);
+                        return null;
+                    }
                 }
                 return super.visitMethod(access, name, descriptor, signature, exceptions);
             }
         };
 
         cr.accept(cv,0);
-        return cw.toByteArray();
+        byte[] ret = cw.toByteArray();
+        FileUtil.write(name.replace('/','.'),ret);
+        return ret;
     }
 }

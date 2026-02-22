@@ -13,7 +13,7 @@ public class ClassUtil {
 
     static {
         try {
-            addURL = ReflectionUtil.findStatic(URLClassLoader.class, "addURL", MethodType.methodType(void.class, URL.class));
+            addURL = ReflectionUtil.findVirtual(URLClassLoader.class, "addURL", MethodType.methodType(void.class, URL.class));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
