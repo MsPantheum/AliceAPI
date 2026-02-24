@@ -29,30 +29,10 @@ public class Init {
         }
     }
 
-    private static void checkPlatform(){
-        String cpu = PlatformInfo.getCPU();
-        String os = PlatformInfo.getOS();
-        if(!(cpu.equals("amd64") || cpu.equals("x86_64"))){
-            throw new BadEnvironment("CPU arch is not supported!");
-        }
-        if(os.equals("darwin")){
-            System.err.println("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
-        }
-        if(os.equals("bsd")){
-            System.err.println("Bsd should be supported but it's not guaranteed.");
-        }
-        if(os.equals("solaris")){
-            System.err.println("???? We are running on solaris!");
-        }
-        if(os.equals("win32")) {
-            System.out.println("Running on windows!");
-            System.setProperty("sun.jvm.hotspot.debugger.windbg.disableNativeLookup","true");
-        }
-    }
 
     static void init() {
         checkHSDB();
-        checkPlatform();
+        Unsafe.ensureClassInitialized(Platform.class);
         PatcherLoader.load();
         Unsafe.ensureClassInitialized(HSDB.class);
     }

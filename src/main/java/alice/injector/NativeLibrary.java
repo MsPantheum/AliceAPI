@@ -1,18 +1,14 @@
 package alice.injector;
 
+import alice.Platform;
 import alice.util.*;
 import net.fornwall.jelf.ElfFile;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 import static alice.util.ProcReader.parseProcMaps;
 
@@ -46,19 +42,47 @@ public class NativeLibrary {
         }
     }
 
+    private static String getLibName(Object lib){
+        return Unsafe.getObject(lib,name_offset);
+    }
+
     private final Object LIBRARY_INSTANCE;
     private final String path;
     private final boolean isBuiltin;
     private final long handle;
     private final long base;
 
-    public static NativeLibrary load(String name, boolean isBuiltin) {
+    private static String check(String name){
         name = Paths.get(name).toAbsolutePath().toString();
+        Iterator<Object> iterator = nativeLibraryContext.iterator();
+        while(iterator.hasNext()) {
+            Object lib = iterator.next();
+            String _name = getLibName(lib);
+            if(name.endsWith(_name)){
+                iterator.remove();
+                break;
+            }
+        }
+        return name;
+    }
+
+    public static NativeLibrary load(String name, boolean isBuiltin) {
+        name = check(name);
         if (libraries.containsKey(name)) {
             return libraries.get(name);
         } else if (canLoad(name)) {
             NativeLibrary ret = new NativeLibrary(name, isBuiltin);
             libraries.put(name, ret);
+            return ret;
+        }
+        return null;
+    }
+
+    public static NativeLibrary temporarilyLoad(String name, boolean isBuiltin) {
+        name = check(name);
+        if (canLoad(name)) {
+            NativeLibrary ret = new NativeLibrary(name, isBuiltin);
+            nativeLibraryContext.pop();
             return ret;
         }
         return null;
@@ -76,12 +100,20 @@ public class NativeLibrary {
         handle = Unsafe.getLong(LIBRARY_INSTANCE, handle_offset);
         List<ProcReader.MemoryMapping> maps = parseProcMaps(ProcessUtil.getPID());
         long _base = 0;
-        for (ProcReader.MemoryMapping map : maps) {
-            if (map.pathname.equals(path)) {
-                _base = Long.parseLong(map.addressRangeStart, 16);
-                break;
+//        if(isBuiltin){
+//            _base = handle;
+//        } else {
+            if (!Platform.win32) {
+                for (ProcReader.MemoryMapping map : maps) {
+                    if (map.pathname.equals(path)) {
+                        _base = Long.parseLong(map.addressRangeStart, 16);
+                        break;
+                    }
+                }
+            } else {
+                _base = handle;
             }
-        }
+        //}
         if (_base == 0) {
             throw new RuntimeException("Cannot get base address of " + path + "!");
         }

@@ -1,5 +1,6 @@
 package alice.injector;
 
+import alice.Platform;
 import alice.util.FileUtil;
 import alice.util.ProcReader;
 import alice.util.ProcessUtil;
@@ -71,12 +72,17 @@ public class SymbolLookup {
         if(bases.containsKey(lib)) {
             base[0] = bases.getLong(lib);
         } else {
-            for (ProcReader.MemoryMapping mapping : ProcReader.parseProcMaps()) {
-                if(mapping.pathname.equals(lib)){
-                    base[0] = Long.parseLong(mapping.addressRangeStart,16);
-                    bases.put(lib, base[0]);
-                    break;
+            if(!Platform.win32) {
+                for (ProcReader.MemoryMapping mapping : ProcReader.parseProcMaps()) {
+                    if (mapping.pathname.equals(lib)) {
+                        base[0] = Long.parseLong(mapping.addressRangeStart, 16);
+                        bases.put(lib, base[0]);
+                        break;
+                    }
                 }
+            } else {
+                NativeLibrary Nlib = NativeLibrary.load(lib,false);
+                System.out.println("........................................");
             }
         }
         if(base[0] == 0){
