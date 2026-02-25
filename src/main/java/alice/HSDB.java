@@ -10,9 +10,10 @@ import java.lang.reflect.Field;
 public class HSDB {
     private static final sun.jvm.hotspot.HSDB HSDB;
     private static final HotSpotAgent agent;
-    private static final TypeDataBase typeDataBase;
+    public static final TypeDataBase typeDataBase;
 
     static {
+        Init.ensureInit();
         HSDB = Unsafe.allocateInstance(sun.jvm.hotspot.HSDB.class);
         try {
             Field f = sun.jvm.hotspot.HSDB.class.getDeclaredField("workerThread");
@@ -27,7 +28,4 @@ public class HSDB {
         }
     }
 
-    public static TypeDataBase getTypeDataBase() {
-        return typeDataBase;
-    }
 }

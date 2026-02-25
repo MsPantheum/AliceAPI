@@ -86,6 +86,7 @@ public class SymbolLookup {
             }
         }
         if(base[0] == 0){
+            System.err.println("Cannot find base of " + lib + "!");
             return 0;
         }
         Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);

@@ -5,7 +5,6 @@ import alice.injector.patch.PatcherLoader;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
 import alice.util.Unsafe;
-import sun.jvm.hotspot.utilities.PlatformInfo;
 
 import java.net.URLClassLoader;
 
@@ -29,11 +28,19 @@ public class Init {
         }
     }
 
+    private static boolean init = false;
 
     static void init() {
         checkHSDB();
         Unsafe.ensureClassInitialized(Platform.class);
         PatcherLoader.load();
         Unsafe.ensureClassInitialized(HSDB.class);
+        init = true;
+    }
+
+    public static void ensureInit() {
+        if(!init){
+            init();
+        }
     }
 }

@@ -19,24 +19,31 @@ public class ProcReader {
             Map<String, SymbolInfo> map = new HashMap<>();
             ProcessBuilder processBuilder = new ProcessBuilder("/bin/nm","-a",elf);
             Process process = processBuilder.start();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    String[] tmp = line.split(" ");
-                    if(tmp.length == 3){
-                        SymbolInfo symbolInfo = new SymbolInfo(Long.parseLong(tmp[0], 16), tmp[1].charAt(0), tmp[2]);
-                        map.put(tmp[2], symbolInfo);
-                    } else if(tmp.length == 2){
-                        SymbolInfo symbolInfo = new SymbolInfo(0, tmp[0].charAt(0), tmp[1]);
-                        map.put(tmp[1], symbolInfo);
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            readOutput(map,process);
+            processBuilder = new ProcessBuilder("/bin/nm","-D",elf);
+            process = processBuilder.start();
+            readOutput(map, process);
             cache.put(elf,map);
             return map;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void readOutput(Map<String, SymbolInfo> map, Process process) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                String[] tmp = line.split(" ");
+                if(tmp.length == 3){
+                    SymbolInfo symbolInfo = new SymbolInfo(Long.parseLong(tmp[0], 16), tmp[1].charAt(0), tmp[2]);
+                    map.put(tmp[2], symbolInfo);
+                } else if(tmp.length == 2){
+                    SymbolInfo symbolInfo = new SymbolInfo(0, tmp[0].charAt(0), tmp[1]);
+                    map.put(tmp[1], symbolInfo);
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
