@@ -100,9 +100,6 @@ public class NativeLibrary {
         handle = Unsafe.getLong(LIBRARY_INSTANCE, handle_offset);
         List<ProcReader.MemoryMapping> maps = parseProcMaps(ProcessUtil.getPID());
         long _base = 0;
-//        if(isBuiltin){
-//            _base = handle;
-//        } else {
             if (!Platform.win32) {
                 for (ProcReader.MemoryMapping map : maps) {
                     if (map.pathname.equals(path)) {
@@ -111,11 +108,10 @@ public class NativeLibrary {
                     }
                 }
             } else {
-                _base = handle;
+                _base = Unsafe.getAddress(handle);
             }
-        //}
         if (_base == 0) {
-            throw new RuntimeException("Cannot get base address of " + path + "!");
+            _base = Unsafe.getAddress(handle);
         }
         base = _base;
     }

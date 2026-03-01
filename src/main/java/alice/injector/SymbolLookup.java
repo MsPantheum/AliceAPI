@@ -5,15 +5,17 @@ import alice.util.FileUtil;
 import alice.util.ProcReader;
 import alice.util.ProcessUtil;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
+import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.Map;
 
 public class SymbolLookup {
     private static final Object2LongOpenHashMap<String> bases  = new Object2LongOpenHashMap<>();
     private static final Object2LongOpenHashMap<String> cache  = new Object2LongOpenHashMap<>();
-
+    private static final Object2ObjectOpenHashMap<String,ExportDirectoryTable> exports = new Object2ObjectOpenHashMap<>();
 
     public static long lookup(String symbol) {
         if(cache.containsKey(symbol)) {
@@ -82,16 +84,41 @@ public class SymbolLookup {
                 }
             } else {
                 NativeLibrary Nlib = NativeLibrary.load(lib,false);
-                System.out.println("........................................");
+                if(Nlib == null){
+                    throw new RuntimeException("Can't load Native library for " + lib);
+                }
+                base[0] = Nlib.getBase();
+                bases.put(lib, base[0]);
             }
         }
         if(base[0] == 0){
             System.err.println("Cannot find base of " + lib + "!");
             return 0;
         }
-        Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
-        if(symbols.containsKey(symbol)){
-            return symbols.get(symbol).offset + base[0];
+        if(!Platform.win32){
+            Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
+            if (symbols.containsKey(symbol)) {
+                return symbols.get(symbol).offset + base[0];
+            }
+        } else {
+            ExportDirectoryTable table;
+            if(!exports.containsKey(lib)){
+                table = COFFFileParser.getParser().parse(lib).getHeader().getOptionalHeader().getDataDirectories().getExportDirectoryTable();
+                exports.put(lib, table);
+            } else {
+                table = exports.get(lib);
+            }
+            long ret = 0;
+            for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+                short ordinal = table.getExportOrdinal(i);
+                String name = table.getExportName(i);
+                long address = table.getExportAddress(ordinal);
+                if(name.equals(symbol)){
+                    ret = base[0] + address;
+                }
+                cache.put(name, base[0] + address);
+            }
+            return ret;
         }
         return 0;
     }

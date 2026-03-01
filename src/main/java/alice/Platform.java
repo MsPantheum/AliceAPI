@@ -12,6 +12,8 @@ public class Platform {
     public static final boolean amd64;
     public static final boolean x86;
 
+    public static final String HOME = System.getProperty("user.home");
+
     static {
         boolean _win32 = false,_linux = false,_bsd = false,_darwin = false;
         String os = PlatformInfo.getOS();

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class TestSymbolLookup {
     @Test
     public void test() {
@@ -20,7 +22,7 @@ public class TestSymbolLookup {
         } else {
             System.err.println(read1);
             System.err.println(read2);
-            throw new RuntimeException("Meow?");
+            fail("Symbol not match!");
         }
     }
 }

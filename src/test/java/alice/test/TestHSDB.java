@@ -12,6 +12,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class TestHSDB {
     @Test
     public void test(){
@@ -37,7 +39,7 @@ public class TestHSDB {
                 System.out.println(field.getOffset());
             });
         } catch (Throwable e) {
-            throw new RuntimeException(e);
+            fail(e);
         }
     }
 }
