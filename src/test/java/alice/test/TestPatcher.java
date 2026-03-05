@@ -23,15 +23,17 @@ public class TestPatcher {
         URLClassPathWrapper.registerProcessor(new ClassByteProcessor() {
             @Override
             public byte[] process(String name, byte[] classBytes) {
-                if(name.equals("alice.Meow")){
+                if(name.equals("alice/Meow.class")){
+                    System.out.println("Get class alice.Meow.");
                     ClassReader cr = new ClassReader(classBytes);
                     ClassWriter cw = new ClassWriter(cr,0);
                     ClassVisitor cv = new ClassVisitor(Opcodes.ASM5,cw) {
                         @Override
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 
-                            if(name.equals("test") && descriptor.equals("()V")){
-                                MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, null);
+                            if(name.equals("test") && descriptor.equals("()I")){
+                                System.out.println("Get Method test()I.");
+                                MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name, descriptor, signature, null);
                                 mv.visitInsn(Opcodes.ICONST_1);
                                 mv.visitInsn(Opcodes.IRETURN);
                                 mv.visitMaxs(1,0);
