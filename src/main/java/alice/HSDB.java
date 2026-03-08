@@ -21,7 +21,9 @@ public class HSDB {
             f = sun.jvm.hotspot.HSDB.class.getDeclaredField("agent");
             agent = new HotSpotAgent();
             Unsafe.putObject(HSDB,Unsafe.objectFieldOffset(f),agent);
+            System.out.println("Fake attach...");
             agent.attach(0);
+            System.out.println("Fake attach completed.");
             typeDataBase = agent.getTypeDataBase();
         } catch (Throwable e) {
             throw new RuntimeException(e);

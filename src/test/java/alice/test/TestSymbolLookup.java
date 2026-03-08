@@ -16,11 +16,12 @@ public class TestSymbolLookup {
     @Test
     public void test() {
         System.out.println("Pid:"+ProcessUtil.getPID());
-        String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
+        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString();
+        NativeLibrary lib = NativeLibrary.load(libjvm, false);
+        assert lib != null;
+        System.out.println("Base:"+lib.getBase());
         long read1 = SymbolLookup.lookup("gHotSpotVMTypes");
-        long read2 = Objects.requireNonNull(NativeLibrary.load(libjvm, false)).find("gHotSpotVMTypes");
-        System.out.println(read1);
-        System.out.println(read2);
+        long read2 = lib.find("gHotSpotVMTypes");
         if(read2 == read1){
             System.out.println("Test passed.");
         } else {

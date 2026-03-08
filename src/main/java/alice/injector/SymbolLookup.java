@@ -3,7 +3,6 @@ package alice.injector;
 import alice.Platform;
 import alice.util.FileUtil;
 import alice.util.ProcReader;
-import alice.util.ProcessUtil;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
@@ -12,7 +11,9 @@ import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 
 import static alice.util.ProcReader.parseProcMaps;
 
@@ -41,7 +42,7 @@ public class SymbolLookup {
         }
         final long[] ret = {0};
         bases.keySet().forEach(lib -> {
-            long base = bases.getLong(symbol);
+            long base = bases.getLong(lib);
             if (!Platform.win32) {
                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
                 if (symbols.containsKey(symbol)) {
@@ -49,7 +50,7 @@ public class SymbolLookup {
                 }
             } else {
                 ExportDirectoryTable table = getExport(lib);
-                for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+                for (int i = 0; i < Objects.requireNonNull(table).getNumberOfNamePointers(); i++) {
                     short ordinal = table.getExportOrdinal(i);
                     String name = table.getExportName(i);
                     long address = table.getExportAddress(ordinal);
@@ -66,18 +67,24 @@ public class SymbolLookup {
             return ret[0];
         }
 
-        ProcReader.parseProcMaps().values().forEach(mm -> {
-            if (FileUtil.exists(mm.pathname)) {
-                if (!bases.containsKey(mm.pathname)) {//We already checked the cache,so skip things exist in the cache.
-                    long base = Long.parseLong(Platform.win32 ? mm.addressRangeStart.substring(2) : mm.addressRangeStart, 16);
-                    bases.put(mm.pathname, base);
+        ProcReader.parseProcMaps().forEach((path,mappings) -> {
+            if (FileUtil.exists(path)) {
+                if (!bases.containsKey(path)) {//We already checked the cache,so skip things exist in the cache.
+
+                    long base = Long.MAX_VALUE;
+
+                    for (ProcReader.MemoryMapping mapping : mappings) {
+                        base = Math.min(Long.parseLong(Platform.win32 ? mapping.addressRangeStart.substring(2) : mapping.addressRangeStart, 16),base);
+                    }
+
+                    bases.put(path, base);
                     if (!Platform.win32) {
-                        Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(mm.pathname);
+                        Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
                         if (symbols.containsKey(symbol)) {
                             ret[0] = base + symbols.get(symbol).offset;
                         }
                     } else {
-                        ExportDirectoryTable table = getExport(mm.pathname);
+                        ExportDirectoryTable table = getExport(path);
                         if(table != null){
                             for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
                                 short ordinal = table.getExportOrdinal(i);
@@ -109,9 +116,9 @@ public class SymbolLookup {
             }
         }
         if (!Platform.win32) {
-            for (ProcReader.MemoryMapping mapping : ProcReader.parseProcMaps().values()) {
-                if (mapping.pathname.endsWith(lib)) {
-                    return mapping.pathname;
+            for (String path : ProcReader.parseProcMaps().keySet()) {
+                if (path.endsWith(lib)) {
+                    return path;
                 }
             }
         } else {
@@ -137,14 +144,16 @@ public class SymbolLookup {
         if (cache.containsKey(symbol)) {
             return cache.getLong(symbol);
         }
-        final long[] base = {0};
+        final long[] base = {Long.MAX_VALUE};
         if (bases.containsKey(lib)) {
             base[0] = bases.getLong(lib);
         } else {
             if (!Platform.win32) {
-                Map<String, ProcReader.MemoryMapping> maps = parseProcMaps();
-                String tmp = maps.get(lib).addressRangeStart;
-                base[0] = Long.parseLong(tmp, 16);
+                Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+                LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
+                for (ProcReader.MemoryMapping mapping : mappings) {
+                    base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16),base[0]);
+                }
                 bases.put(lib, base[0]);
             } else {
                 NativeLibrary Nlib = NativeLibrary.load(lib, false);
@@ -167,7 +176,7 @@ public class SymbolLookup {
         } else {
             ExportDirectoryTable table = getExport(lib);
             long ret = 0;
-            for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+            for (int i = 0; i < Objects.requireNonNull(table).getNumberOfNamePointers(); i++) {
                 short ordinal = table.getExportOrdinal(i);
                 String name = table.getExportName(i);
                 long address = table.getExportAddress(ordinal);

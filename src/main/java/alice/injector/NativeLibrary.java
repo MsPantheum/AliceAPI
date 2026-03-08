@@ -98,10 +98,12 @@ public class NativeLibrary {
         nativeLibraryContext.add(LIBRARY_INSTANCE);
         load();
         handle = Unsafe.getLong(LIBRARY_INSTANCE, handle_offset);
-        long _base = 0;
+        long _base = Long.MAX_VALUE;
         if (!Platform.win32) {
-            Map<String,ProcReader.MemoryMapping> maps = parseProcMaps();
-            _base = Long.parseLong(maps.get(path).addressRangeStart,16);
+            Map<String,LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+            for(ProcReader.MemoryMapping map : maps.get(path)){
+                _base = Math.min(_base,Long.parseLong(map.addressRangeStart, 16));
+            }
         } else {
             _base = handle;
         }

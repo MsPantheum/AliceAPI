@@ -33,22 +33,18 @@ public class Init {
     private static boolean init = false;
 
     static void init() {
-        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                System.err.println("Uncaught exception in thread " + t.getName());
-                e.printStackTrace(System.err);
-                System.out.println(ProcessUtil.getPID());
-                System.out.println(Unsafe.getAddress(Unsafe.getLong(Object.class,8)));
-                String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
-                NativeLibrary lib = NativeLibrary.load(libjvm,false);
-
-                ProcessUtil.guiPause();
-            }
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            System.err.println("Uncaught exception in thread " + t.getName());
+            e.printStackTrace(System.err);
+            System.out.println(ProcessUtil.getPID());
+            System.out.println(Unsafe.getAddress(Unsafe.getLong(Object.class,8)));
+            ProcessUtil.guiPause();
         });
         checkHSDB();
+        System.out.println("HSDB passwd.");
         Unsafe.ensureClassInitialized(Platform.class);
         PatcherLoader.load();
+        System.out.println("Patch loaded,");
         Unsafe.ensureClassInitialized(HSDB.class);
         init = true;
     }
