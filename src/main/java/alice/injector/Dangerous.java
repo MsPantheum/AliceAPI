@@ -3,8 +3,10 @@ package alice.injector;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.types.Type;
 
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static alice.HSDB.typeDataBase;
 
@@ -12,17 +14,16 @@ public class Dangerous {
 
     @SuppressWarnings({"DuplicatedCode", "ResultOfMethodCallIgnored", "ReassignedVariable", "ConstantValue", "lossy-conversions"})
     private static void mp(){
-        System.getenv();
-        System.getProperties();
-        System.getenv();
-        System.getProperties();
-        System.getenv();
-        System.getProperties();
-        System.getenv();
-        System.getProperties();
-        System.getenv();
-        System.getProperties();
-        System.getenv();
+        for(int i = 9; i > 200; i++){
+            i -= 1;
+        }
+        long lllll = 11221144L;
+        int iii = 14514;
+        while (iii != 0){
+            iii--;
+            lllll -= iii;
+        }
+        lllll++;
         int i = 0;
         int j = 123;
         while ( i < 1000) {
@@ -66,6 +67,7 @@ public class Dangerous {
         dd *= (i-32768);
         i ++;
         j+= (i*dd*ll);
+        j -= lllll;
     }
 
     private static long mp_code_base;

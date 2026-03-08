@@ -42,8 +42,8 @@ public class NativeLibrary {
         }
     }
 
-    private static String getLibName(Object lib){
-        return Unsafe.getObject(lib,name_offset);
+    private static String getLibName(Object lib) {
+        return Unsafe.getObject(lib, name_offset);
     }
 
     private final Object LIBRARY_INSTANCE;
@@ -52,13 +52,13 @@ public class NativeLibrary {
     private final long handle;
     private final long base;
 
-    private static String check(String name){
+    private static String check(String name) {
         name = Paths.get(name).toAbsolutePath().toString();
         Iterator<Object> iterator = nativeLibraryContext.iterator();
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             Object lib = iterator.next();
             String _name = getLibName(lib);
-            if(name.endsWith(_name)){
+            if (name.endsWith(_name)) {
                 iterator.remove();
                 break;
             }
@@ -98,20 +98,12 @@ public class NativeLibrary {
         nativeLibraryContext.add(LIBRARY_INSTANCE);
         load();
         handle = Unsafe.getLong(LIBRARY_INSTANCE, handle_offset);
-        List<ProcReader.MemoryMapping> maps = parseProcMaps(ProcessUtil.getPID());
         long _base = 0;
-            if (!Platform.win32) {
-                for (ProcReader.MemoryMapping map : maps) {
-                    if (map.pathname.equals(path)) {
-                        _base = Long.parseLong(map.addressRangeStart, 16);
-                        break;
-                    }
-                }
-            } else {
-                _base = Unsafe.getAddress(handle);
-            }
-        if (_base == 0) {
-            _base = Unsafe.getAddress(handle);
+        if (!Platform.win32) {
+            Map<String,ProcReader.MemoryMapping> maps = parseProcMaps();
+            _base = Long.parseLong(maps.get(path).addressRangeStart,16);
+        } else {
+            _base = handle;
         }
         base = _base;
     }
@@ -146,6 +138,10 @@ public class NativeLibrary {
     public static boolean canLoad(String filePath) {
         if (filePath.isEmpty() || libraries.containsKey(filePath) || !FileUtil.exists(filePath)) {
             return false;
+        }
+
+        if (Platform.win32) {
+            return filePath.endsWith(".dll");
         }
 
         final byte[] data = FileUtil.read(filePath);

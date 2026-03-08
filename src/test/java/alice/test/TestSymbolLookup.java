@@ -6,6 +6,8 @@ import alice.util.FileUtil;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -17,6 +19,8 @@ public class TestSymbolLookup {
         String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
         long read1 = SymbolLookup.lookup("gHotSpotVMTypes");
         long read2 = Objects.requireNonNull(NativeLibrary.load(libjvm, false)).find("gHotSpotVMTypes");
+        System.out.println(read1);
+        System.out.println(read2);
         if(read2 == read1){
             System.out.println("Test passed.");
         } else {

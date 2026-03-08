@@ -34,8 +34,13 @@ public class FileUtil {
     }
 
     public static Path search(String dir,String name){
+
         Path ret = null;
-        try(Stream<Path> stream = Files.list(Paths.get(dir))){
+        Path dir_p = Paths.get(dir);
+        if(!Files.isDirectory(dir_p)){
+            return null;
+        }
+        try(Stream<Path> stream = Files.list(dir_p)){
             Iterator<Path> iterator = stream.iterator();
             while (iterator.hasNext()){
                 Path p = iterator.next();

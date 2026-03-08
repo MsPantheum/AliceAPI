@@ -1,9 +1,11 @@
 package alice;
 
 import alice.exception.BadEnvironment;
+import alice.injector.NativeLibrary;
 import alice.injector.patch.PatcherLoader;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
+import alice.util.ProcessUtil;
 import alice.util.Unsafe;
 
 import java.net.URLClassLoader;
@@ -31,6 +33,19 @@ public class Init {
     private static boolean init = false;
 
     static void init() {
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                System.err.println("Uncaught exception in thread " + t.getName());
+                e.printStackTrace(System.err);
+                System.out.println(ProcessUtil.getPID());
+                System.out.println(Unsafe.getAddress(Unsafe.getLong(Object.class,8)));
+                String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
+                NativeLibrary lib = NativeLibrary.load(libjvm,false);
+
+                ProcessUtil.guiPause();
+            }
+        });
         checkHSDB();
         Unsafe.ensureClassInitialized(Platform.class);
         PatcherLoader.load();
