@@ -40,7 +40,7 @@ public class Init {
             ProcessUtil.guiPause();
         });
         checkHSDB();
-        System.out.println("HSDB passwd.");
+        System.out.println("HSDB passed.");
         Unsafe.ensureClassInitialized(Platform.class);
         PatcherLoader.load();
         System.out.println("Patch loaded,");
