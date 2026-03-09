@@ -3,16 +3,14 @@ package alice.injector;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.types.Type;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import static alice.HSDB.typeDataBase;
 
 public class Dangerous {
 
-    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions"})
+    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static void mp(){
         for(int i = 9; i > 200; i++){
             i -= 1;
