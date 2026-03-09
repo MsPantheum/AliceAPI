@@ -12,7 +12,7 @@ import static alice.HSDB.typeDataBase;
 
 public class Dangerous {
 
-    @SuppressWarnings({"DuplicatedCode", "ResultOfMethodCallIgnored", "ReassignedVariable", "ConstantValue", "lossy-conversions"})
+    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions"})
     private static void mp(){
         for(int i = 9; i > 200; i++){
             i -= 1;
@@ -85,7 +85,6 @@ public class Dangerous {
         return new String(b, StandardCharsets.UTF_8);
     }
 
-
     private static void inject(byte[] payload,Class<?> target,String name,String desc) {
         int oopSize = typeDataBase.lookupIntConstant("oopSize");
         long klassOffset = typeDataBase.lookupType("java_lang_Class").getCIntegerField("_klass_offset").getValue();
@@ -145,6 +144,7 @@ public class Dangerous {
 
 
     static {
+        System.out.println("Setting up mprotect call payload.");
         long func = SymbolLookup.lookup("/usr/lib/libc.so.6","mprotect@@GLIBC_2.2.5");
         byte[] payload = new byte[59];
         payload[0] = (byte) 0x55;
@@ -199,11 +199,14 @@ public class Dangerous {
         payload[57] = (byte) 0x5d;
         payload[58] = (byte) 0xc3;
 
+        System.out.println("Forcing C2 to optimize the target...");
         for(int i = 0; i < 40000 ; i++){
             mp();
         }
-
+        System.out.println("Done.");
+        System.out.println("Injecting payload.");
         inject(payload, Dangerous.class,"mp","()V");
+        System.out.println("Done.");
     }
 
     public static void mprotect(long target,int size){
