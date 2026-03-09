@@ -175,11 +175,31 @@ public class Unsafe {
         return (location) * 8L;
     }
 
+    public static long allocateMemory(long bytes){
+        return UNSAFE.allocateMemory(bytes);
+    }
+
+    public static long reallocateMemory(long address, long bytes){
+        return UNSAFE.reallocateMemory(address, bytes);
+    }
+
+    public static void freeMemory(long address){
+        UNSAFE.freeMemory(address);
+    }
+
     public static byte[] readBytes(long address,long numBytes){
         byte[] bytes = new byte[Math.toIntExact(numBytes)];
         for(int i = 0; i < numBytes; i++){
             bytes[i] = getByte(address + i);
         }
         return bytes;
+    }
+
+    static {
+        for(int i = 0; i < 20000; i++){
+            long tmp = allocateMemory(1);
+            readBytes(tmp,1);
+            freeMemory(tmp);
+        }
     }
 }

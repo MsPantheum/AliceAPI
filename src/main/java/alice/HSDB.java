@@ -2,6 +2,7 @@ package alice;
 
 import alice.util.Unsafe;
 import sun.jvm.hotspot.HotSpotAgent;
+import sun.jvm.hotspot.debugger.Debugger;
 import sun.jvm.hotspot.types.TypeDataBase;
 import sun.jvm.hotspot.utilities.WorkerThread;
 
@@ -9,8 +10,9 @@ import java.lang.reflect.Field;
 
 public class HSDB {
     private static final sun.jvm.hotspot.HSDB HSDB;
-    private static final HotSpotAgent agent;
+    public static final HotSpotAgent agent;
     public static final TypeDataBase typeDataBase;
+    public static final Debugger debugger;
 
     static {
         Init.ensureInit();
@@ -23,6 +25,7 @@ public class HSDB {
             Unsafe.putObject(HSDB,Unsafe.objectFieldOffset(f),agent);
             System.out.println("Fake attach...");
             agent.attach(0);
+            debugger = agent.getDebugger();
             System.out.println("Fake attach completed.");
             typeDataBase = agent.getTypeDataBase();
         } catch (Throwable e) {

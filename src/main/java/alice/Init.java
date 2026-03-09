@@ -37,7 +37,6 @@ public class Init {
             System.err.println("Uncaught exception in thread " + t.getName());
             e.printStackTrace(System.err);
             System.out.println(ProcessUtil.getPID());
-            System.out.println(Unsafe.getAddress(Unsafe.getLong(Object.class,8)));
             ProcessUtil.guiPause();
         });
         checkHSDB();

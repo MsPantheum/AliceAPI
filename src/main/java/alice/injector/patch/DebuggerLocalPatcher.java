@@ -1,6 +1,5 @@
 package alice.injector.patch;
 
-import alice.util.FileUtil;
 import alice.util.Unsafe;
 import org.objectweb.asm.*;
 
@@ -88,8 +87,6 @@ public class DebuggerLocalPatcher {
         };
 
         cr.accept(cv,0);
-        byte[] ret = cw.toByteArray();
-        FileUtil.write(name.replace('/','.'),ret);
-        return ret;
+        return cw.toByteArray();
     }
 }
