@@ -119,26 +119,32 @@ public class Unsafe {
     }
 
     public static long getAddress(long address){
+        assert address != 0;
         return UNSAFE.getAddress(address);
     }
 
     public static void putAddress(long address, long value){
+        assert address != 0;
         UNSAFE.putAddress(address, value);
     }
 
     public static short getShort(long address){
+        assert address != 0;
         return UNSAFE.getShort(address);
     }
 
     public static void putShort(long address, short value){
+        assert address != 0;
         UNSAFE.putShort(address, value);
     }
 
     public static byte getByte(long address) {
+        assert address != 0;
         return UNSAFE.getByte(address);
     }
 
     public static void putByte(long address,byte value) {
+        assert address != 0;
         UNSAFE.putByte(address, value);
     }
 
@@ -180,14 +186,17 @@ public class Unsafe {
     }
 
     public static long reallocateMemory(long address, long bytes){
+        assert address != 0;
         return UNSAFE.reallocateMemory(address, bytes);
     }
 
     public static void freeMemory(long address){
+        assert address != 0;
         UNSAFE.freeMemory(address);
     }
 
     public static byte[] readBytes(long address,long numBytes){
+        assert address != 0;
         byte[] bytes = new byte[Math.toIntExact(numBytes)];
         for(int i = 0; i < numBytes; i++){
             bytes[i] = getByte(address + i);
@@ -195,11 +204,14 @@ public class Unsafe {
         return bytes;
     }
 
-    static {
-        for(int i = 0; i < 20000; i++){
-            long tmp = allocateMemory(1);
-            readBytes(tmp,1);
-            freeMemory(tmp);
+    public static void writeBytes(long address,byte[] payload){
+        writeBytes(address,payload,payload.length);
+    }
+
+    public static void writeBytes(long address,byte[] payload,long numBytes){
+        for(int i = 0; i < numBytes; i++){
+            putByte(address + i, payload[i]);
         }
     }
+
 }

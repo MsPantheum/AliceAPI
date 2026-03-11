@@ -36,21 +36,9 @@ public class ProcReader {
             ElfFile elf = ElfFile.from(Files.newInputStream(Paths.get(path)));
             Map<String, SymbolInfo> map = new HashMap<>();
             ElfSymbolTableSection symbols = elf.getSymbolTableSection();
-            if(symbols != null){
-                for (ElfSymbol symbol : symbols.symbols) {
-                    if (symbol.getName() != null) {
-                        map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
-                    }
-                }
-            }
+            iterateSymbols(map, symbols);
             symbols = elf.getDynamicSymbolTableSection();
-            if(symbols != null){
-                for (ElfSymbol symbol : symbols.symbols) {
-                    if (symbol.getName() != null) {
-                        map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
-                    }
-                }
-            }
+            iterateSymbols(map, symbols);
             cache.put(path,map);
             return map;
         } catch (Throwable e) {
@@ -59,22 +47,13 @@ public class ProcReader {
         }
     }
 
-    private static void readOutput(Map<String, SymbolInfo> map, Process process) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                String[] tmp = line.split(" ");
-                if(tmp.length == 3){
-                    SymbolInfo symbolInfo = new SymbolInfo(Long.parseLong(tmp[0], 16), tmp[1].charAt(0), tmp[2]);
-                    map.put(tmp[2], symbolInfo);
-                } else if(tmp.length == 2){
-                    SymbolInfo symbolInfo = new SymbolInfo(0, tmp[0].charAt(0), tmp[1]);
-                    map.put(tmp[1], symbolInfo);
+    private static void iterateSymbols(Map<String, SymbolInfo> map, ElfSymbolTableSection symbols) {
+        if(symbols != null){
+            for (ElfSymbol symbol : symbols.symbols) {
+                if (symbol.getName() != null && symbol.st_shndx != 0x0) {
+                    map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

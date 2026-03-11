@@ -1,10 +1,13 @@
 package alice._native;
 
+import alice.Test;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.ProcessUtil;
 import alice.util.Unsafe;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class mprotect {
 
@@ -71,6 +74,7 @@ public class mprotect {
     static {
         System.out.println("Setting up mprotect call payload.");
         long func = SymbolLookup.lookup("mprotect");
+        System.out.println("mprotect:0x"+Long.toHexString(func));
         byte[] payload = new byte[59];
         payload[0] = (byte) 0x55;
         payload[1] = (byte) 0x48;
@@ -125,12 +129,13 @@ public class mprotect {
         payload[58] = (byte) 0xc3;
 
         System.out.println("Forcing C2 to optimize the target...");
-        for(int i = 0; i < 40000 ; i++){
+        for(int i = 0; i < 20000 ; i++){
             mp();
         }
         System.out.println("Done.");
         System.out.println("Injecting payload.");
         mp_code_base = Shellcode.inject(payload, mprotect.class,"mp","()V");
+        assert mp_code_base != 0;
         System.out.println("Done.");
     }
 

@@ -2,6 +2,7 @@ package alice;
 
 import alice.exception.BadEnvironment;
 import sun.jvm.hotspot.utilities.PlatformInfo;
+import sun.jvm.hotspot.utilities.UnsupportedPlatformException;
 
 public class Platform {
     public static final boolean win32;
@@ -14,29 +15,43 @@ public class Platform {
 
     public static final String HOME = System.getProperty("user.home");
 
+    public static final ABI abi;
+
+    public enum ABI {
+        SYSTEM_V,
+        WINDOWS_X64;
+    }
+
     static {
         boolean _win32 = false,_linux = false,_bsd = false,_darwin = false;
         String os = PlatformInfo.getOS();
+        ABI _abi;
         switch (os) {
             case "win32":
                 _win32 = true;
                 System.out.println("Running on windows!");
+                _abi = ABI.WINDOWS_X64;
                 break;
             case "linux":
                 _linux = true;
+                _abi = ABI.SYSTEM_V;
                 break;
             case "darwin":
                 _darwin = true;
+                _abi = ABI.SYSTEM_V;
                 System.err.println("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
                 break;
             case "bsd":
             case "solaris":
                 _bsd = true;
+                _abi = ABI.SYSTEM_V;
                 System.err.println("Bsd should be supported but it's not guaranteed.");
                 if (os.equals("solaris")) {
                     System.err.println("???? We are running on solaris!");
                 }
                 break;
+            default:
+                throw new UnsupportedPlatformException(PlatformInfo.getOS());
         }
 
         win32 = _win32;
@@ -57,5 +72,6 @@ public class Platform {
 
         amd64 = _amd64;
         x86 = _x86;
+        abi = _abi;
     }
 }

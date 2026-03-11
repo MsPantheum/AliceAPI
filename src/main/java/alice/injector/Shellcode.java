@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import static alice.HSDB.typeDataBase;
 
 public class Shellcode {
+
     private static String getSymbol(long symbolAddress) {
         Type symbolType = typeDataBase.lookupType("Symbol");
         long symbol = Unsafe.getAddress(symbolAddress);
@@ -21,8 +22,7 @@ public class Shellcode {
         return new String(b, StandardCharsets.UTF_8);
     }
 
-    public static long inject(byte[] payload, Class<?> target, String name, String desc) {
-        long ret = 0;
+    public static long getCompiledEntry(Class<?> target, String name, String desc){
         int oopSize = typeDataBase.lookupIntConstant("oopSize");
         long klassOffset = typeDataBase.lookupType("java_lang_Class").getCIntegerField("_klass_offset").getValue();
         long klass = oopSize == 8
@@ -55,27 +55,31 @@ public class Shellcode {
             if (name.equals(_name)
                     && desc.equals(_desc)) {
 
-                long address = Unsafe.getAddress(method + _from_compiled_entry);
-                ret = address;
-                for(int j = 0; ;j++){
-                    byte code = Unsafe.getByte(address + j);
-                    if(code == (byte) 0xc2 || code == (byte) 0xc3){
-                        if(j + 1 >= payload.length){
-                            break;
-                        } else {
-                            throw new RuntimeException("Not enough space! Requiring " + payload.length + " but only have " + j +".");
-                        }
-                    }
-                }
-                for (int j = 0;j < payload.length ; j++) {
-                    Unsafe.putByte(address + j, payload[j]);
-                }
-
-                break;
+                return Unsafe.getAddress(method + _from_compiled_entry);
 
             }
         }
+        return 0;
+    }
 
-        return ret;
+    public static long inject(byte[] payload, Class<?> target, String name, String desc) {
+        long address = getCompiledEntry(target, name, desc);
+        if(address == 0){
+            return 0;
+        }
+        for(int j = 0; ;j++){
+            byte code = Unsafe.getByte(address + j);
+            if(code == (byte) 0xc2 || code == (byte) 0xc3){
+                if(j + 1 >= payload.length){
+                    break;
+                } else {
+                    throw new RuntimeException("Not enough space! Requiring " + payload.length + " but only have " + j +".");
+                }
+            }
+        }
+        for (int j = 0;j < payload.length ; j++) {
+            Unsafe.putByte(address + j, payload[j]);
+        }
+        return address;
     }
 }

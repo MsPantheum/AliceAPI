@@ -1,10 +1,12 @@
 package alice.test;
 
+import alice.Init;
 import alice.Platform;
 import alice._native.VirtualProtect;
 import alice._native.mprotect;
 import alice.injector.SymbolLookup;
 import alice.util.FileUtil;
+import alice.util.ProcessUtil;
 import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -16,7 +18,10 @@ public class TestASM {
     @Test
     @EnabledOnOs(value = {OS.LINUX,OS.WINDOWS})
     public void test(){
+        Init.ensureInit();
+        System.out.println("Pid:"+ProcessUtil.getPID());
         long target = SymbolLookup.lookup(Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString(),"JVM_Sleep");
+        System.out.println("Target:0x"+Long.toHexString(target));
         if(!Platform.win32){
             mprotect.invoke(target, Unsafe.PAGE_SIZE);
         } else {
