@@ -74,7 +74,6 @@ public class mprotect {
     static {
         System.out.println("Setting up mprotect call payload.");
         long func = SymbolLookup.lookup("mprotect");
-        System.out.println("mprotect:0x"+Long.toHexString(func));
         byte[] payload = new byte[59];
         payload[0] = (byte) 0x55;
         payload[1] = (byte) 0x48;
