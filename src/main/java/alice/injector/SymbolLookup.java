@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 
+import static alice.util.ProcReader.isElf;
 import static alice.util.ProcReader.parseProcMaps;
 
 public class SymbolLookup {
@@ -68,7 +69,7 @@ public class SymbolLookup {
         }
 
         ProcReader.parseProcMaps().forEach((path,mappings) -> {
-            if (FileUtil.exists(path)) {
+            if (FileUtil.exists(path) && !FileUtil.isDirectory(path)) {
                 if (!bases.containsKey(path)) {//We already checked the cache,so skip things exist in the cache.
 
                     long base = Long.MAX_VALUE;
@@ -77,23 +78,27 @@ public class SymbolLookup {
                         base = Math.min(Long.parseLong(Platform.win32 ? mapping.addressRangeStart.substring(2) : mapping.addressRangeStart, 16),base);
                     }
 
-                    bases.put(path, base);
-                    if (!Platform.win32) {
-                        Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
-                        if (symbols.containsKey(symbol)) {
-                            ret[0] = base + symbols.get(symbol).offset;
-                        }
-                    } else {
-                        ExportDirectoryTable table = getExport(path);
-                        if(table != null){
-                            for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
-                                short ordinal = table.getExportOrdinal(i);
-                                String name = table.getExportName(i);
-                                long address = table.getExportAddress(ordinal);
-                                if (name.equals(symbol)) {
-                                    ret[0] = base + address;
+                    if(base != Long.MAX_VALUE) {
+                        bases.put(path, base);
+                        if (!Platform.win32) {
+                            if(isElf(path)){
+                                Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
+                                if (symbols.containsKey(symbol)) {
+                                    ret[0] = base + symbols.get(symbol).offset;
                                 }
-                                cache.put(name, base + address);
+                            }
+                        } else {
+                            ExportDirectoryTable table = getExport(path);
+                            if (table != null) {
+                                for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+                                    short ordinal = table.getExportOrdinal(i);
+                                    String name = table.getExportName(i);
+                                    long address = table.getExportAddress(ordinal);
+                                    if (name.equals(symbol)) {
+                                        ret[0] = base + address;
+                                    }
+                                    cache.put(name, base + address);
+                                }
                             }
                         }
                     }
@@ -144,6 +149,10 @@ public class SymbolLookup {
         if (cache.containsKey(symbol)) {
             return cache.getLong(symbol);
         }
+        if(!Platform.win32 && !isElf(lib)){
+            System.err.println("Not an elf file:"+lib);
+            return 0;
+        }
         final long[] base = {Long.MAX_VALUE};
         if (bases.containsKey(lib)) {
             base[0] = bases.getLong(lib);
@@ -164,7 +173,7 @@ public class SymbolLookup {
                 bases.put(lib, base[0]);
             }
         }
-        if (base[0] == 0) {
+        if (base[0] == Long.MAX_VALUE) {
             System.err.println("Cannot find base of " + lib + "!");
             return 0;
         }

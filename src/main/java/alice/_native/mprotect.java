@@ -70,7 +70,7 @@ public class mprotect {
 
     static {
         System.out.println("Setting up mprotect call payload.");
-        long func = SymbolLookup.lookup("/usr/lib/libc.so.6","mprotect@@GLIBC_2.2.5");
+        long func = SymbolLookup.lookup("mprotect");
         byte[] payload = new byte[59];
         payload[0] = (byte) 0x55;
         payload[1] = (byte) 0x48;

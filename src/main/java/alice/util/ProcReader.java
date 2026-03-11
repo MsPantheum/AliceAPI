@@ -1,10 +1,15 @@
 package alice.util;
 
 import alice.Platform;
+import net.fornwall.jelf.ElfFile;
+import net.fornwall.jelf.ElfSymbol;
+import net.fornwall.jelf.ElfSymbolTableSection;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -13,21 +18,43 @@ public class ProcReader {
 
     private static final Map<Object,Map<String,SymbolInfo>> cache = new HashMap<>();
 
-    public static Map<String, SymbolInfo> readElf(String elf){
-        if(cache.containsKey(elf)){
-            return cache.get(elf);
+    public static boolean isElf(String path){
+        try (InputStream is = Files.newInputStream(Paths.get(path))){
+            byte[] head = new byte[4];
+            int ret = is.read(head);
+            return ret == 4 && 0x7f == head[0] && 'E' == head[1] && 'L' == head[2] && 'F' == head[3];
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Map<String, SymbolInfo> readElf(String path){
+        if(cache.containsKey(path)){
+            return cache.get(path);
         }
         try {
+            ElfFile elf = ElfFile.from(Files.newInputStream(Paths.get(path)));
             Map<String, SymbolInfo> map = new HashMap<>();
-            ProcessBuilder processBuilder = new ProcessBuilder("/bin/nm","-a",elf);
-            Process process = processBuilder.start();
-            readOutput(map,process);
-            processBuilder = new ProcessBuilder("/bin/nm","-D",elf);
-            process = processBuilder.start();
-            readOutput(map, process);
-            cache.put(elf,map);
+            ElfSymbolTableSection symbols = elf.getSymbolTableSection();
+            if(symbols != null){
+                for (ElfSymbol symbol : symbols.symbols) {
+                    if (symbol.getName() != null) {
+                        map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
+                    }
+                }
+            }
+            symbols = elf.getDynamicSymbolTableSection();
+            if(symbols != null){
+                for (ElfSymbol symbol : symbols.symbols) {
+                    if (symbol.getName() != null) {
+                        map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
+                    }
+                }
+            }
+            cache.put(path,map);
             return map;
-        } catch (IOException e) {
+        } catch (Throwable e) {
+            System.err.println(path);
             throw new RuntimeException(e);
         }
     }

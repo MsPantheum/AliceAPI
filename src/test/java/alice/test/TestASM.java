@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
+import java.util.Objects;
+
 public class TestASM {
     @Test
     @EnabledOnOs(value = {OS.LINUX,OS.WINDOWS})
     public void test(){
-        long target = SymbolLookup.lookup(FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString(),"JVM_Sleep");
+        long target = SymbolLookup.lookup(Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString(),"JVM_Sleep");
         if(!Platform.win32){
             mprotect.invoke(target, Unsafe.PAGE_SIZE);
         } else {

@@ -75,4 +75,8 @@ public class FileUtil {
     public static boolean exists(String filePath) {
         return Files.exists(Paths.get(filePath));
     }
+
+    public static boolean isDirectory(String path) {
+        return Files.isDirectory(Paths.get(path));
+    }
 }
