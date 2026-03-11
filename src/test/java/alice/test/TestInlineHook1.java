@@ -5,7 +5,7 @@ import alice.injector.Shellcode;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 
-public class TestInlineHook {
+public class TestInlineHook1 {
 
     private static int test_value = 0x0;
 
@@ -75,7 +75,7 @@ public class TestInlineHook {
         i ++;
         j+= (i*dd*ll);
         j -= lllll;
-    }//test_value = 0x114514
+    }
 
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static void func2(int value){
@@ -134,7 +134,7 @@ public class TestInlineHook {
         i ++;
         j+= (i*dd*ll);
         j -= lllll;
-    }//test_value = 0x191980
+    }
 
     @Test
     public void test(){
@@ -143,12 +143,11 @@ public class TestInlineHook {
         assert test_value == 0x114514 + 1;
         func2(0x191980); System.out.println("After func2 called: 0x" + Long.toHexString(test_value));
         assert test_value == 0x191980 - 1;
-        long p1 = Shellcode.getCompiledEntry(TestInlineHook.class,"func1","(I)V");
-        long p2 = Shellcode.getCompiledEntry(TestInlineHook.class,"func2","(I)V");
+        long p1 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func1","(I)V");
+        long p2 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func2","(I)V");
         ProcessUtil.guiPause();
         InlineHook.hook(p2,p1);
         func2(0x12345);
-        System.out.println("After func2 called again: 0x"+Long.toHexString(test_value));
-        System.out.println("Success:" + (test_value == (0x12345 + 1)));
+        assert test_value == 0x12345 + 1;
     }
 }
