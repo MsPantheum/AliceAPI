@@ -1,11 +1,10 @@
 package alice.test;
 
-import alice._native.InlineHook;
+import alice._native.InlineHookSystemV;
 import alice.injector.Shellcode;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class TestInlineHook3 {
@@ -33,7 +32,8 @@ public class TestInlineHook3 {
         assert ori != 0;
         long neo = Shellcode.getCompiledEntry(TestInlineHook3.class,"fuck","(Ljava/util/ArrayList;Ljava/lang/Object;)Z");
         assert neo != 0;
-        InlineHook.hook(ori,neo);
+        InlineHookSystemV.simpleHook(ori,neo);
+        //Well,JUnit breaks after this. It ignores this test and not execute subsequent instructions.
         System.out.println("Testing...");
         ArrayList list = new ArrayList();
         list.add(1);

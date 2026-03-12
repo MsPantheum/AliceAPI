@@ -45,10 +45,12 @@ public class SymbolLookup {
         bases.keySet().forEach(lib -> {
             long base = bases.getLong(lib);
             if (!Platform.win32) {
-                Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
-                if (symbols.containsKey(symbol)) {
-                    System.out.println("Found symbol " + symbol + " from " + lib + " @0x" + Long.toHexString(base) + " offset=0x" + Long.toHexString(symbols.get(symbol).offset));
-                    ret[0] = base + symbols.get(symbol).offset;
+                if(isElf(lib)){
+                    Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
+                    if (symbols.containsKey(symbol)) {
+                        System.out.println("Found symbol " + symbol + " from " + lib + " @0x" + Long.toHexString(base) + " offset=0x" + Long.toHexString(symbols.get(symbol).offset));
+                        ret[0] = base + symbols.get(symbol).offset;
+                    }
                 }
             } else {
                 ExportDirectoryTable table = getExport(lib);

@@ -5,6 +5,7 @@ import alice.Platform;
 import alice._native.VirtualProtect;
 import alice._native.mprotect;
 import alice.injector.SymbolLookup;
+import alice.util.AddressUtil;
 import alice.util.FileUtil;
 import alice.util.ProcessUtil;
 import alice.util.Unsafe;
@@ -23,7 +24,8 @@ public class TestASM {
         long target = SymbolLookup.lookup(Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString(),"JVM_Sleep");
         System.out.println("Target:0x"+Long.toHexString(target));
         if(!Platform.win32){
-            mprotect.invoke(target, Unsafe.PAGE_SIZE);
+            int success = mprotect.invoke(AddressUtil.align(target), 1,0x1 | 0x2 | 0x4);
+            assert success == 0;
         } else {
             VirtualProtect.invoke(target,1,0x40);
         }

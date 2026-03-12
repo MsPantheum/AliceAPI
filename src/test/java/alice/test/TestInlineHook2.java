@@ -1,12 +1,12 @@
 package alice.test;
 
-import alice._native.InlineHook;
+import alice._native.InlineHookSystemV;
 import alice._native.mprotect;
 import alice.injector.Shellcode;
+import alice.util.AddressUtil;
 import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
@@ -98,9 +98,10 @@ public class TestInlineHook2 {
         long neo = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(neo, payload);
         //long neo = Shellcode.getCompiledEntry(TestInlineHook2.class,"hello","()V");
-        mprotect.invoke(neo,Unsafe.PAGE_SIZE * 4);
+        int success = mprotect.invoke(AddressUtil.align(neo),1,0x1 | 0x2 | 0x4);
+        assert success == 0;
         long ori = Shellcode.getCompiledEntry(TestInlineHook2.class,"func","()V");
-        InlineHook.hook(ori,neo);
+        InlineHookSystemV.simpleHook(ori,neo);
         func();
     }
 }

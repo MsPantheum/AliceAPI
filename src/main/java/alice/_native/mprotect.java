@@ -1,18 +1,16 @@
 package alice._native;
 
-import alice.Test;
+//int mprotect (void *__addr, size_t __len, int __prot)
+
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
-import alice.util.ProcessUtil;
 import alice.util.Unsafe;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 public class mprotect {
-
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
-    private static void mp(){
+    private static int mp(){
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
@@ -67,96 +65,73 @@ public class mprotect {
         i ++;
         j+= (i*dd*ll);
         j -= lllll;
+        return j;
     }
 
     private static final long mp_code_base;
 
     static {
-        System.out.println("Setting up mprotect call payload.");
-        long func = SymbolLookup.lookup("mprotect");
-        byte[] payload = new byte[59];
-        payload[0] = (byte) 0x55;
-        payload[1] = (byte) 0x48;
-        payload[2] = (byte) 0x89;
-        payload[3] = (byte) 0xe5;
-        payload[4] = (byte) 0x48;
-        payload[5] = (byte) 0x83;
-        payload[6] = (byte) 0xec;
-        payload[7] = (byte) 0x10;
-        payload[8] = (byte) 0x48;
-        payload[9] = (byte) 0xb8;
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(func);
-        byte[] addr = buffer.array();
-
-        for(int i = 7,j = 10; i >=0; i--,j++){
-            payload[j] = addr[i];
-        }
-        payload[18] = (byte) 0x48;
-        payload[19] = (byte) 0x89;
-        payload[20] = (byte) 0x45;
-        payload[21] = (byte) 0xf8;
-        payload[22] = (byte) 0x48;
-        payload[23] = (byte) 0x8b;
-        payload[24] = (byte) 0x45;
-        payload[25] = (byte) 0xf8;
-        payload[26] = (byte) 0x48;
-        payload[27] = (byte) 0x89;
-        payload[28] = (byte) 0x45;
-        payload[29] = (byte) 0xf0;
-        payload[30] = (byte) 0x48;
-        payload[31] = (byte) 0xbf;
-
-        payload[40] = (byte) 0xbe;
-        payload[41] = (byte) 0x10;
-        payload[42] = (byte) 0x00;
-        payload[43] = (byte) 0x00;
-        payload[44] = (byte) 0x00;
-        payload[45] = (byte) 0xba;
-        payload[46] = (byte) 0x07;
-        payload[47] = (byte) 0x00;
-        payload[48] = (byte) 0x00;
-        payload[49] = (byte) 0x00;
-        payload[50] = (byte) 0xff;
-        payload[51] = (byte) 0x55;
-        payload[52] = (byte) 0xf0;
-        payload[53] = (byte) 0x48;
-        payload[54] = (byte) 0x83;
-        payload[55] = (byte) 0xc4;
-        payload[56] = (byte) 0x10;
-        payload[57] = (byte) 0x5d;
-        payload[58] = (byte) 0xc3;
-
         System.out.println("Forcing C2 to optimize the target...");
         for(int i = 0; i < 20000 ; i++){
             mp();
         }
         System.out.println("Done.");
+
+        System.out.println("Setting up mprotect call payload.");
+        long func = SymbolLookup.lookup("mprotect");
+        byte[] payload = new byte[37];
+        payload[0] = (byte) 0x48;
+        payload[1] = (byte) 0xbf;
+        //__addr here
+        payload[10] = (byte) 0x48;
+        payload[11] = (byte) 0xbe;
+        //__len here
+        payload[20] = (byte) 0x48;
+        payload[21] = (byte) 0xb8;
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(func);
+        byte[] addr = buffer.array();
+
+        for(int i = 7,j = 22; i >=0; i--,j++){
+            payload[j] = addr[i];
+        }
+        payload[30] = (byte) 0xba;
+        //__prot here
+        payload[35] = (byte) 0xff;
+        payload[36] = (byte) 0xe0;
+
         System.out.println("Injecting payload.");
-        mp_code_base = Shellcode.inject(payload, mprotect.class,"mp","()V");
-        assert mp_code_base != 0;
+        long tmp = Shellcode.inject(payload, mprotect.class,"mp","()I");
+        assert tmp != 0;
+        mp_code_base = tmp;
+
         System.out.println("Done.");
     }
 
-    public static void invoke(long target, int size){
-        if(size % Unsafe.PAGE_SIZE != 0){
-            throw new IllegalArgumentException("size must be a multiple of page size!");
-        }
-        target = target & -Unsafe.PAGE_SIZE;
+    public static int invoke(long addr,long size,int prot){
+        System.out.println("final_target=0x" +  Long.toHexString(addr));
         ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(target);
-        byte[] addr = buffer.array();
-
-        for(int i = 7,j = 32; i >=0; i--,j++){
-            Unsafe.putByte(mp_code_base + j,addr[i]);
+        buffer.putLong(addr);
+        byte[] data = buffer.array();
+        System.out.println("---1");
+        for(int i = 7,j = 2; i >=0; i--,j++){
+            Unsafe.putByte(mp_code_base + j, data[i]);
+        }
+        buffer.clear();
+        buffer.putLong(size);
+        data = buffer.array();
+        System.out.println("---2");
+        for(int i = 7,j = 12; i >=0; i--,j++){
+            Unsafe.putByte(mp_code_base + j, data[i]);
         }
         buffer = ByteBuffer.allocate(Integer.BYTES);
-        buffer.putInt(size);
-        addr = buffer.array();
-        for(int i = 3,j = 41; i >=0; i--,j++){
-            Unsafe.putByte(mp_code_base + j,addr[i]);
+        buffer.putInt(prot);
+        data = buffer.array();
+        System.out.println("---3");
+        for(int i = 3,j = 31; i >=0; i--,j++){
+            Unsafe.putByte(mp_code_base + j, data[i]);
         }
-
-        mp();
+        return mp();
     }
+
 }

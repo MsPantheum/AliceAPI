@@ -22,4 +22,8 @@ public class AddressUtil {
         }
         throw new IllegalStateException("Should not reach here");
     }
+
+    public static long align(long address){
+        return address & -Unsafe.PAGE_SIZE;
+    }
 }

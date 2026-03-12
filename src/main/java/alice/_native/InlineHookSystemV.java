@@ -1,11 +1,12 @@
 package alice._native;
 
+import alice.util.AddressUtil;
 import alice.util.Unsafe;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
 
-public class InlineHook {
+public class InlineHookSystemV {
 
     private static final Long2ObjectOpenHashMap<Hook> HOOKS = new Long2ObjectOpenHashMap<>();
 
@@ -14,6 +15,7 @@ public class InlineHook {
         private final long neo;
         private final byte[] backup;
 
+        private long p2ori = 0;
         private boolean hooked;
 
         private Hook(long ori, long neo) {
@@ -23,7 +25,7 @@ public class InlineHook {
             this.hooked = false;
         }
 
-        private boolean hook() {
+        private boolean simpleHook() {
             if (hooked) {
                 return false;
             }
@@ -54,26 +56,35 @@ public class InlineHook {
             if (hooked) {
                 hooked = false;
                 Unsafe.writeBytes(ori, backup);
+                if(p2ori != 0){
+                    Unsafe.freeMemory(p2ori);
+                    p2ori = 0;
+                }
                 return true;
             }
             return false;
         }
     }
 
-    public static boolean hook(long ori, long neo) {
+    public static boolean simpleHook(long ori, long neo) {
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
-            return hook.hook();
+            return hook.simpleHook();
         }
 
         System.out.printf("Creating hook from %x to %x.\n",ori,neo);
         System.out.println("Setting permission...");
-        mprotect.invoke(ori, Unsafe.PAGE_SIZE);
+        int success = mprotect.invoke(AddressUtil.align(ori), 1,0x1 | 0x2 | 0x4);
+        assert success == 0;
         System.out.println("Setting permission done.");
 
         hook = new Hook(ori, neo);
         HOOKS.put(ori, hook);
-        hook.hook();
+        hook.simpleHook();
+        return true;
+    }
+
+    public static boolean hook(){
         return true;
     }
 
