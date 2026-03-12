@@ -6,11 +6,9 @@ import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
-import java.nio.ByteBuffer;
-
 public class mprotect {
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
-    private static int mp(){
+    private static int holder() {
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
@@ -68,12 +66,13 @@ public class mprotect {
         return j;
     }
 
-    private static final long mp_code_base;
+    private static final long code_base;
 
     static {
         System.out.println("Forcing C2 to optimize the target...");
         for(int i = 0; i < 20000 ; i++){
-            mp();
+            //noinspection ResultOfMethodCallIgnored
+            holder();
         }
         System.out.println("Done.");
 
@@ -88,50 +87,25 @@ public class mprotect {
         //__len here
         payload[20] = (byte) 0x48;
         payload[21] = (byte) 0xb8;
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(func);
-        byte[] addr = buffer.array();
-
-        for(int i = 7,j = 22; i >=0; i--,j++){
-            payload[j] = addr[i];
-        }
         payload[30] = (byte) 0xba;
         //__prot here
         payload[35] = (byte) 0xff;
         payload[36] = (byte) 0xe0;
 
         System.out.println("Injecting payload.");
-        long tmp = Shellcode.inject(payload, mprotect.class,"mp","()I");
+        long tmp = Shellcode.inject(payload, mprotect.class,"holder","()I");
         assert tmp != 0;
-        mp_code_base = tmp;
+        code_base = tmp;
+        Unsafe.putLong(code_base + 22,func);
 
         System.out.println("Done.");
     }
 
-    public static int invoke(long addr,long size,int prot){
-        System.out.println("final_target=0x" +  Long.toHexString(addr));
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(addr);
-        byte[] data = buffer.array();
-        System.out.println("---1");
-        for(int i = 7,j = 2; i >=0; i--,j++){
-            Unsafe.putByte(mp_code_base + j, data[i]);
-        }
-        buffer.clear();
-        buffer.putLong(size);
-        data = buffer.array();
-        System.out.println("---2");
-        for(int i = 7,j = 12; i >=0; i--,j++){
-            Unsafe.putByte(mp_code_base + j, data[i]);
-        }
-        buffer = ByteBuffer.allocate(Integer.BYTES);
-        buffer.putInt(prot);
-        data = buffer.array();
-        System.out.println("---3");
-        for(int i = 3,j = 31; i >=0; i--,j++){
-            Unsafe.putByte(mp_code_base + j, data[i]);
-        }
-        return mp();
+    public synchronized static int invoke(long __addr,long __len,int __prot){
+        Unsafe.putLong(code_base + 2,__addr);
+        Unsafe.putLong(code_base + 12,__len);
+        Unsafe.putInt(code_base + 31,__prot);
+        return holder();
     }
 
 }

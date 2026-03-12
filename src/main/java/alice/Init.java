@@ -1,7 +1,6 @@
 package alice;
 
 import alice.exception.BadEnvironment;
-import alice.injector.NativeLibrary;
 import alice.injector.patch.PatcherLoader;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;

@@ -44,9 +44,9 @@ public class ReflectionUtil {
         }
     }
 
-    public static MethodHandle findSpecial(Class<?> owner,String name,MethodType methodType,Class<?> caller){
+    public static MethodHandle findSpecial(Class<?> owner,String name,MethodType methodType,Class<?> special_caller){
         try {
-            return IMPL_LOOKUP.findSpecial(owner, name, methodType, caller);
+            return IMPL_LOOKUP.findSpecial(owner, name, methodType, special_caller);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

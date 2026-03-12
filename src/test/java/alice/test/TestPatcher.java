@@ -4,16 +4,8 @@ import alice.Meow;
 import alice.api.ClassByteProcessor;
 import alice.injector.patch.PatcherLoader;
 import alice.util.URLClassPathWrapper;
-import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.*;
-import sun.jvm.hotspot.debugger.MachineDescriptionAMD64;
-import sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestPatcher {
     @Test
@@ -24,7 +16,6 @@ public class TestPatcher {
             @Override
             public byte[] process(String name, byte[] classBytes) {
                 if(name.equals("alice/Meow.class")){
-                    System.out.println("Get class alice.Meow.");
                     ClassReader cr = new ClassReader(classBytes);
                     ClassWriter cw = new ClassWriter(cr,0);
                     ClassVisitor cv = new ClassVisitor(Opcodes.ASM5,cw) {
@@ -32,7 +23,6 @@ public class TestPatcher {
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 
                             if(name.equals("test") && descriptor.equals("()I")){
-                                System.out.println("Get Method test()I.");
                                 MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name, descriptor, signature, null);
                                 mv.visitInsn(Opcodes.ICONST_1);
                                 mv.visitInsn(Opcodes.IRETURN);
@@ -50,11 +40,6 @@ public class TestPatcher {
                 return ClassByteProcessor.super.process(name, classBytes);
             }
         });
-        System.out.println("Loading completed.");
-        if(Meow.test() == 1){
-            System.out.println("Test passed.");
-        } else {
-            fail("Test failed.");
-        }
+        assert Meow.test() == 1;
     }
 }

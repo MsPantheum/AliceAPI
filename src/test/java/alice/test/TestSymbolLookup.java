@@ -6,11 +6,7 @@ import alice.util.FileUtil;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Objects;
-
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestSymbolLookup {
     @Test
@@ -22,12 +18,6 @@ public class TestSymbolLookup {
         System.out.println("Base:"+lib.getBase());
         long read1 = SymbolLookup.lookup("gHotSpotVMTypes");
         long read2 = lib.find("gHotSpotVMTypes");
-        if(read2 == read1){
-            System.out.println("Test passed.");
-        } else {
-            System.err.println(read1);
-            System.err.println(read2);
-            fail("Symbol not match!");
-        }
+        assert read1 == read2 : "Symbol not match!";
     }
 }

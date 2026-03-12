@@ -4,7 +4,7 @@ import alice.util.AddressUtil;
 import alice.util.Unsafe;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import java.nio.ByteBuffer;
+import static alice.util.Constants.*;
 
 public class InlineHookSystemV {
 
@@ -17,6 +17,7 @@ public class InlineHookSystemV {
 
         private long p2ori = 0;
         private boolean hooked;
+        private long trampoline;
 
         private Hook(long ori, long neo) {
             this.ori = ori;
@@ -25,6 +26,30 @@ public class InlineHookSystemV {
             this.hooked = false;
         }
 
+//        private long hookWithTrampoline() {
+//            if (hooked) {
+//                return 0;
+//            }
+//            byte[] payload = new byte[12];
+//            payload[0] = (byte) 0x48;
+//            payload[1] = (byte) 0xb8;
+//            payload[10] = (byte) 0xff;
+//            payload[11] = (byte) 0xe0;
+//            HDE64.Hde64s hs = new HDE64.Hde64s();
+//            long need = hde64_disasm(ori,0,hs);
+//            if((hs.modrm & 0xC7) == 0x05){
+//                System.out.println("RIP Addressing not implemented yet.");
+//                return 0;
+//            }
+//            long jump = ori + 12;
+//            long trampoline = mmap.invoke(0,20,);
+//            Unsafe.writeBytes(ori, payload);
+//            hooked = true;
+//            Unsafe.putLong(ori + 2,neo);
+//
+//            return 0;
+//        }
+
         private boolean simpleHook() {
             if (hooked) {
                 return false;
@@ -32,18 +57,10 @@ public class InlineHookSystemV {
             byte[] payload = new byte[12];
             payload[0] = (byte) 0x48;
             payload[1] = (byte) 0xb8;
-            ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-            buffer.putLong(neo);
-            byte[] addr = buffer.array();
-
-            for (int i = 7, j = 2; i >= 0; i--, j++) {
-                payload[j] = addr[i];
-            }
-
             payload[10] = (byte) 0xff;
             payload[11] = (byte) 0xe0;
-            System.out.println("Writing payload...");
             Unsafe.writeBytes(ori, payload);
+            Unsafe.putLong(ori + 2,neo);
             hooked = true;
             return true;
         }
@@ -66,7 +83,7 @@ public class InlineHookSystemV {
         }
     }
 
-    public static boolean simpleHook(long ori, long neo) {
+    public synchronized static boolean simpleHook(long ori, long neo) {
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.simpleHook();
@@ -74,7 +91,7 @@ public class InlineHookSystemV {
 
         System.out.printf("Creating hook from %x to %x.\n",ori,neo);
         System.out.println("Setting permission...");
-        int success = mprotect.invoke(AddressUtil.align(ori), 1,0x1 | 0x2 | 0x4);
+        int success = mprotect.invoke(AddressUtil.align(ori), 1,PROT_READ | PROT_WRITE | PROT_EXEC);
         assert success == 0;
         System.out.println("Setting permission done.");
 
@@ -84,11 +101,7 @@ public class InlineHookSystemV {
         return true;
     }
 
-    public static boolean hook(){
-        return true;
-    }
-
-    public static boolean unhook(long ori) {
+    public synchronized static boolean unhook(long ori) {
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.unhook();

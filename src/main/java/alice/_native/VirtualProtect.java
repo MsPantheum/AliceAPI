@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 
 public class VirtualProtect {
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
-    private static void vp(){
+    private static void holder(){
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
@@ -69,7 +69,7 @@ public class VirtualProtect {
 
     static {
         for(int i = 0; i < 20000; i++){
-            vp();
+            holder();
         }
 
         System.out.println("Setting up VirtualProtect call payload.");
@@ -122,10 +122,10 @@ public class VirtualProtect {
         payload[57] = (byte) 0xc4;
         payload[58] = (byte) 0x28;
         payload[59] = (byte) 0xc3;
-        vp_code_base = Shellcode.inject(payload, VirtualProtect.class,"vp","()V");
+        vp_code_base = Shellcode.inject(payload, VirtualProtect.class,"holder","()V");
     }
 
-    public static void invoke(long target, int size, int access){
+    public synchronized static void invoke(long target, int size, int access){
         ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
         buffer.putLong(target);
         byte[] addr = buffer.array();
@@ -147,6 +147,6 @@ public class VirtualProtect {
         for (int i = 3, j = 44; i >= 0; i--, j++) {
             Unsafe.putByte(vp_code_base + j, addr[i]);
         }
-        vp();
+        holder();
     }
 }

@@ -9,13 +9,13 @@ import sun.jvm.hotspot.utilities.WorkerThread;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestHSDB {
     @Test
+    @SuppressWarnings("unchecked")
     public void test(){
         PatcherLoader.load();
         try {
@@ -31,13 +31,8 @@ public class TestHSDB {
             f.set(hsdb,new WorkerThread());
             agent.attach(0);
             Type type = agent.getTypeDataBase().lookupType("InstanceKlass");
-            System.out.println(type.getSize());
             Iterator<sun.jvm.hotspot.types.Field> iterator = type.getFields();
-            iterator.forEachRemaining(field -> {
-                System.out.println(field.getName());
-                System.out.println(field.getSize());
-                System.out.println(field.getOffset());
-            });
+            iterator.forEachRemaining(field -> System.out.println(field.getName() + " size=" + field.getSize() + " offset=" + field.getOffset()));
         } catch (Throwable e) {
             fail(e);
         }

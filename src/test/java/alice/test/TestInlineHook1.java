@@ -18,7 +18,7 @@ public class TestInlineHook1 {
         }
     }
 
-    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
+    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment", "SameParameterValue"})
     private static void func1(int value){
         test_value = value + 1;
         for(int i = 9; i > 200; i++){
@@ -145,7 +145,6 @@ public class TestInlineHook1 {
         assert test_value == 0x191980 - 1;
         long p1 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func1","(I)V");
         long p2 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func2","(I)V");
-        ProcessUtil.guiPause();
         InlineHookSystemV.simpleHook(p2,p1);
         func2(0x12345);
         assert test_value == 0x12345 + 1;

@@ -19,7 +19,7 @@ public class Platform {
 
     public enum ABI {
         SYSTEM_V,
-        WINDOWS_X64;
+        WINDOWS_X64
     }
 
     static {

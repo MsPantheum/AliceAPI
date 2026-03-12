@@ -6,18 +6,17 @@ import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.swing.*;
+import java.util.Objects;
 
-public class TestInjector {
+public class TestNativeLibrary {
 
     @Test
     public void test(){
-        String libjvm = FileUtil.search(FileUtil.getJavaHome(),System.mapLibraryName("jvm")).toString();
+        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString();
         NativeLibrary lib = NativeLibrary.load(libjvm,false);
         System.out.println(ProcessUtil.getPID());
         Assertions.assertNotNull(lib);
         long gHotSpotVMTypes = lib.find("gHotSpotVMTypes");
         assert gHotSpotVMTypes != 0;
-        System.out.println(gHotSpotVMTypes);
     }
 }

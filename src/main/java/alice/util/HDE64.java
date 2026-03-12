@@ -1,0 +1,546 @@
+package alice.util;
+
+import alice.injector.Shellcode;
+
+import java.util.zip.ZipFile;
+
+@SuppressWarnings("unused")
+public class HDE64 {
+
+    // --- hde64.h Constants ---
+    public static final int F_MODRM = 0x00000001;
+    public static final int F_SIB = 0x00000002;
+    public static final int F_IMM8 = 0x00000004;
+    public static final int F_IMM16 = 0x00000008;
+    public static final int F_IMM32 = 0x00000010;
+    public static final int F_IMM64 = 0x00000020;
+    public static final int F_DISP8 = 0x00000040;
+    public static final int F_DISP16 = 0x00000080;
+    public static final int F_DISP32 = 0x00000100;
+    public static final int F_RELATIVE = 0x00000200;
+    public static final int F_ERROR = 0x00001000;
+    public static final int F_ERROR_OPCODE = 0x00002000;
+    public static final int F_ERROR_LENGTH = 0x00004000;
+    public static final int F_ERROR_LOCK = 0x00008000;
+    public static final int F_ERROR_OPERAND = 0x00010000;
+    public static final int F_PREFIX_REPNZ = 0x01000000;
+    public static final int F_PREFIX_REPX = 0x02000000;
+    public static final int F_PREFIX_REP = 0x03000000;
+    public static final int F_PREFIX_66 = 0x04000000;
+    public static final int F_PREFIX_67 = 0x08000000;
+    public static final int F_PREFIX_LOCK = 0x10000000;
+    public static final int F_PREFIX_SEG = 0x20000000;
+    public static final int F_PREFIX_REX = 0x40000000;
+    public static final int F_PREFIX_ANY = 0x7f000000;
+
+    public static final int PREFIX_SEGMENT_CS = 0x2e;
+    public static final int PREFIX_SEGMENT_SS = 0x36;
+    public static final int PREFIX_SEGMENT_DS = 0x3e;
+    public static final int PREFIX_SEGMENT_ES = 0x26;
+    public static final int PREFIX_SEGMENT_FS = 0x64;
+    public static final int PREFIX_SEGMENT_GS = 0x65;
+    public static final int PREFIX_LOCK = 0xf0;
+    public static final int PREFIX_REPNZ = 0xf2;
+    public static final int PREFIX_REPX = 0xf3;
+    public static final int PREFIX_OPERAND_SIZE = 0x66;
+    public static final int PREFIX_ADDRESS_SIZE = 0x67;
+
+    // --- table64.h Constants ---
+    public static final int C_NONE = 0x00;
+    public static final int C_MODRM = 0x01;
+    public static final int C_IMM8 = 0x02;
+    public static final int C_IMM16 = 0x04;
+    public static final int C_IMM_P66 = 0x10;
+    public static final int C_REL8 = 0x20;
+    public static final int C_REL32 = 0x40;
+    public static final int C_GROUP = 0x80;
+    public static final int C_ERROR = 0xff;
+
+    public static final int PRE_ANY = 0x00;
+    public static final int PRE_NONE = 0x01;
+    public static final int PRE_F2 = 0x02;
+    public static final int PRE_F3 = 0x04;
+    public static final int PRE_66 = 0x08;
+    public static final int PRE_67 = 0x10;
+    public static final int PRE_LOCK = 0x20;
+    public static final int PRE_SEG = 0x40;
+    public static final int PRE_ALL = 0xff;
+
+    public static final int DELTA_OPCODES = 0x4a;
+    public static final int DELTA_FPU_REG = 0xfd;
+    public static final int DELTA_FPU_MODRM = 0x104;
+    public static final int DELTA_PREFIXES = 0x13c;
+    public static final int DELTA_OP_LOCK_OK = 0x1ae;
+    public static final int DELTA_OP2_LOCK_OK = 0x1c6;
+    public static final int DELTA_OP_ONLY_MEM = 0x1d8;
+    public static final int DELTA_OP2_ONLY_MEM = 0x1e7;
+
+    // Converted to int[] to avoid signed byte issues in Java
+    private static final int[] hde64_table = {
+            0xa5, 0xaa, 0xa5, 0xb8, 0xa5, 0xaa, 0xa5, 0xaa, 0xa5, 0xb8, 0xa5, 0xb8, 0xa5, 0xb8, 0xa5,
+            0xb8, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xac, 0xc0, 0xcc, 0xc0, 0xa1, 0xa1,
+            0xa1, 0xa1, 0xb1, 0xa5, 0xa5, 0xa6, 0xc0, 0xc0, 0xd7, 0xda, 0xe0, 0xc0, 0xe4, 0xc0, 0xea,
+            0xea, 0xe0, 0xe0, 0x98, 0xc8, 0xee, 0xf1, 0xa5, 0xd3, 0xa5, 0xa5, 0xa1, 0xea, 0x9e, 0xc0,
+            0xc0, 0xc2, 0xc0, 0xe6, 0x03, 0x7f, 0x11, 0x7f, 0x01, 0x7f, 0x01, 0x3f, 0x01, 0x01, 0xab,
+            0x8b, 0x90, 0x64, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x92, 0x5b, 0x5b, 0x76, 0x90, 0x92, 0x92,
+            0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x6a, 0x73, 0x90,
+            0x5b, 0x52, 0x52, 0x52, 0x52, 0x5b, 0x5b, 0x5b, 0x5b, 0x77, 0x7c, 0x77, 0x85, 0x5b, 0x5b,
+            0x70, 0x5b, 0x7a, 0xaf, 0x76, 0x76, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b, 0x5b,
+            0x5b, 0x5b, 0x86, 0x01, 0x03, 0x01, 0x04, 0x03, 0xd5, 0x03, 0xd5, 0x03, 0xcc, 0x01, 0xbc,
+            0x03, 0xf0, 0x03, 0x03, 0x04, 0x00, 0x50, 0x50, 0x50, 0x50, 0xff, 0x20, 0x20, 0x20, 0x20,
+            0x01, 0x01, 0x01, 0x01, 0xc4, 0x02, 0x10, 0xff, 0xff, 0xff, 0x01, 0x00, 0x03, 0x11, 0xff,
+            0x03, 0xc4, 0xc6, 0xc8, 0x02, 0x10, 0x00, 0xff, 0xcc, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x01, 0x01, 0x03, 0x01, 0xff, 0xff, 0xc0, 0xc2, 0x10, 0x11, 0x02, 0x03, 0x01, 0x01,
+            0x01, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x10,
+            0x10, 0x10, 0x10, 0x02, 0x10, 0x00, 0x00, 0xc6, 0xc8, 0x02, 0x02, 0x02, 0x02, 0x06, 0x00,
+            0x04, 0x00, 0x02, 0xff, 0x00, 0xc0, 0xc2, 0x01, 0x01, 0x03, 0x03, 0x03, 0xca, 0x40, 0x00,
+            0x0a, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x33, 0x01, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xbf, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0xff, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+            0x00, 0x00, 0x00, 0xbf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00,
+            0xff, 0x40, 0x40, 0x40, 0x40, 0x41, 0x49, 0x40, 0x40, 0x40, 0x40, 0x4c, 0x42, 0x40, 0x40,
+            0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x4f, 0x44, 0x53, 0x40, 0x40, 0x40, 0x44, 0x57, 0x43,
+            0x5c, 0x40, 0x60, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
+            0x40, 0x40, 0x64, 0x66, 0x6e, 0x6b, 0x40, 0x40, 0x6a, 0x46, 0x40, 0x40, 0x44, 0x46, 0x40,
+            0x40, 0x5b, 0x44, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x01, 0x06,
+            0x06, 0x02, 0x06, 0x06, 0x00, 0x06, 0x00, 0x0a, 0x0a, 0x00, 0x00, 0x00, 0x02, 0x07, 0x07,
+            0x06, 0x02, 0x0d, 0x06, 0x06, 0x06, 0x0e, 0x05, 0x05, 0x02, 0x02, 0x00, 0x00, 0x04, 0x04,
+            0x04, 0x04, 0x05, 0x06, 0x06, 0x06, 0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x08, 0x00, 0x10,
+            0x00, 0x18, 0x00, 0x20, 0x00, 0x28, 0x00, 0x30, 0x00, 0x80, 0x01, 0x82, 0x01, 0x86, 0x00,
+            0xf6, 0xcf, 0xfe, 0x3f, 0xab, 0x00, 0xb0, 0x00, 0xb1, 0x00, 0xb3, 0x00, 0xba, 0xf8, 0xbb,
+            0x00, 0xc0, 0x00, 0xc1, 0x00, 0xc7, 0xbf, 0x62, 0xff, 0x00, 0x8d, 0xff, 0x00, 0xc4, 0xff,
+            0x00, 0xc5, 0xff, 0x00, 0xff, 0xff, 0xeb, 0x01, 0xff, 0x0e, 0x12, 0x08, 0x00, 0x13, 0x09,
+            0x00, 0x16, 0x08, 0x00, 0x17, 0x09, 0x00, 0x2b, 0x09, 0x00, 0xae, 0xff, 0x07, 0xb2, 0xff,
+            0x00, 0xb4, 0xff, 0x00, 0xb5, 0xff, 0x00, 0xc3, 0x01, 0x00, 0xc7, 0xff, 0xbf, 0xe7, 0x08,
+            0x00, 0xf0, 0x02, 0x00
+    };
+
+    public static class Hde64s {
+        public int len;
+        public int p_rep;
+        public int p_lock;
+        public int p_seg;
+        public int p_66;
+        public int p_67;
+        public int rex;
+        public int rex_w;
+        public int rex_r;
+        public int rex_x;
+        public int rex_b;
+        public int opcode;
+        public int opcode2;
+        public int modrm;
+        public int modrm_mod;
+        public int modrm_reg;
+        public int modrm_rm;
+        public int sib;
+        public int sib_scale;
+        public int sib_index;
+        public int sib_base;
+        public long imm; // Replaces imm union
+        public int disp; // Replaces disp union
+        public int flags;
+
+        public void reset() {
+            len = p_rep = p_lock = p_seg = p_66 = p_67 = rex = rex_w = rex_r = rex_x = rex_b = 0;
+            opcode = opcode2 = modrm = modrm_mod = modrm_reg = modrm_rm = sib = sib_scale = sib_index = sib_base = 0;
+            imm = disp = flags = 0;
+        }
+    }
+
+    // --- Helper functions for reading structured bytes ---
+    private static int read16(long start, int offset) {
+        return (Unsafe.getByte(start + offset) & 0xFF) | ((Unsafe.getByte(start + offset + 1) & 0xFF) << 8);
+    }
+
+    private static int read32(long start, int offset) {
+        return (Unsafe.getByte(start + offset) & 0xFF) |
+                ((Unsafe.getByte(start + offset + 1) & 0xFF) << 8) |
+                ((Unsafe.getByte(start + offset + 2) & 0xFF) << 16) |
+                ((Unsafe.getByte(start + offset + 3) & 0xFF) << 24);
+    }
+
+    private static long read64(long start, int offset) {
+        return (read32(start, offset) & 0xFFFFFFFFL) |
+                ((read32(start, offset + 4) & 0xFFFFFFFFL) << 32);
+    }
+
+    // --- Core Disassembler Logic (hde64.c) ---
+    public static int hde64_disasm(long start, int offset, Hde64s hs) {
+        hs.reset();
+
+        int p = offset;
+        int c = 0, x;
+        int cflags, opcode = 0;
+        int pref = 0;
+        int m_mod = 0, m_reg = 0, m_rm = 0;
+        int disp_size = 0;
+        int op64 = 0;
+
+        prefLoop:
+        for (x = 16; x > 0; x--) {
+            c = Unsafe.getByte(start + (p++)) & 0xFF;
+            switch (c) {
+                case 0xf3:
+                    hs.p_rep = c;
+                    pref |= PRE_F3;
+                    break;
+                case 0xf2:
+                    hs.p_rep = c;
+                    pref |= PRE_F2;
+                    break;
+                case 0xf0:
+                    hs.p_lock = c;
+                    pref |= PRE_LOCK;
+                    break;
+                case 0x26:
+                case 0x2e:
+                case 0x36:
+                case 0x3e:
+                case 0x64:
+                case 0x65:
+                    hs.p_seg = c;
+                    pref |= PRE_SEG;
+                    break;
+                case 0x66:
+                    hs.p_66 = c;
+                    pref |= PRE_66;
+                    break;
+                case 0x67:
+                    hs.p_67 = c;
+                    pref |= PRE_67;
+                    break;
+                default:
+                    break prefLoop;
+            }
+        }
+
+        hs.flags = pref << 23;
+
+        if (pref == 0) {
+            pref |= PRE_NONE;
+        }
+
+        boolean errorOpcode = false;
+
+        if ((c & 0xf0) == 0x40) {
+            hs.flags |= F_PREFIX_REX;
+            hs.rex_w = (c & 0xf) >> 3;
+            if (hs.rex_w != 0 && (Unsafe.getByte(start + p) & 0xf8) == 0xb8) {
+                op64++;
+            }
+            hs.rex_r = (c & 7) >> 2;
+            hs.rex_x = (c & 3) >> 1;
+            hs.rex_b = c & 1;
+
+            c = Unsafe.getByte(start + (p++)) & 0xFF;
+            if ((c & 0xf0) == 0x40) {
+                opcode = c;
+                errorOpcode = true;
+            }
+        }
+
+        int htIdx = 0;
+
+        if (!errorOpcode) {
+            if ((hs.opcode = c) == 0x0f) {
+                c = Unsafe.getByte(start + (p++)) & 0xFF;
+                hs.opcode2 = c;
+                htIdx += DELTA_OPCODES;
+            } else if (c >= 0xa0 && c <= 0xa3) {
+                op64++;
+                if ((pref & PRE_67) != 0) {
+                    pref |= PRE_66;
+                } else {
+                    pref &= ~PRE_66;
+                }
+            }
+
+            opcode = c;
+            cflags = hde64_table[htIdx + hde64_table[htIdx + opcode / 4] + (opcode % 4)];
+
+            if (cflags == C_ERROR) {
+                errorOpcode = true;
+            }
+        } else {
+            cflags = 0;
+        }
+
+        if (errorOpcode) {
+            hs.flags |= F_ERROR | F_ERROR_OPCODE;
+            cflags = 0;
+            if ((opcode & ~2) == 0x24) {
+                cflags++;
+            }
+        }
+
+        x = 0;
+        if ((cflags & C_GROUP) != 0) {
+            int tableOffset = htIdx + (cflags & 0x7f);
+            int t = hde64_table[tableOffset] | (hde64_table[tableOffset + 1] << 8);
+            cflags = t & 0xFF;
+            x = (t >> 8) & 0xFF;
+        }
+
+        if (hs.opcode2 != 0) {
+            htIdx = DELTA_PREFIXES;
+            if ((hde64_table[htIdx + hde64_table[htIdx + opcode / 4] + (opcode % 4)] & pref) != 0) {
+                hs.flags |= F_ERROR | F_ERROR_OPCODE;
+            }
+        }
+
+        if ((cflags & C_MODRM) != 0) {
+            hs.flags |= F_MODRM;
+            c = Unsafe.getByte(start + (p++)) & 0xFF;
+            hs.modrm = c;
+            hs.modrm_mod = m_mod = c >> 6;
+            hs.modrm_rm = m_rm = c & 7;
+            hs.modrm_reg = m_reg = (c & 0x3f) >> 3;
+
+            if (x != 0 && ((x << m_reg) & 0x80) != 0) {
+                hs.flags |= F_ERROR | F_ERROR_OPCODE;
+            }
+
+            if (hs.opcode2 == 0 && opcode >= 0xd9 && opcode <= 0xdf) {
+                int t = opcode - 0xd9;
+                if (m_mod == 3) {
+                    htIdx = DELTA_FPU_MODRM + t * 8;
+                    t = (hde64_table[htIdx + m_reg] << m_rm) & 0xFF;
+                } else {
+                    htIdx = DELTA_FPU_REG;
+                    t = (hde64_table[htIdx + t] << m_reg) & 0xFF;
+                }
+                if ((t & 0x80) != 0) {
+                    hs.flags |= F_ERROR | F_ERROR_OPCODE;
+                }
+            }
+
+            if ((pref & PRE_LOCK) != 0) {
+                if (m_mod == 3) {
+                    hs.flags |= F_ERROR | F_ERROR_LOCK;
+                } else {
+                    int table_end;
+                    int op = opcode;
+                    if (hs.opcode2 != 0) {
+                        htIdx = DELTA_OP2_LOCK_OK;
+                        table_end = DELTA_OP_ONLY_MEM;
+                    } else {
+                        htIdx = DELTA_OP_LOCK_OK;
+                        table_end = DELTA_OP2_LOCK_OK;
+                        op &= ~1;
+                    }
+                    boolean lockError = true;
+                    while (htIdx < table_end) {
+                        int currentOp = hde64_table[htIdx++];
+                        if (currentOp == op) {
+                            if (((hde64_table[htIdx] << m_reg) & 0x80) == 0) {
+                                lockError = false;
+                            }
+                            break;
+                        }
+                        htIdx++;
+                    }
+                    if (lockError) {
+                        hs.flags |= F_ERROR | F_ERROR_LOCK;
+                    }
+                }
+            }
+
+            boolean errorOperand = false;
+            checkOperand:
+            {
+                if (hs.opcode2 != 0) {
+                    switch (opcode) {
+                        case 0x20:
+                        case 0x22:
+                            m_mod = 3;
+                            if (m_reg > 4 || m_reg == 1) errorOperand = true;
+                            break checkOperand;
+                        case 0x21:
+                        case 0x23:
+                            m_mod = 3;
+                            if (m_reg == 4 || m_reg == 5) errorOperand = true;
+                            break checkOperand;
+                    }
+                } else {
+                    switch (opcode) {
+                        case 0x8c:
+                            if (m_reg > 5) errorOperand = true;
+                            break checkOperand;
+                        case 0x8e:
+                            if (m_reg == 1 || m_reg > 5) errorOperand = true;
+                            break checkOperand;
+                    }
+                }
+
+                if (m_mod == 3) {
+                    int table_end;
+                    if (hs.opcode2 != 0) {
+                        htIdx = DELTA_OP2_ONLY_MEM;
+                        table_end = hde64_table.length;
+                    } else {
+                        htIdx = DELTA_OP_ONLY_MEM;
+                        table_end = DELTA_OP2_ONLY_MEM;
+                    }
+                    while (htIdx < table_end) {
+                        int tableOpcode = hde64_table[htIdx++];
+                        if (tableOpcode == opcode) {
+                            int prefMask = hde64_table[htIdx++];
+                            int regMask = hde64_table[htIdx];
+                            if ((prefMask & pref) != 0 && ((regMask << m_reg) & 0x80) == 0) {
+                                errorOperand = true;
+                            }
+                            break;
+                        }
+                        htIdx += 2;
+                    }
+                    break checkOperand;
+                } else if (hs.opcode2 != 0) {
+                    switch (opcode) {
+                        case 0x50:
+                        case 0xd7:
+                        case 0xf7:
+                            if ((pref & (PRE_NONE | PRE_66)) != 0) errorOperand = true;
+                            break;
+                        case 0xd6:
+                            if ((pref & (PRE_F2 | PRE_F3)) != 0) errorOperand = true;
+                            break;
+                        case 0xc5:
+                            errorOperand = true;
+                            break;
+                    }
+                }
+            }
+
+            if (errorOperand) {
+                hs.flags |= F_ERROR | F_ERROR_OPERAND;
+            }
+
+            c = Unsafe.getByte(start + (p++)) & 0xFF;
+            if (m_reg <= 1) {
+                if (opcode == 0xf6) {
+                    cflags |= C_IMM8;
+                } else if (opcode == 0xf7) {
+                    cflags |= C_IMM_P66;
+                }
+            }
+
+            switch (m_mod) {
+                case 0:
+                    if ((pref & PRE_67) != 0) {
+                        if (m_rm == 6) disp_size = 2;
+                    } else {
+                        if (m_rm == 5) disp_size = 4;
+                    }
+                    break;
+                case 1:
+                    disp_size = 1;
+                    break;
+                case 2:
+                    disp_size = 2;
+                    if ((pref & PRE_67) == 0) disp_size <<= 1;
+                    break;
+            }
+
+            if (m_mod != 3 && m_rm == 4) {
+                hs.flags |= F_SIB;
+                p++;
+                hs.sib = c;
+                hs.sib_scale = c >> 6;
+                hs.sib_index = (c & 0x3f) >> 3;
+                if ((hs.sib_base = c & 7) == 5 && (m_mod & 1) == 0) {
+                    disp_size = 4;
+                }
+            }
+
+            p--;
+            switch (disp_size) {
+                case 1:
+                    hs.flags |= F_DISP8;
+                    hs.disp = Unsafe.getByte(start + p) & 0xFF;
+                    break;
+                case 2:
+                    hs.flags |= F_DISP16;
+                    hs.disp = read16(start, p);
+                    break;
+                case 4:
+                    hs.flags |= F_DISP32;
+                    hs.disp = read32(start, p);
+                    break;
+            }
+            p += disp_size;
+
+        } else if ((pref & PRE_LOCK) != 0) {
+            hs.flags |= F_ERROR | F_ERROR_LOCK;
+        }
+
+        boolean imm16_ok = false;
+        boolean rel32_ok = false;
+        boolean disasm_done = false;
+
+        if ((cflags & C_IMM_P66) != 0) {
+            if ((cflags & C_REL32) != 0) {
+                if ((pref & PRE_66) != 0) {
+                    hs.flags |= F_IMM16 | F_RELATIVE;
+                    hs.imm = read16(start, p);
+                    p += 2;
+                    disasm_done = true;
+                } else {
+                    rel32_ok = true;
+                }
+            }
+            if (!disasm_done && !rel32_ok) {
+                if (op64 != 0) {
+                    hs.flags |= F_IMM64;
+                    hs.imm = read64(start, p);
+                    p += 8;
+                } else if ((pref & PRE_66) == 0) {
+                    hs.flags |= F_IMM32;
+                    hs.imm = read32(start, p);
+                    p += 4;
+                } else {
+                    imm16_ok = true;
+                }
+            }
+        }
+
+        if (!disasm_done) {
+            if ((cflags & C_IMM16) != 0 || imm16_ok) {
+                hs.flags |= F_IMM16;
+                hs.imm = read16(start, p);
+                p += 2;
+            }
+            if ((cflags & C_IMM8) != 0) {
+                hs.flags |= F_IMM8;
+                hs.imm = Unsafe.getByte(start + (p++)) & 0xFF;
+            }
+            if ((cflags & C_REL32) != 0 || rel32_ok) {
+                hs.flags |= F_IMM32 | F_RELATIVE;
+                hs.imm = read32(start, p);
+                p += 4;
+            } else if ((cflags & C_REL8) != 0) {
+                hs.flags |= F_IMM8 | F_RELATIVE;
+                hs.imm = Unsafe.getByte(start + (p++)) & 0xFF;
+            }
+        }
+
+        hs.len = p - offset;
+        if (hs.len > 15) {
+            hs.flags |= F_ERROR | F_ERROR_LENGTH;
+            hs.len = 15;
+        }
+
+        return hs.len;
+    }
+
+    public static void main(String[] args){
+        System.out.println("Start.");
+        long target = Shellcode.getCompiledEntry(ZipFile.class,"getInputStream","(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;");
+        Hde64s hs = new Hde64s();
+        System.out.println("Meow? "+hde64_disasm(target,0,hs));
+        System.out.println(hs.len);
+        System.out.printf("%x\n",(byte)hs.opcode);
+        System.out.println((hs.modrm & 0xC7) == 0x05);
+        Runtime.getRuntime().exit(0);
+    }
+}
