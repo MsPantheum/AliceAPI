@@ -1,6 +1,6 @@
 package alice.test;
 
-import alice._native.InlineHookSystemV;
+import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
@@ -145,7 +145,7 @@ public class TestInlineHook1 {
         assert test_value == 0x191980 - 1;
         long p1 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func1","(I)V");
         long p2 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func2","(I)V");
-        InlineHookSystemV.simpleHook(p2,p1);
+        InlineHook.simpleHook(p2,p1);
         func2(0x12345);
         assert test_value == 0x12345 + 1;
     }

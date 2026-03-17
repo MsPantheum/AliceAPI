@@ -1,33 +1,19 @@
 package alice.injector;
 
+import alice.util.AddressUtil;
+import alice.util.MethodInfo;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.types.Type;
 
-import java.nio.charset.StandardCharsets;
+import java.io.PrintStream;
 
 import static alice.HSDB.typeDataBase;
 
 public class Shellcode {
 
-    private static String getSymbol(long symbolAddress) {
-        Type symbolType = typeDataBase.lookupType("Symbol");
-        long symbol = Unsafe.getAddress(symbolAddress);
-        long body = symbol + symbolType.getField("_body").getOffset();
-        int length = Unsafe.getShort(symbol + symbolType.getField("_length").getOffset()) & 0xffff;
-
-        byte[] b = new byte[length];
-        for (int i = 0; i < length; i++) {
-            b[i] = Unsafe.getByte(body + i);
-        }
-        return new String(b, StandardCharsets.UTF_8);
-    }
-
     public static long getCompiledEntry(Class<?> target, String name, String desc){
         int oopSize = typeDataBase.lookupIntConstant("oopSize");
-        long klassOffset = typeDataBase.lookupType("java_lang_Class").getCIntegerField("_klass_offset").getValue();
-        long klass = oopSize == 8
-                ? Unsafe.getLong(target, klassOffset)
-                : Unsafe.getInt(target, klassOffset) & 0xffffffffL;
+        long klass = AddressUtil.getKlassAddress(target);
 
         long methodArray = Unsafe.getAddress(klass + typeDataBase.lookupType("InstanceKlass").getField("_methods").getOffset());
         int methodCount = Unsafe.getInt(methodArray);
@@ -49,13 +35,88 @@ public class Shellcode {
             int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
-            String _name = getSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = getSymbol(
+            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = AddressUtil.readSymbol(
                     constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
             if (name.equals(_name)
                     && desc.equals(_desc)) {
 
                 return Unsafe.getAddress(method + _from_compiled_entry);
+
+            }
+        }
+        return 0;
+    }
+
+    public static boolean setCompiledEntry(Class<?> target, String name, String desc,long neo){
+        int oopSize = typeDataBase.lookupIntConstant("oopSize");
+        long klass = AddressUtil.getKlassAddress(target);
+
+        long methodArray = Unsafe.getAddress(klass + typeDataBase.lookupType("InstanceKlass").getField("_methods").getOffset());
+        int methodCount = Unsafe.getInt(methodArray);
+        long methods = methodArray + typeDataBase.lookupType("Array<Method*>").getAddressField("_data").getOffset();
+
+        long constMethodOffset = typeDataBase.lookupType("Method").getAddressField("_constMethod").getOffset();
+        Type constMethodType = typeDataBase.lookupType("ConstMethod");
+        Type constantPoolType = typeDataBase.lookupType("ConstantPool");
+        long constantPoolOffset = constMethodType.getAddressField("_constants").getOffset();
+        long nameIndexOffset = constMethodType.getAddressField("_name_index").getOffset();
+        long signatureIndexOffset = constMethodType.getCIntegerField("_signature_index").getOffset();
+        long _from_compiled_entry = typeDataBase.lookupType("Method").getAddressField("_from_compiled_entry").getOffset();
+
+        for (int i = 0; i < methodCount; i++) {
+            long method = Unsafe.getAddress(methods + (long) i * oopSize);
+            long constMethod = Unsafe.getAddress(method + constMethodOffset);
+
+            long constantPool = Unsafe.getAddress(constMethod + constantPoolOffset);
+            int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
+            int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
+
+            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = AddressUtil.readSymbol(
+                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
+            if (name.equals(_name)
+                    && desc.equals(_desc)) {
+
+                Unsafe.putAddress(method + _from_compiled_entry,neo);
+                return true;
+
+            }
+        }
+        return false;
+    }
+
+    public static long getPointer2CompiledEntry(Class<?> target, String name, String desc){
+        int oopSize = typeDataBase.lookupIntConstant("oopSize");
+        long klass = AddressUtil.getKlassAddress(target);
+
+        long methodArray = Unsafe.getAddress(klass + typeDataBase.lookupType("InstanceKlass").getField("_methods").getOffset());
+        int methodCount = Unsafe.getInt(methodArray);
+        long methods = methodArray + typeDataBase.lookupType("Array<Method*>").getAddressField("_data").getOffset();
+
+        long constMethodOffset = typeDataBase.lookupType("Method").getAddressField("_constMethod").getOffset();
+        Type constMethodType = typeDataBase.lookupType("ConstMethod");
+        Type constantPoolType = typeDataBase.lookupType("ConstantPool");
+        long constantPoolOffset = constMethodType.getAddressField("_constants").getOffset();
+        long nameIndexOffset = constMethodType.getAddressField("_name_index").getOffset();
+        long signatureIndexOffset = constMethodType.getCIntegerField("_signature_index").getOffset();
+        long _from_compiled_entry = typeDataBase.lookupType("Method").getAddressField("_from_compiled_entry").getOffset();
+
+        for (int i = 0; i < methodCount; i++) {
+            long method = Unsafe.getAddress(methods + (long) i * oopSize);
+            long constMethod = Unsafe.getAddress(method + constMethodOffset);
+
+            long constantPool = Unsafe.getAddress(constMethod + constantPoolOffset);
+            int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
+            int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
+
+            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = AddressUtil.readSymbol(
+                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
+            if (name.equals(_name)
+                    && desc.equals(_desc)) {
+
+                return method + _from_compiled_entry;
 
             }
         }
@@ -81,5 +142,18 @@ public class Shellcode {
             Unsafe.putByte(address + j, payload[j]);
         }
         return address;
+    }
+
+    public static void dump(long start, long size, PrintStream out){
+        out.println("----------START_DUMP----------");
+        for(long i = 0; i < size; i++){
+            out.printf("0x%x ",Unsafe.getByte(start+i));
+        }
+        out.println();
+        out.println("-----------END_DUMP-----------");
+    }
+
+    public static long getCompiledEntry(MethodInfo ori) {
+        return getCompiledEntry(ori.holder,ori.methodName,ori.methodDesc);
     }
 }

@@ -10,7 +10,12 @@ import static alice.util.Constants.*;
 
 public class munmap {
     private static int holder() {
-        System.getenv().keySet();
+        long lllll = 11221144L;
+        int iii = 14514;
+        while (iii != 0 && lllll > 0){
+            iii--;
+            lllll -= iii;
+        }
         return System.in.hashCode();
     }
 
@@ -39,7 +44,7 @@ public class munmap {
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, function);
         long holder = Shellcode.getCompiledEntry(munmap.class, "holder", "()I");
-        InlineHookSystemV.simpleHook(holder, code_base);
+        InlineHook.simpleHook(holder, code_base);
     }
 
     public static int invoke(long __addr, long __len) {
@@ -51,7 +56,6 @@ public class munmap {
     public static void main(String[] args){
         long test = mmap.invoke(0, 8, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         Unsafe.putLong(test,0x114514191980L);
-        System.out.println("0x"+Long.toHexString(Unsafe.getLong(test)));
         munmap.invoke(test,8);
         Runtime.getRuntime().exit(0);
     }

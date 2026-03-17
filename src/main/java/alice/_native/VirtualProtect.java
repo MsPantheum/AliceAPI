@@ -72,7 +72,6 @@ public class VirtualProtect {
             holder();
         }
 
-        System.out.println("Setting up VirtualProtect call payload.");
         byte[] payload = new byte[60];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0x83;
@@ -131,10 +130,8 @@ public class VirtualProtect {
         byte[] addr = buffer.array();
 
         for (int i = 7, j = 14; i >= 0; i--, j++) {
-            System.out.printf("%02x ", addr[i] & 0xFF);
             Unsafe.putByte(vp_code_base + j, addr[i]);
         }
-        System.out.println();
         buffer = ByteBuffer.allocate(Integer.BYTES);
         buffer.putInt(size);
         addr = buffer.array();

@@ -9,7 +9,15 @@ import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.debugger.bsd.BsdDebuggerLocal;
 import sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal;
 import sun.jvm.hotspot.debugger.windbg.WindbgDebuggerLocal;
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Metadata;
+import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
+import sun.jvm.hotspot.types.Type;
+import sun.jvm.hotspot.utilities.MethodArray;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static alice.HSDB.typeDataBase;
 import static alice.util.Constants.*;
@@ -17,6 +25,14 @@ import static alice.util.Constants.*;
 public class AddressUtil {
     public static long getAddressValue(Address addr) {
         return HSDB.debugger.getAddressValue(addr);
+    }
+
+    public static void print(long address){
+        System.out.print("0x" + Long.toHexString(address));
+    }
+
+    public static void println(long address){
+        System.out.println("0x" + Long.toHexString(address));
     }
 
     public static Address toAddress(long addr) {
@@ -75,8 +91,8 @@ public class AddressUtil {
         return diff >= -0x7FFFFF00L && diff <= 0x7FFFFF00L;
     }
 
-    private static final long klass_offset;
-    private static final long oopSize;
+    public static final long klass_offset;
+    public static final long oopSize;
 
     static {
         Init.ensureInit();
@@ -88,5 +104,53 @@ public class AddressUtil {
         return oopSize == 8
                 ? Unsafe.getLong(cls, klass_offset)
                 : Unsafe.getInt(cls, klass_offset) & 0xffffffffL;
+    }
+
+    public static long getMethod(MethodInfo methodInfo) {
+        long klass_addr = getKlassAddress(methodInfo.holder);
+        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(toAddress(klass_addr));
+        List<Method> methods = klass.getImmediateMethods();
+        for (Method method : methods) {
+            if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
+                return getAddressValue(method.getAddress());
+            }
+        }
+        return 0;
+    }
+
+    private static final long method_dataFieldOffset;
+
+    static {
+        method_dataFieldOffset = typeDataBase.lookupType("Array<Method*>").getField("_data").getOffset();
+    }
+
+    public static long getPointer2Method(MethodInfo methodInfo) {
+        long klass_addr = getKlassAddress(methodInfo.holder);
+        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(toAddress(klass_addr));
+        MethodArray methods = klass.getMethods();
+        long start = getAddressValue(methods.getAddress());
+        long offset = methods.getElemType().getSize();
+        for(int i = 0; i < methods.length(); i++) {
+            long p = start + method_dataFieldOffset + i * offset;
+            long m = Unsafe.getAddress(start + method_dataFieldOffset + i * offset);
+            Method method = (Method) Metadata.instantiateWrapperFor(toAddress(m));
+            if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
+                return p;
+            }
+        }
+        return 0;
+    }
+
+    public static String readSymbol(long symbolAddress) {
+        Type symbolType = typeDataBase.lookupType("Symbol");
+        long symbol = Unsafe.getAddress(symbolAddress);
+        long body = symbol + symbolType.getField("_body").getOffset();
+        int length = Unsafe.getShort(symbol + symbolType.getField("_length").getOffset()) & 0xffff;
+
+        byte[] b = new byte[length];
+        for (int i = 0; i < length; i++) {
+            b[i] = Unsafe.getByte(body + i);
+        }
+        return new String(b, StandardCharsets.UTF_8);
     }
 }

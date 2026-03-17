@@ -1,8 +1,10 @@
 package alice.util;
 
 import javax.swing.*;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.management.ManagementFactory;
-import java.util.*;
+import java.util.Scanner;
 
 public class ProcessUtil {
     public static void pause(){
@@ -24,4 +26,29 @@ public class ProcessUtil {
         return Integer.parseInt(pid);
     }
 
+    private static final MethodHandle halt0;
+    private static final MethodHandle beforeHalt;
+    private static final MethodHandle runHooks;
+
+    static {
+        try {
+            halt0 = ReflectionUtil.findStatic(Class.forName("java.lang.Shutdown"),"halt0", MethodType.methodType(void.class,int.class));
+            beforeHalt = ReflectionUtil.findStatic(Class.forName("java.lang.Shutdown"),"beforeHalt", MethodType.methodType(void.class));
+            runHooks = ReflectionUtil.findStatic(Class.forName("java.lang.Shutdown"),"runHooks", MethodType.methodType(void.class));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void exit(int status){
+        try {
+            if(status == 0){
+                beforeHalt.invoke();
+                runHooks.invoke();
+            }
+            halt0.invoke(status);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

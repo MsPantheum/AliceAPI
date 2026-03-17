@@ -53,7 +53,7 @@ public class mmap {
         Unsafe.putLong(code_base + 32,function);
         mprotect.invoke(AddressUtil.align(code_base),1,PROT_READ | PROT_WRITE | PROT_EXEC);
         long address = Shellcode.getCompiledEntry(mmap.class,"holder","()J");
-        InlineHookSystemV.simpleHook(address,code_base);
+        InlineHook.simpleHook(address,code_base);
     }
 
     public synchronized static long invoke(long __addr,long __len,int __prot,int __flags,int __fd,long __offset){

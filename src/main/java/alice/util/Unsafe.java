@@ -284,4 +284,9 @@ public class Unsafe {
         }
     }
 
+    public static void copy(long source,long target,long numBytes){
+        for(long i = 0; i < numBytes; i++){
+            putByte(target + i,getByte(source + i));
+        }
+    }
 }

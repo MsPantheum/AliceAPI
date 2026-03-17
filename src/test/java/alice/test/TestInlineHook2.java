@@ -1,6 +1,6 @@
 package alice.test;
 
-import alice._native.InlineHookSystemV;
+import alice._native.InlineHook;
 import alice._native.mprotect;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
@@ -101,7 +101,7 @@ public class TestInlineHook2 {
         int success = mprotect.invoke(AddressUtil.align(neo),1,0x1 | 0x2 | 0x4);
         assert success == 0;
         long ori = Shellcode.getCompiledEntry(TestInlineHook2.class,"func","()V");
-        InlineHookSystemV.simpleHook(ori,neo);
+        InlineHook.simpleHook(ori,neo);
         func();
     }
 }

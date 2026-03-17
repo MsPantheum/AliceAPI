@@ -69,14 +69,10 @@ public class mprotect {
     private static final long code_base;
 
     static {
-        System.out.println("Forcing C2 to optimize the target...");
         for(int i = 0; i < 20000 ; i++){
             //noinspection ResultOfMethodCallIgnored
             holder();
         }
-        System.out.println("Done.");
-
-        System.out.println("Setting up mprotect call payload.");
         long func = SymbolLookup.lookup("mprotect");
         byte[] payload = new byte[37];
         payload[0] = (byte) 0x48;
@@ -91,14 +87,10 @@ public class mprotect {
         //__prot here
         payload[35] = (byte) 0xff;
         payload[36] = (byte) 0xe0;
-
-        System.out.println("Injecting payload.");
         long tmp = Shellcode.inject(payload, mprotect.class,"holder","()I");
         assert tmp != 0;
         code_base = tmp;
         Unsafe.putLong(code_base + 22,func);
-
-        System.out.println("Done.");
     }
 
     public synchronized static int invoke(long __addr,long __len,int __prot){

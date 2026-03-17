@@ -48,7 +48,6 @@ public class SymbolLookup {
                 if(isElf(lib)){
                     Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
                     if (symbols.containsKey(symbol)) {
-                        System.out.println("Found symbol " + symbol + " from " + lib + " @0x" + Long.toHexString(base) + " offset=0x" + Long.toHexString(symbols.get(symbol).offset));
                         ret[0] = base + symbols.get(symbol).offset;
                     }
                 }
@@ -61,7 +60,6 @@ public class SymbolLookup {
                     if (name.equals(symbol)) {
                         ret[0] = base + address;
                     }
-                    System.out.println("Found symbol " + symbol + " from " + lib + " @0x" + Long.toHexString(base) + " offset=0x" + Long.toHexString(address));
                     cache.put(name, base + address);
                 }
             }
@@ -89,8 +87,6 @@ public class SymbolLookup {
                                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
                                 if (symbols.containsKey(symbol)) {
                                     ret[0] = base + symbols.get(symbol).offset;
-                                    System.out.println("Found symbol " + symbol + " from " + path + " @0x" + Long.toHexString(base) + " offset=0x" + Long.toHexString(symbols.get(symbol).offset));
-
                                 }
 
                             }

@@ -1,6 +1,10 @@
 package alice.util;
 
+import alice.Platform;
+
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,5 +82,19 @@ public class FileUtil {
 
     public static boolean isDirectory(String path) {
         return Files.isDirectory(Paths.get(path));
+    }
+
+    public static String getJarPath(Class<?> cls) {
+        String tmp = cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/" + cls.getName().replace('.', '/'), "").replace("file:", "");
+        if (Platform.win32) {
+            tmp = tmp.substring(1);
+        }
+
+        try {
+            tmp = URLDecoder.decode(tmp, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException ignored) {
+        }
+
+        return tmp;
     }
 }
