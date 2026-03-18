@@ -20,4 +20,7 @@ public interface Constants {
     int MAP_ANONYMOUS = 0x20;
     int MAP_HUGE_SHIFT = 26;
     int MAP_HUGE_MASK = 0x3f;
+
+    long _JPLISEnvironment_SIZE = Unsafe.ADDRESS_SIZE * 2L + 1;
+    long _JPLISAgent_SIZE = Unsafe.ADDRESS_SIZE * 7L + _JPLISEnvironment_SIZE * 2 + 4;
 }

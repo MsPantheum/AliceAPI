@@ -73,7 +73,6 @@ public class SymbolLookup {
         ProcReader.parseProcMaps().forEach((path,mappings) -> {
             if (FileUtil.exists(path) && !FileUtil.isDirectory(path)) {
                 if (!bases.containsKey(path)) {//We already checked the cache,so skip things exist in the cache.
-
                     long base = Long.MAX_VALUE;
 
                     for (ProcReader.MemoryMapping mapping : mappings) {
@@ -84,7 +83,12 @@ public class SymbolLookup {
                         bases.put(path, base);
                         if (!Platform.win32) {
                             if(isElf(path)){
+
                                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
+                                if(path.endsWith("libinstrument.so")){
+                                    System.out.println("Checking for elf.");
+                                    symbols.keySet().forEach(System.out::println);
+                                }
                                 if (symbols.containsKey(symbol)) {
                                     ret[0] = base + symbols.get(symbol).offset;
                                 }
@@ -105,6 +109,8 @@ public class SymbolLookup {
                                 }
                             }
                         }
+                    } else {
+                        System.err.println("Error:Failed to get base of " + path);
                     }
                 }
             }

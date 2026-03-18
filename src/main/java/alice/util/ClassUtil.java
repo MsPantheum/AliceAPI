@@ -1,5 +1,11 @@
 package alice.util;
 
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Metadata;
+import sun.jvm.hotspot.tools.jcore.ClassWriter;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.net.URL;
@@ -29,6 +35,18 @@ public class ClassUtil {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static byte[] dump(Class<?> clazz){
+        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(AddressUtil.toAddress(AddressUtil.getKlassAddress(clazz)));
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ClassWriter cw = new ClassWriter(klass,bos);
+        try {
+            cw.write();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return bos.toByteArray();
     }
 
     public static String getPath(Class<?> cls){
