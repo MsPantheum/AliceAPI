@@ -11,7 +11,6 @@ import static alice.util.Constants.*;
 
 public class mmap {
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static long holder(){
         System.getenv().keySet();
         return System.nanoTime();

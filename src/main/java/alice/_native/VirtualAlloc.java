@@ -1,14 +1,16 @@
 package alice._native;
 
-//int mprotect (void *__addr, size_t __len, int __prot)
+//LPVOID WINAPI VirtualAlloc (LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
-public class mprotect {
+public class VirtualAlloc {
+
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
-    private static int holder() {
+    private static long holder(){
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
@@ -63,40 +65,52 @@ public class mprotect {
         i ++;
         j+= (i*dd*ll);
         j -= lllll;
-        return j;
+        return j % i;
     }
 
     private static final long code_base;
 
     static {
-        for(int i = 0; i < 20000 ; i++){
+        for(int i = 0; i < 20000; i++){
             //noinspection ResultOfMethodCallIgnored
             holder();
         }
-        byte[] payload = new byte[37];
+
+        byte[] payload = new byte[45];
         payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0xbf;
-        //__addr here
+        payload[1] = (byte) 0xb9;
+        //lpAddress here
         payload[10] = (byte) 0x48;
-        payload[11] = (byte) 0xbe;
-        //__len here
+        payload[11] = (byte) 0xba;
+        //dwSize here
         payload[20] = (byte) 0x48;
         payload[21] = (byte) 0xb8;
-        payload[30] = (byte) 0xba;
-        //__prot here
-        payload[35] = (byte) 0xff;
-        payload[36] = (byte) 0xe0;
-        long tmp = Shellcode.inject(payload, mprotect.class,"holder","()I");
-        assert tmp != 0;
-        code_base = tmp;
-        Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
+        //function
+        payload[30] = (byte) 0x41;
+        payload[31] = (byte) 0xb8;
+        //flAllocationType here
+        payload[36] = (byte) 0x41;
+        payload[37] = (byte) 0xb9;
+        //flProtect here
+        payload[42] = (byte) 0x48;
+        payload[43] = (byte) 0xff;
+        payload[44] = (byte) 0xe0;
+
+        code_base = Unsafe.allocateMemory(45);//Shellcode.inject(payload,VirtualAlloc.class,"holder","()J");
+        Unsafe.writeBytes(code_base, payload);
+        Unsafe.putLong(code_base + 22, SymbolLookup.lookup("VirtualAlloc"));
+        VirtualProtect.invoke(code_base,1,0x40,0);
+        long address = Shellcode.getCompiledEntry(VirtualAlloc.class,"holder","()J");
+        boolean success = InlineHook.simpleHook(address,code_base);
+        assert success;
     }
 
-    public synchronized static int invoke(long __addr,long __len,int __prot){
-        Unsafe.putLong(code_base + 2,__addr);
-        Unsafe.putLong(code_base + 12,__len);
-        Unsafe.putInt(code_base + 31,__prot);
+    public static synchronized long invoke(long lpAddress,long dwSize,int flAllocationType,int flProtect){
+        Unsafe.putLong(code_base + 2,lpAddress);
+        Unsafe.putLong(code_base + 12,dwSize);
+        Unsafe.putInt(code_base + 32,flAllocationType);
+        Unsafe.putInt(code_base + 38,flProtect);
+        AddressUtil.println(Shellcode.getCompiledEntry(VirtualAlloc.class,"holder","()J"));
         return holder();
     }
-
 }

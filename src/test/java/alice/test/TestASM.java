@@ -29,7 +29,7 @@ public class TestASM {
             int success = mprotect.invoke(AddressUtil.align(target), 1,PROT_READ | PROT_WRITE | PROT_EXEC);
             assert success == 0;
         } else {
-            VirtualProtect.invoke(target,1,0x40);
+            VirtualProtect.invoke(target,1,0x40,0);
         }
         Unsafe.putByte(target,(byte)0xc3);
         System.out.println("Try to sleep. Current time:" + System.nanoTime());

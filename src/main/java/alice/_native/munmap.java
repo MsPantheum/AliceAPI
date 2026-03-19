@@ -25,9 +25,6 @@ public class munmap {
         for (int i = 0; i < 20000; i++) {
             holder();
         }
-
-        long function = SymbolLookup.lookup("munmap");
-        assert function != 0;
         byte[] payload = new byte[32];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -42,7 +39,7 @@ public class munmap {
         payload[31] = (byte) 0xe0;
         code_base = mmap.invoke(0, 32, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         Unsafe.writeBytes(code_base, payload);
-        Unsafe.putLong(code_base + 22, function);
+        Unsafe.putLong(code_base + 22, SymbolLookup.lookup("munmap"));
         long holder = Shellcode.getCompiledEntry(munmap.class, "holder", "()I");
         InlineHook.simpleHook(holder, code_base);
     }

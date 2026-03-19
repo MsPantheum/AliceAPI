@@ -1,5 +1,6 @@
 package alice._native;
 
+import alice.Platform;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
@@ -40,8 +41,6 @@ public class InlineHook {
         }
 
         private static void MovRBX(long target, long offset, long mov_target) {
-            System.out.print("mov_target=");
-            AddressUtil.println(mov_target);
             long p = 0;
             Unsafe.putByte(target + offset + (p++), (byte) 0x48);
             Unsafe.putByte(target + offset + (p++), (byte) 0xBB);
@@ -197,8 +196,8 @@ public class InlineHook {
         if (hook != null) {
             return hook.simpleHook();
         }
-        int success = mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        assert success == 0;
+        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,0x40,0) : mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert Platform.win32 == (success != 0);
         hook = new Hook(ori, neo);
         HOOKS.put(ori, hook);
         hook.simpleHook();

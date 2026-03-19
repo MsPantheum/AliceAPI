@@ -36,10 +36,10 @@ public class Shellcode {
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
             String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = AddressUtil.readSymbol(
-                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
+            String _desc = desc != null ? AddressUtil.readSymbol(
+                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
-                    && desc.equals(_desc)) {
+                    && (desc == null || desc.equals(_desc))) {
 
                 return Unsafe.getAddress(method + _from_compiled_entry);
 
@@ -73,10 +73,10 @@ public class Shellcode {
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
             String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = AddressUtil.readSymbol(
-                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
+            String _desc = desc != null ? AddressUtil.readSymbol(
+                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
-                    && desc.equals(_desc)) {
+                    && (desc == null || desc.equals(_desc))) {
 
                 Unsafe.putAddress(method + _from_compiled_entry,neo);
                 return true;
@@ -111,10 +111,10 @@ public class Shellcode {
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
             String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = AddressUtil.readSymbol(
-                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize);
+            String _desc = desc != null ? AddressUtil.readSymbol(
+                    constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
-                    && desc.equals(_desc)) {
+                    && (desc == null || desc.equals(_desc))) {
 
                 return method + _from_compiled_entry;
 

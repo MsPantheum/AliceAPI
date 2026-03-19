@@ -2,13 +2,14 @@ package alice._native;
 
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
-import java.nio.ByteBuffer;
+//WINBASEAPI WINBOOL WINAPI VirtualProtect (LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
 
 public class VirtualProtect {
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
-    private static void holder(){
+    private static int holder(){
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
@@ -63,87 +64,73 @@ public class VirtualProtect {
         i ++;
         j+= (i*dd*ll);
         j -= lllll;
+        return j % i;
     }
 
-    private static final long vp_code_base;
+    private static final long code_base;
 
     static {
+
         for(int i = 0; i < 20000; i++){
+            //noinspection ResultOfMethodCallIgnored
             holder();
         }
 
-        byte[] payload = new byte[60];
+        byte[] payload = new byte[62];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0x83;
         payload[2] = (byte) 0xec;
         payload[3] = (byte) 0x28;
 
-        payload[4] = (byte) 0xc7;
-        payload[5] = (byte) 0x44;
-        payload[6] = (byte) 0x24;
-        payload[7] = (byte) 0x24;
-        payload[8] = (byte) 0x00;
-        payload[9] = (byte) 0x00;
-        payload[10] = (byte) 0x00;
-        payload[11] = (byte) 0x00;
-        payload[12] = (byte) 0x48;
-        payload[13] = (byte) 0xb9;
+        payload[4] = (byte) 0x48;
+        payload[5] = (byte) 0xb9;
         //lpAddress here
 
-        payload[22] = (byte) 0x4c;
-        payload[23] = (byte) 0x8d;
-        payload[24] = (byte) 0x4c;
-        payload[25] = (byte) 0x24;
-        payload[26] = (byte) 0x24;
-        payload[27] = (byte) 0x48;
-        payload[28] = (byte) 0xb8;
-        long function = SymbolLookup.lookup("VirtualProtect");
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(function);
-        byte[] addr = buffer.array();
-        for (int i = 7, j = 29; i >= 0; i--, j++) {
-            payload[j] = addr[i];
-        }
-        payload[37] = (byte) 0xba;
+        payload[14] = (byte) 0x48;
+        payload[15] = (byte) 0xba;
         //dwSize here
-        payload[42] = (byte) 0x41;
-        payload[43] = (byte) 0xb8;
+
+        payload[24] = (byte) 0x49;
+        payload[25] = (byte) 0xb9;
+        //lpflOldProtect here
+
+        payload[34] = (byte) 0x48;
+        payload[35] = (byte) 0xb8;
+        //function here
+
+        payload[44] = (byte) 0x41;
+        payload[45] = (byte) 0xb8;
         //flNewProtect here
-        payload[48] = (byte) 0xff;
-        payload[49] = (byte) 0xd0;
-        payload[50] = (byte) 0xb8;
-        payload[51] = (byte) 0x01;
-        payload[52] = (byte) 0x00;
-        payload[53] = (byte) 0x00;
+        payload[50] = (byte) 0xff;
+        payload[51] = (byte) 0xd0;
+        payload[52] = (byte) 0xb8;
+        payload[53] = (byte) 0x01;
         payload[54] = (byte) 0x00;
-        payload[55] = (byte) 0x48;
-        payload[56] = (byte) 0x83;
-        payload[57] = (byte) 0xc4;
-        payload[58] = (byte) 0x28;
-        payload[59] = (byte) 0xc3;
-        vp_code_base = Shellcode.inject(payload, VirtualProtect.class,"holder","()V");
+        payload[55] = (byte) 0x00;
+        payload[56] = (byte) 0x00;
+        payload[57] = (byte) 0x48;
+        payload[58] = (byte) 0x83;
+        payload[59] = (byte) 0xc4;
+        payload[60] = (byte) 0x28;
+        payload[61] = (byte) 0xc3;
+
+        code_base = Shellcode.inject(payload, VirtualProtect.class,"holder","()I");
+        Unsafe.putLong(code_base + 36, SymbolLookup.lookup("VirtualProtect"));
     }
 
-    public synchronized static void invoke(long target, int size, int access){
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(target);
-        byte[] addr = buffer.array();
-
-        for (int i = 7, j = 14; i >= 0; i--, j++) {
-            Unsafe.putByte(vp_code_base + j, addr[i]);
+    public synchronized static int invoke(long lpAddress, int dwSize, int flNewProtect,long lpflOldProtect){
+        Unsafe.putLong(code_base + 6,lpAddress);
+        Unsafe.putInt(code_base + 16,dwSize);
+        Unsafe.putInt(code_base + 46,flNewProtect);
+        boolean allocated = false;
+        if(lpflOldProtect == 0){
+            allocated = true;
+            lpflOldProtect = Unsafe.allocateMemory(Integer.BYTES);
         }
-        buffer = ByteBuffer.allocate(Integer.BYTES);
-        buffer.putInt(size);
-        addr = buffer.array();
-        for (int i = 3, j = 38; i >= 0; i--, j++) {
-            Unsafe.putByte(vp_code_base + j, addr[i]);
+        Unsafe.putLong(code_base + 26,lpflOldProtect);
+        if(allocated){
+            Unsafe.freeMemory(lpflOldProtect);
         }
-        buffer = ByteBuffer.allocate(Integer.BYTES);
-        buffer.putInt(access);
-        addr = buffer.array();
-        for (int i = 3, j = 44; i >= 0; i--, j++) {
-            Unsafe.putByte(vp_code_base + j, addr[i]);
-        }
-        holder();
+        return holder();
     }
 }

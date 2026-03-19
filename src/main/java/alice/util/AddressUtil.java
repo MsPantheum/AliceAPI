@@ -16,6 +16,7 @@ import sun.jvm.hotspot.runtime.VM;
 import sun.jvm.hotspot.types.Type;
 import sun.jvm.hotspot.utilities.MethodArray;
 
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -27,12 +28,20 @@ public class AddressUtil {
         return HSDB.debugger.getAddressValue(addr);
     }
 
+    public static void print(long address, PrintStream out){
+        out.print("0x" + Long.toHexString(address));
+    }
+
     public static void print(long address){
-        System.out.print("0x" + Long.toHexString(address));
+        print(address,System.out);
+    }
+
+    public static void println(long address, PrintStream out){
+        out.println("0x" + Long.toHexString(address));
     }
 
     public static void println(long address){
-        System.out.println("0x" + Long.toHexString(address));
+        println(address,System.out);
     }
 
     public static Address toAddress(long addr) {
