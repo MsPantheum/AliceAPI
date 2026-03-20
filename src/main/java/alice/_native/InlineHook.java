@@ -1,7 +1,6 @@
 package alice._native;
 
 import alice.Platform;
-import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
 import alice.util.Unsafe;
@@ -131,11 +130,11 @@ public class InlineHook {
                 Unsafe.putLong(p2trampoline, trampoline);
             }
             this.backup = Unsafe.readBytes(ori, current);
-            System.out.println("Trampoline:");
-            Shellcode.dump(trampoline,current + offset + 14,System.out);
+//            System.out.println("Trampoline:");
+//            Shellcode.dump(trampoline,current + offset + 14,System.out);
             createJump(ori, 0, neo);
-            System.out.println("Ori after hook:");
-            Shellcode.dump(ori,28,System.out);
+//            System.out.println("Ori after hook:");
+//            Shellcode.dump(ori,28,System.out);
             hooked = true;
             return trampoline;
         }

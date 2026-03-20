@@ -3,10 +3,9 @@ package alice._native;
 import alice.Platform;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.AddressUtil;
 import alice.util.CString;
 import alice.util.Unsafe;
-
-//int __cdecl system(const char *_Command);
 
 import static alice.util.Constants.*;
 
@@ -39,7 +38,7 @@ public class system {
         payload[10] = (byte) 0xec;
         payload[11] = (byte) 0x20;
         payload[12] = (byte) 0x48;
-        payload[13] = (byte) 0xb9;
+        payload[13] = Platform.win32 ? (byte) 0xb9 : (byte) 0xbf;
         //_Command here
         payload[22] = (byte) 0x48;
         payload[23] = (byte) 0xb8;
@@ -48,7 +47,8 @@ public class system {
         payload[33] = (byte) 0xd0;
         payload[34] = (byte) 0xc9;
         payload[35] = (byte) 0xc3;
-        code_base = Platform.win32 ? VirtualAlloc.invoke(0, 23, MEM_COMMIT | MEM_RESERVE, 0x40) : mprotect.invoke(0, 23, PROT_EXEC | PROT_WRITE | PROT_READ);
+        code_base = Platform.win32 ? VirtualAlloc.invoke(0, 23, MEM_COMMIT | MEM_RESERVE, 0x40) : mmap.invoke(0, 23, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        AddressUtil.println(code_base);
         assert code_base != 0;
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 24, SymbolLookup.lookup("system"));
@@ -60,7 +60,7 @@ public class system {
     public static synchronized int invoke(String cmd) {
         CString cstr = CString.create(cmd);
         Unsafe.putLong(code_base + 14, cstr.getAddress());
-        Shellcode.dump(code_base,36,System.out);
+        Shellcode.dump(code_base, 36, System.out);
         int ret = holder();
         cstr.release();
         return ret;
