@@ -1,6 +1,11 @@
 package alice._native;
 
 import alice.Platform;
+import alice._native.linux.mmap;
+import alice._native.linux.mprotect;
+import alice._native.linux.munmap;
+import alice._native.win32.VirtualAlloc;
+import alice._native.win32.VirtualProtect;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
 import alice.util.Unsafe;

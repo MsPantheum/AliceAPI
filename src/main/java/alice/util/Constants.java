@@ -80,4 +80,11 @@ public interface Constants {
 
     long _JPLISEnvironment_SIZE = Unsafe.ADDRESS_SIZE * 2L + 1;
     long _JPLISAgent_SIZE = Unsafe.ADDRESS_SIZE * 7L + _JPLISEnvironment_SIZE * 2 + 4;
+
+    int JVMTI_VERSION_1 = 0x30010000;
+    int JVMTI_VERSION_1_0 = 0x30010000;
+    int JVMTI_VERSION_1_1 = 0x30010100;
+    int JVMTI_VERSION_1_2 = 0x30010200;
+
+    int JVMTI_VERSION = 0x30000000 + (0x10000) + (2 * 0x100) + 1;
 }

@@ -1,13 +1,13 @@
-package alice._native;
+package alice._native.stdlib;
 
 import alice.Platform;
+import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.CString;
+import alice.util.MemoryUtil;
 import alice.util.Unsafe;
-
-import static alice.util.Constants.*;
 
 public class system {
 
@@ -47,7 +47,7 @@ public class system {
         payload[33] = (byte) 0xd0;
         payload[34] = (byte) 0xc9;
         payload[35] = (byte) 0xc3;
-        code_base = Platform.win32 ? VirtualAlloc.invoke(0, 23, MEM_COMMIT | MEM_RESERVE, 0x40) : mmap.invoke(0, 23, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        code_base = MemoryUtil.allocate(23);
         AddressUtil.println(code_base);
         assert code_base != 0;
         Unsafe.writeBytes(code_base, payload);

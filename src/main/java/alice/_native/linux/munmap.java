@@ -1,7 +1,9 @@
-package alice._native;
+package alice._native.linux;
 
+import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 
 import static alice.util.Constants.*;
@@ -37,7 +39,7 @@ public class munmap {
         //function
         payload[30] = (byte) 0xff;
         payload[31] = (byte) 0xe0;
-        code_base = mmap.invoke(0, 32, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        code_base = MemoryUtil.allocate(32);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("munmap"));
         long holder = Shellcode.getCompiledEntry(munmap.class, "holder", "()I");

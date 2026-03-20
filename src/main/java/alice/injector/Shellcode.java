@@ -1,6 +1,7 @@
 package alice.injector;
 
 import alice.util.AddressUtil;
+import alice.util.MemoryUtil;
 import alice.util.MethodInfo;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.types.Type;
@@ -35,8 +36,8 @@ public class Shellcode {
             int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
-            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = desc != null ? AddressUtil.readSymbol(
+            String _name = MemoryUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = desc != null ? MemoryUtil.readSymbol(
                     constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
                     && (desc == null || desc.equals(_desc))) {
@@ -72,8 +73,8 @@ public class Shellcode {
             int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
-            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = desc != null ? AddressUtil.readSymbol(
+            String _name = MemoryUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = desc != null ? MemoryUtil.readSymbol(
                     constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
                     && (desc == null || desc.equals(_desc))) {
@@ -110,8 +111,8 @@ public class Shellcode {
             int nameIndex = Unsafe.getShort(constMethod + nameIndexOffset) & 0xffff;
             int signatureIndex = Unsafe.getShort(constMethod + signatureIndexOffset) & 0xffff;
 
-            String _name = AddressUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
-            String _desc = desc != null ? AddressUtil.readSymbol(
+            String _name = MemoryUtil.readSymbol(constantPool + constantPoolType.getSize() + (long) nameIndex * oopSize);
+            String _desc = desc != null ? MemoryUtil.readSymbol(
                     constantPool + constantPoolType.getSize() + (long) signatureIndex * oopSize) : null;
             if (name.equals(_name)
                     && (desc == null || desc.equals(_desc))) {

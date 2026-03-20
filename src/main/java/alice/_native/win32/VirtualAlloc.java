@@ -1,7 +1,8 @@
-package alice._native;
+package alice._native.win32;
 
 //LPVOID WINAPI VirtualAlloc (LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 
+import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;

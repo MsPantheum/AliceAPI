@@ -85,10 +85,6 @@ public class SymbolLookup {
                             if(isElf(path)){
 
                                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
-                                if(path.endsWith("libinstrument.so")){
-                                    System.out.println("Checking for elf.");
-                                    symbols.keySet().forEach(System.out::println);
-                                }
                                 if (symbols.containsKey(symbol)) {
                                     ret[0] = base + symbols.get(symbol).offset;
                                 }

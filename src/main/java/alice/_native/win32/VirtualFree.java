@@ -1,7 +1,8 @@
-package alice._native;
+package alice._native.win32;
 
 //WINBOOL WINAPI VirtualFree (LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
+import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;

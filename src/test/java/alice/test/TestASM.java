@@ -2,8 +2,8 @@ package alice.test;
 
 import alice.Init;
 import alice.Platform;
-import alice._native.VirtualProtect;
-import alice._native.mprotect;
+import alice._native.linux.mprotect;
+import alice._native.win32.VirtualProtect;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.FileUtil;

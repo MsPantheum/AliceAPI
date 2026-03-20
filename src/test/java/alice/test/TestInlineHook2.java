@@ -2,7 +2,7 @@ package alice.test;
 
 import alice.Platform;
 import alice._native.InlineHook;
-import alice._native.mprotect;
+import alice._native.linux.mprotect;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.Unsafe;

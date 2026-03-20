@@ -3,9 +3,9 @@ package alice.util;
 import alice.HSDB;
 import alice.Init;
 import alice.Platform;
-import alice._native.VirtualAlloc;
-import alice._native.mmap;
-import alice._native.munmap;
+import alice._native.linux.mmap;
+import alice._native.linux.munmap;
+import alice._native.win32.VirtualAlloc;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.debugger.bsd.BsdDebuggerLocal;
 import sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal;
@@ -14,11 +14,9 @@ import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
-import sun.jvm.hotspot.types.Type;
 import sun.jvm.hotspot.utilities.MethodArray;
 
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static alice.HSDB.typeDataBase;
@@ -151,16 +149,4 @@ public class AddressUtil {
         return 0;
     }
 
-    public static String readSymbol(long symbolAddress) {
-        Type symbolType = typeDataBase.lookupType("Symbol");
-        long symbol = Unsafe.getAddress(symbolAddress);
-        long body = symbol + symbolType.getField("_body").getOffset();
-        int length = Unsafe.getShort(symbol + symbolType.getField("_length").getOffset()) & 0xffff;
-
-        byte[] b = new byte[length];
-        for (int i = 0; i < length; i++) {
-            b[i] = Unsafe.getByte(body + i);
-        }
-        return new String(b, StandardCharsets.UTF_8);
-    }
 }

@@ -1,8 +1,7 @@
-package alice._native;
+package alice._native.win32;
 
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
-import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
 //WINBASEAPI WINBOOL WINAPI VirtualProtect (LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);

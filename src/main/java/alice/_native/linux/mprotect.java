@@ -1,4 +1,4 @@
-package alice._native;
+package alice._native.linux;
 
 //int mprotect (void *__addr, size_t __len, int __prot)
 
