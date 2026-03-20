@@ -4,6 +4,8 @@ import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 public class TestInlineHook1 {
 
@@ -137,6 +139,7 @@ public class TestInlineHook1 {
     }
 
     @Test
+    @EnabledOnOs({OS.LINUX,OS.WINDOWS})
     public void test(){
         System.out.println("Pid:"+ProcessUtil.getPID());
         func1(0x114514); System.out.println("After func1 called: 0x" + Long.toHexString(test_value));

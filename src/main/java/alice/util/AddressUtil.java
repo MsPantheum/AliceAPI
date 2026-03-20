@@ -3,6 +3,7 @@ package alice.util;
 import alice.HSDB;
 import alice.Init;
 import alice.Platform;
+import alice._native.VirtualAlloc;
 import alice._native.mmap;
 import alice._native.munmap;
 import sun.jvm.hotspot.debugger.Address;
@@ -72,7 +73,7 @@ public class AddressUtil {
 
         for (try_addr = (target & page_mask) - page_size;
              try_addr >= lo; try_addr -= page_size) {
-            long p = mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr,size,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             if (p == MAP_FAILED)
                 continue;
@@ -83,7 +84,7 @@ public class AddressUtil {
 
         for (try_addr = (target & page_mask) + page_size;
              try_addr <= hi; try_addr += page_size) {
-            long p = mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr,size,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             if (p == MAP_FAILED)
                 continue;
@@ -118,7 +119,7 @@ public class AddressUtil {
     public static long getMethod(MethodInfo methodInfo) {
         long klass_addr = getKlassAddress(methodInfo.holder);
         InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(toAddress(klass_addr));
-        List<Method> methods = klass.getImmediateMethods();
+        @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
             if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
                 return getAddressValue(method.getAddress());

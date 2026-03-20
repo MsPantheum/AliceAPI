@@ -1,11 +1,14 @@
 package alice.test;
 
+import alice.Platform;
 import alice._native.InlineHook;
 import alice._native.mprotect;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -81,7 +84,7 @@ public class TestInlineHook2 {
         }
         PrintStream backup = System.out;
         try {
-            System.setOut(new PrintStream(new FileOutputStream("/dev/null")));
+            System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -92,6 +95,7 @@ public class TestInlineHook2 {
     }
 
     @Test
+    @EnabledOnOs({OS.LINUX})
     public void test() {
         byte[] payload = new byte[]{(byte)0xb8,(byte)0x01,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0xbf,(byte)0x01,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x48,(byte)0x8d,(byte)0x35,(byte)0xef,(byte)0x0f,(byte)0x00,(byte)0x00,(byte)0xba,(byte)0x0e,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x0f,(byte)0x05,(byte)0xb8,(byte)0x3c,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x48,(byte)0x31,(byte)0xff,(byte)0x0f,(byte)0x05};
         System.out.println(payload.length);

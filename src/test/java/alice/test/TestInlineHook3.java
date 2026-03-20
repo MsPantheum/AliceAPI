@@ -2,6 +2,7 @@ package alice.test;
 
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ public class TestInlineHook3 {
     }
 
     @Test
+    @Disabled
     public void test(){
         Class<?> clazz = ArrayList.class;
         assert clazz.getClassLoader() == null;

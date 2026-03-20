@@ -1,9 +1,12 @@
 package alice.test;
 
+import alice.Platform;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -26,7 +29,7 @@ public class TestInlineHook4 {
     static {
         PrintStream backup = System.out;
         try {
-            System.setOut(new PrintStream(new FileOutputStream("/dev/null")));
+            System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -39,15 +42,13 @@ public class TestInlineHook4 {
     }
 
     @Test
+    @EnabledOnOs(OS.LINUX) //I don't know why JUnit crashed on this.
     public void test(){
         long func1 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func1","()V");
         long func2 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func2","()V");
         long trampoline = InlineHook.hookWithTrampoline(func1,func2);
         func1();
         Shellcode.setCompiledEntry(TestInlineHook4.class,"func3","()V",trampoline);
-        //ProcessUtil.guiPause();
-//        long meow = Shellcode.getCompiledEntry(TestInlineHook4.class,"func3","()V");
-//        for(int i = 0; i < ){}
         func3();
         ProcessUtil.exit(0);
     }

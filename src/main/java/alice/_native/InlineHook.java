@@ -52,7 +52,11 @@ public class InlineHook {
                 return 0;
             }
             HDE64.Hde64s hs = new HDE64.Hde64s();
-            trampoline = mmap.invoke(ori, 128, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            trampoline = AddressUtil.allocateNear(ori,128);
+            if(trampoline==0){
+                trampoline = Platform.win32 ? VirtualAlloc.invoke(0,128,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(0,128,PROT_READ | PROT_WRITE | PROT_EXEC,
+                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            }
             System.out.print("Trampoline=");
             AddressUtil.println(trampoline);
             long offset = prepare != null ? prepare.process(trampoline) : 0;
@@ -250,8 +254,8 @@ public class InlineHook {
             return hook.hookWithTrampoline();
         }
 
-        int success = mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        assert success == 0;
+        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,PAGE_EXECUTE_READWRITE,0) : mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert Platform.win32 == (success != 0);
         hook = new Hook(ori, neo);
         HOOKS.put(ori, hook);
         return hook.hookWithTrampoline();
