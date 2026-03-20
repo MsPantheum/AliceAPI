@@ -3,6 +3,7 @@ package alice.util;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.security.ProtectionDomain;
 
 public class Unsafe {
     private static final sun.misc.Unsafe UNSAFE;
@@ -288,5 +289,15 @@ public class Unsafe {
         for(long i = 0; i < numBytes; i++){
             putByte(target + i,getByte(source + i));
         }
+    }
+
+    public static Class<?> defineClass(String name, byte[] b, int off, int len,
+                                       ClassLoader loader,
+                                       ProtectionDomain protectionDomain) {
+        return UNSAFE.defineClass(name, b, off, len, loader, protectionDomain);
+    }
+
+    public static Class<?> defineAnonymousClass(Class<?> hostClass, byte[] data, Object[] cpPatches) {
+        return UNSAFE.defineAnonymousClass(hostClass, data, cpPatches);
     }
 }
