@@ -8,7 +8,7 @@ import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 //JNI_GetCreatedJavaVMs(JavaVM **, jsize, jsize *);
 

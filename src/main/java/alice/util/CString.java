@@ -3,24 +3,26 @@ package alice.util;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 
+import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class CString {
 
-    private static final Object2ObjectMap<String,CString> cache = new Object2ObjectLinkedOpenHashMap<>();
+    private static final Object2ObjectMap<String, WeakReference<CString>> cache = new Object2ObjectLinkedOpenHashMap<>();
 
     private final long address;
     private final String jstring;
     private boolean dead = false;
 
     public static CString create(String str){
-        CString cstr = cache.get(str);
-        if(cstr != null){
-            return cstr;
+        WeakReference<CString> ref = cache.get(str);
+        if (ref != null) {
+            if (ref.get() != null) {
+                return ref.get();
+            }
         }
-        cstr = new CString(str);
-        cache.put(str,cstr);
+        CString cstr = new CString(str);
+        cache.put(str, new WeakReference<>(cstr));
         return cstr;
     }
 

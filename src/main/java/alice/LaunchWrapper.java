@@ -10,7 +10,7 @@ public class LaunchWrapper {
             JavaAgent.main(args);
             return;
         }
-        Init.init();
+        Init.ensureInit();
         if(operation.equals("test")){
             System.out.println(HSDB.typeDataBase.lookupType("InstanceKlass"));
         }

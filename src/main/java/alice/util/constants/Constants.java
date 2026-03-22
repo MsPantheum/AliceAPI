@@ -1,4 +1,6 @@
-package alice.util;
+package alice.util.constants;
+
+import alice.util.Unsafe;
 
 public interface Constants {
     int PROT_NONE = 0x0;

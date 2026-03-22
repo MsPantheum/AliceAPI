@@ -8,7 +8,7 @@ import sun.jvm.hotspot.types.Type;
 import java.nio.charset.StandardCharsets;
 
 import static alice.HSDB.typeDataBase;
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 public class MemoryUtil {
     public static String readSymbol(long symbolAddress) {

@@ -11,7 +11,7 @@ import java.lang.instrument.Instrumentation;
 
 public class JavaAgent {
     private static void agent(String args,Instrumentation instrumentation){
-        Init.init();
+        Init.ensureInit();
     }
 
     public static void agentmain(String args, Instrumentation instrumentation){

@@ -6,13 +6,15 @@ import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualProtect;
+import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
 import alice.util.Unsafe;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import static alice.util.Constants.*;
+import static alice.util.AddressUtil.checkNull;
 import static alice.util.HDE64.hde64_disasm;
+import static alice.util.constants.Constants.*;
 
 @SuppressWarnings("UnusedReturnValue")
 public class InlineHook {
@@ -22,6 +24,13 @@ public class InlineHook {
     @FunctionalInterface
     public interface Processor {
         long process(long address);
+    }
+
+    public static void MovRBX(long target, long offset, long mov_target) {
+        long p = 0;
+        Unsafe.putByte(target + offset + (p++), (byte) 0x48);
+        Unsafe.putByte(target + offset + (p++), (byte) 0xBB);
+        Unsafe.putLong(target + offset + (p), mov_target);
     }
 
     private static class Hook {
@@ -44,12 +53,7 @@ public class InlineHook {
             this(ori, neo, null);
         }
 
-        private static void MovRBX(long target, long offset, long mov_target) {
-            long p = 0;
-            Unsafe.putByte(target + offset + (p++), (byte) 0x48);
-            Unsafe.putByte(target + offset + (p++), (byte) 0xBB);
-            Unsafe.putLong(target + offset + (p), mov_target);
-        }
+
 
         private long hookWithTrampoline(long p2trampoline) {
             if (hooked) {
@@ -176,8 +180,14 @@ public class InlineHook {
             if (hooked) {
                 return false;
             }
-            this.backup = Unsafe.readBytes(ori, 14);
-            createJump(ori, 0, neo);
+            long offset = 0;
+            if (prepare != null) {
+                offset = prepare.process(ori);
+            }
+            this.backup = Unsafe.readBytes(ori, 14 + offset);
+            createJump(ori, offset, neo);
+            System.out.println("Meow:");
+            Shellcode.dump(ori, 14 + offset, System.err);
             hooked = true;
             return true;
         }
@@ -199,17 +209,22 @@ public class InlineHook {
         }
     }
 
-    public synchronized static boolean simpleHook(long ori, long neo) {
+    public synchronized static boolean simpleHook(long ori, long neo, Processor processor) {
+        checkNull(ori, neo);
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.simpleHook();
         }
         int success = Platform.win32 ? VirtualProtect.invoke(ori,1,0x40,0) : mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
         assert Platform.win32 == (success != 0);
-        hook = new Hook(ori, neo);
+        hook = new Hook(ori, neo, processor);
         HOOKS.put(ori, hook);
         hook.simpleHook();
         return true;
+    }
+
+    public synchronized static boolean simpleHook(long ori, long neo) {
+        return simpleHook(ori, neo, null);
     }
 
 //    public synchronized static long hookWithTrampoline(MethodInfo ori_method, MethodInfo neo_method, MethodInfo trampoline_method) {
@@ -253,6 +268,7 @@ public class InlineHook {
 //    }
 
     public synchronized static long hookWithTrampoline(long ori, long neo) {
+        checkNull(ori, neo);
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.hookWithTrampoline();
@@ -266,6 +282,7 @@ public class InlineHook {
     }
 
     public synchronized static long hookWithTrampoline(long ori, long neo, long p2trampoline) {
+        checkNull(ori, neo);
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.hookWithTrampoline(p2trampoline);
@@ -279,6 +296,7 @@ public class InlineHook {
     }
 
     public synchronized static boolean unhook(long ori) {
+        checkNull(ori);
         Hook hook = HOOKS.get(ori);
         if (hook != null) {
             return hook.unhook();

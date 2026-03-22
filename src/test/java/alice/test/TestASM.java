@@ -15,7 +15,7 @@ import org.junit.jupiter.api.condition.OS;
 
 import java.util.Objects;
 
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 public class TestASM {
     @Test

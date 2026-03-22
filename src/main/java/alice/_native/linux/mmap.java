@@ -6,7 +6,7 @@ import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 //void *mmap (void *__addr, size_t __len, int __prot,int __flags, int __fd, __off_t __offset)
 

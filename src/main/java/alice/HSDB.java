@@ -14,7 +14,6 @@ public class HSDB {
     public static final Debugger debugger;
 
     static {
-        Init.ensureInit();
         HSDB = Unsafe.allocateInstance(sun.jvm.hotspot.HSDB.class);
         try {
             Field f = sun.jvm.hotspot.HSDB.class.getDeclaredField("agent");

@@ -31,7 +31,7 @@ public class Init {
 
     private static boolean init = false;
 
-    static void init() {
+    private static void init() {
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             System.err.println("Uncaught exception in thread " + t.getName());
             e.printStackTrace(System.err);
@@ -45,7 +45,7 @@ public class Init {
         init = true;
     }
 
-    public static void ensureInit() {
+    public static synchronized void ensureInit() {
         if(!init){
             init();
         }

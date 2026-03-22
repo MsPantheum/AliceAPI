@@ -27,6 +27,7 @@ dependencies {
     implementation("org.ow2.asm:asm-analysis:9.9.1")
     implementation("it.unimi.dsi:fastutil:8.5.18")
     implementation('com.gradleup.shadow:shadow-gradle-plugin:8.3.+')
+    implementation 'commons-io:commons-io:2.21.0'
     //implementation("net.java.dev.jna:jna:5.18.1")
 }
 

@@ -1,7 +1,6 @@
 package alice.util;
 
 import alice.HSDB;
-import alice.Init;
 import alice.Platform;
 import alice._native.linux.mmap;
 import alice._native.linux.munmap;
@@ -20,9 +19,22 @@ import java.io.PrintStream;
 import java.util.List;
 
 import static alice.HSDB.typeDataBase;
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 public class AddressUtil {
+
+    public static void checkNull(long address) {
+        if (address == 0) {
+            throw new NullPointerException();
+        }
+    }
+
+    public static void checkNull(long... addresses) {
+        for (long address : addresses) {
+            checkNull(address);
+        }
+    }
+
     public static long getAddressValue(Address addr) {
         return HSDB.debugger.getAddressValue(addr);
     }
@@ -103,7 +115,6 @@ public class AddressUtil {
     public static final long oopSize;
 
     static {
-        Init.ensureInit();
         oopSize = VM.getVM().getOopSize();
         klass_offset = typeDataBase.lookupType("java_lang_Class").getCIntegerField("_klass_offset").getValue();
     }

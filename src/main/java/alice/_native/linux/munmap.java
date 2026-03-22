@@ -6,7 +6,7 @@ import alice.injector.SymbolLookup;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 
-import static alice.util.Constants.*;
+import static alice.util.constants.Constants.*;
 
 //int munmap (void *__addr, size_t __len)
 

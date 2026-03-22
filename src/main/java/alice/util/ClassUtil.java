@@ -15,6 +15,10 @@ import java.nio.file.Paths;
 
 public class ClassUtil {
 
+    public static boolean isClassFile(byte[] data, int offset) {
+        return data[offset] == (byte) 0xca && data[offset + 1] == (byte) 0xfe && data[offset + 2] == (byte) 0xba && data[offset + 3] == (byte) 0xbe;
+    }
+
     private static final MethodHandle addURL;
 
     static {
@@ -25,11 +29,11 @@ public class ClassUtil {
         }
     }
 
-    public static void append(String path, URLClassLoader classLoader){
-        append(Paths.get(path),classLoader);
+    public static void append(String path, URLClassLoader classLoader) {
+        append(Paths.get(path), classLoader);
     }
 
-    public static void append(Path path, URLClassLoader classLoader){
+    public static void append(Path path, URLClassLoader classLoader) {
         try {
             addURL.invoke(classLoader, path.toUri().toURL());
         } catch (Throwable e) {
@@ -37,10 +41,10 @@ public class ClassUtil {
         }
     }
 
-    public static byte[] dump(Class<?> clazz){
+    public static byte[] dump(Class<?> clazz) {
         InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(AddressUtil.toAddress(AddressUtil.getKlassAddress(clazz)));
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ClassWriter cw = new ClassWriter(klass,bos);
+        ClassWriter cw = new ClassWriter(klass, bos);
         try {
             cw.write();
         } catch (IOException e) {
@@ -49,7 +53,7 @@ public class ClassUtil {
         return bos.toByteArray();
     }
 
-    public static String getPath(Class<?> cls){
-        return cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/"+cls.getName().replace('.','/')+".class", "").replace("file:", "");
+    public static String getPath(Class<?> cls) {
+        return cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/" + cls.getName().replace('.', '/') + ".class", "").replace("file:", "");
     }
 }
