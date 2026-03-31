@@ -1,57 +1,39 @@
 package alice;
 
-import alice._native.InlineHook;
-import alice._native.system;
-import alice.injector.Shellcode;
-import alice.injector.SymbolLookup;
-import alice.util.FileUtil;
+import alice.util.AddressUtil;
+import alice.util.ClassUtil;
 import alice.util.ProcessUtil;
-import com.sun.jna.Function;
-import com.sun.jna.Pointer;
-
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import sun.jvm.hotspot.oops.InstanceKlass;
 
 public class Test {
 
-    private static void func1(){
-        System.out.println("func1 called!");
-    }
-
-    private static void func2(){
-        System.out.println("func2 called!");
-    }
-
-    private static void func3(){
-        Runtime.getRuntime().runFinalization();
+    public static void test() {
+        new Object();
     }
 
     static {
-        PrintStream backup = System.out;
-        try {
-            System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        for (int i = 0; i < 20000; i++) {
-            func1();
-            func2();
-            func3();
-        }
-        System.setOut(backup);
+        Init.ensureInit();
     }
 
-    public static void main(String[] args) throws Throwable {
-        long func1 = Shellcode.getCompiledEntry(Test.class,"func1","()V");
-        long func2 = Shellcode.getCompiledEntry(Test.class,"func2","()V");
-        System.out.println("Hooking...");
-        long trampoline = InlineHook.hookWithTrampoline(func1,func2);
-        System.out.println("Hooked.");
-        func1();
-        System.out.println("State1");
-        Shellcode.setCompiledEntry(Test.class,"func3","()V",trampoline);
-        func3();
-        ProcessUtil.exit(0);
+    public static void main(String[] args) {
+        InstanceKlass klass = ClassUtil.getKlass(Init.class);
+        long address = AddressUtil.getAddressValue(klass);
+        AddressUtil.println(address);
+        System.out.println("Start 1st test.");
+        long time = System.nanoTime();
+        boolean result = AddressUtil.safeAddress(address);
+        time = System.nanoTime() - time;
+        System.out.println("Result:" + result);
+        System.out.println("Time:" + time);
+        System.out.println("End.");
+        System.out.println("Start 2st test.");
+        time = System.nanoTime();
+        result = AddressUtil.safeAddress("libjvm.so", address);
+        time = System.nanoTime() - time;
+        System.out.println("Result:" + result);
+        System.out.println("Time:" + time);
+        System.out.println("End.");
+        ProcessUtil.pause();
     }
+
 }

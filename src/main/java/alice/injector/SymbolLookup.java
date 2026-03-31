@@ -9,7 +9,6 @@ import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
 import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.Map;
@@ -117,7 +116,7 @@ public class SymbolLookup {
         return ret[0];
     }
 
-    private static String toAbsoluteLibPath(String lib) {
+    public static String toAbsoluteLibPath(String lib) {
         if (!Platform.win32) {
             lib = File.separator + lib;
         }
@@ -126,23 +125,9 @@ public class SymbolLookup {
                 return p;
             }
         }
-        if (!Platform.win32) {
-            for (String path : ProcReader.parseProcMaps().keySet()) {
-                if (path.endsWith(lib)) {
-                    return path;
-                }
-            }
-        } else {
-            Path ret = FileUtil.search(FileUtil.getJavaHome(), lib);
-            if (ret != null) {
-                return ret.toAbsolutePath().toString();
-            }
-            String[] search_paths = System.getProperty("java.library.path").split(File.pathSeparator);
-            for (String s : search_paths) {
-                ret = FileUtil.search(s, lib);
-                if (ret != null) {
-                    return ret.toAbsolutePath().toString();
-                }
+        for (String path : ProcReader.parseProcMaps().keySet()) {
+            if (path.endsWith(lib)) {
+                return path;
             }
         }
         throw new RuntimeException("Can't find absolute lib path for " + lib);

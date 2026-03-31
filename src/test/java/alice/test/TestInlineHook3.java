@@ -1,5 +1,6 @@
 package alice.test;
 
+import alice.Init;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import org.junit.jupiter.api.Disabled;
@@ -16,6 +17,7 @@ public class TestInlineHook3 {
     }
 
     static {
+        Init.ensureInit();
         @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") ArrayList tmp = new ArrayList(1);
         for(int i = 0;i < 20000;i ++){
             //noinspection ResultOfMethodCallIgnored

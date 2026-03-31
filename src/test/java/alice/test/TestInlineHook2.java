@@ -1,5 +1,6 @@
 package alice.test;
 
+import alice.Init;
 import alice.Platform;
 import alice._native.InlineHook;
 import alice._native.linux.mprotect;
@@ -79,6 +80,7 @@ public class TestInlineHook2 {
     }
 
     static {
+        Init.ensureInit();
         for (int i = 0; i < 20000; i++) {
             func();
         }

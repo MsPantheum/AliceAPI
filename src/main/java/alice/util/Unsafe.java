@@ -177,6 +177,22 @@ public class Unsafe {
         UNSAFE.putIntVolatile(o, offset, x);
     }
 
+    public static void putFloatVolatile(Object o, long offset, float x) {
+        UNSAFE.putFloatVolatile(o, offset, x);
+    }
+
+    public static void putDoubleVolatile(Object o, long offset, double x) {
+        UNSAFE.putDoubleVolatile(o, offset, x);
+    }
+
+    public static int arrayBaseOffset(Class<?> ac) {
+        return UNSAFE.arrayBaseOffset(ac);
+    }
+
+    public static int arrayIndexScale(Class<?> ac) {
+        return UNSAFE.arrayIndexScale(ac);
+    }
+
     public static void putInt(Object o, long offset, int x) {
         UNSAFE.putInt(o, offset, x);
     }
@@ -285,9 +301,9 @@ public class Unsafe {
         }
     }
 
-    public static void copy(long source,long target,long numBytes){
-        for(long i = 0; i < numBytes; i++){
-            putByte(target + i,getByte(source + i));
+    public static void copy(long source, long target, long numBytes) {
+        for (long i = 0; i < numBytes; i++) {
+            putByte(target + i, getByte(source + i));
         }
     }
 
@@ -299,5 +315,23 @@ public class Unsafe {
 
     public static Class<?> defineAnonymousClass(Class<?> hostClass, byte[] data, Object[] cpPatches) {
         return UNSAFE.defineAnonymousClass(hostClass, data, cpPatches);
+    }
+
+    public static boolean compareAndSwapObject(Object o, long offset,
+                                               Object expected,
+                                               Object x) {
+        return UNSAFE.compareAndSwapObject(o, offset, expected, x);
+    }
+
+    public static boolean compareAndSwapInt(Object o, long offset,
+                                            int expected,
+                                            int x) {
+        return UNSAFE.compareAndSwapInt(o, offset, expected, x);
+    }
+
+    public static boolean compareAndSwapLong(Object o, long offset,
+                                             long expected,
+                                             long x) {
+        return UNSAFE.compareAndSwapLong(o, offset, expected, x);
     }
 }

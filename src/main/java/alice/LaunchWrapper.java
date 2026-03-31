@@ -1,18 +1,15 @@
 package alice;
 
+import alice.util.ReflectionUtil;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
+
 public class LaunchWrapper {
-    public static void main(String[] args) {
-        if(args.length == 0){
-            throw new IllegalArgumentException("Missing command line arguments");
-        }
-        String operation = args[0];
-        if(operation.equals("attach")){
-            JavaAgent.main(args);
-            return;
-        }
+    public static void main(String[] args) throws Throwable {
         Init.ensureInit();
-        if(operation.equals("test")){
-            System.out.println(HSDB.typeDataBase.lookupType("InstanceKlass"));
-        }
+        Class<?> launch_target = Class.forName(System.getProperty("AliceLaunchTarget"));
+        MethodHandle main = ReflectionUtil.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
+        main.invoke((Object[]) args);
     }
 }

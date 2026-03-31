@@ -186,7 +186,6 @@ public class InlineHook {
             }
             this.backup = Unsafe.readBytes(ori, 14 + offset);
             createJump(ori, offset, neo);
-            System.out.println("Meow:");
             Shellcode.dump(ori, 14 + offset, System.err);
             hooked = true;
             return true;

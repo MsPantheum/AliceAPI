@@ -1,5 +1,6 @@
 package alice.test;
 
+import alice.Init;
 import alice.injector.NativeLibrary;
 import alice.util.FileUtil;
 import alice.util.ProcessUtil;
@@ -9,6 +10,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Objects;
 
 public class TestNativeLibrary {
+
+    static {
+        Init.ensureInit();
+    }
 
     @Test
     public void test(){

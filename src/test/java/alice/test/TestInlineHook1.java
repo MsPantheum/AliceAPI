@@ -1,7 +1,9 @@
 package alice.test;
 
+import alice.Init;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
+import alice.util.DebugUtil;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -12,6 +14,7 @@ public class TestInlineHook1 {
     private static int test_value = 0x0;
 
     static {
+        Init.ensureInit();
         for(int i = 0; i < 40000; i++){
             func1(0x114514);
         }
@@ -141,6 +144,7 @@ public class TestInlineHook1 {
     @Test
     @EnabledOnOs({OS.LINUX,OS.WINDOWS})
     public void test(){
+        System.out.println(DebugUtil.isRunningTest());
         System.out.println("Pid:"+ProcessUtil.getPID());
         func1(0x114514); System.out.println("After func1 called: 0x" + Long.toHexString(test_value));
         assert test_value == 0x114514 + 1;

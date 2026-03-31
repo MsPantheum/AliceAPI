@@ -1,44 +1,53 @@
 package alice.injector.patch;
 
 import alice.api.ClassByteProcessor;
+import alice.util.ClassLoaderUtil;
 import alice.util.URLClassPathWrapper;
 import alice.util.Unsafe;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.ConstantDynamic;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.tree.ClassNode;
 import sun.misc.URLClassPath;
 
-import java.lang.reflect.Field;
 import java.net.URLClassLoader;
 
 public class PatcherLoader {
 
-    private static final long ucp_offset;
 
-    static {
+    public static void load() {
+        Unsafe.ensureClassInitialized(URLClassLoader.class);
+        Unsafe.ensureClassInitialized(URLClassPath.class);
+        Unsafe.ensureClassInitialized(URLClassPathWrapper.class);
+        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticResource.class);
+        Unsafe.ensureClassInitialized(ClassByteProcessor.class);
+        Unsafe.ensureClassInitialized(DebuggerLocalPatcher.class);
+        Unsafe.ensureClassInitialized(LinuxDebuggerLocalWorkerThreadPatcher.class);
+        Unsafe.ensureClassInitialized(ClassReader.class);
+        Unsafe.ensureClassInitialized(ClassWriter.class);
+        Unsafe.ensureClassInitialized(ClassNode.class);
+        Unsafe.ensureClassInitialized(UniversalPatcher.class);
+        Unsafe.ensureClassInitialized(Label.class);
+        Unsafe.ensureClassInitialized(ConstantDynamic.class);
         try {
-            Field f = URLClassLoader.class.getDeclaredField("ucp");
-            ucp_offset = Unsafe.objectFieldOffset(f);
-        } catch (NoSuchFieldException e) {
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1"));
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1$1"));
+            Unsafe.ensureClassInitialized(Class.forName("org.objectweb.asm.Context"));
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static URLClassPath get(URLClassLoader loader){
-        return Unsafe.getObject(loader,ucp_offset);
-    }
-
-    private static void set(URLClassLoader loader,Object neo){
-        Unsafe.putObject(loader,ucp_offset,neo);
-    }
-
-    public static void load(){
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         assert classLoader instanceof URLClassLoader;
         URLClassLoader loader = (URLClassLoader)classLoader;
-        URLClassPath ucp = get(loader);
+        URLClassPath ucp = ClassLoaderUtil.getUCP(loader);
         URLClassPathWrapper wrapper = new URLClassPathWrapper(ucp);
-        set(loader,wrapper);
+        System.out.println("Replacing URLClassPath.");
+        ClassLoaderUtil.setUCP(loader, wrapper);
+        System.out.println("Replaced.");
         URLClassPathWrapper.registerProcessor(new ClassByteProcessor() {
             @Override
-            public byte[] process(String name, byte[] classBytes) {
+            public byte[] process(byte[] classBytes, String name) {
                 switch (name) {
                     case "sun/jvm/hotspot/debugger/bsd/BsdDebuggerLocal.class":
                     case "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class":
@@ -46,14 +55,15 @@ public class PatcherLoader {
                         return DebuggerLocalPatcher.patch(classBytes,name);
                     }
                     case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class":{
-                        return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes);
+                        return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes, name);
                     }
                     default: {
-                        return ClassByteProcessor.super.process(name, classBytes);
+                        return UniversalPatcher.patch(classBytes, name);
                     }
 
                 }
             }
         });
+        System.out.println("Necessary processors registered.");
     }
 }

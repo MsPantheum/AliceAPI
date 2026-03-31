@@ -21,6 +21,7 @@ public class TestASM {
     @Test
     @EnabledOnOs(value = {OS.LINUX,OS.WINDOWS})
     public void test(){
+        System.out.println(ProcessUtil.getPID());
         Init.ensureInit();
         System.out.println("Pid:"+ProcessUtil.getPID());
         long target = SymbolLookup.lookup(Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString(),"JVM_Sleep");

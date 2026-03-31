@@ -5,6 +5,7 @@ import alice.Platform;
 import alice._native.linux.mmap;
 import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
+import alice.injector.SymbolLookup;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.debugger.bsd.BsdDebuggerLocal;
 import sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal;
@@ -13,9 +14,12 @@ import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
+import sun.jvm.hotspot.runtime.VMObject;
 import sun.jvm.hotspot.utilities.MethodArray;
 
 import java.io.PrintStream;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import static alice.HSDB.typeDataBase;
@@ -35,8 +39,45 @@ public class AddressUtil {
         }
     }
 
+    public static long getObjAddress(Object object) {
+        if (object == null) {
+            return 0L;
+        } else {
+            Object[] array = new Object[]{object};
+            long baseOffset = Unsafe.arrayBaseOffset(Object[].class);
+            int addressSize = Unsafe.ADDRESS_SIZE;
+            long location;
+            switch (addressSize) {
+                case 4:
+                    location = Unsafe.getInt(array, baseOffset);
+                    break;
+                case 8:
+                    location = Unsafe.getLong(array, baseOffset);
+                    break;
+                default:
+                    throw new Error("unsupported address size: " + addressSize);
+            }
+
+            return location * 8L;
+        }
+    }
+
     public static long getAddressValue(Address addr) {
         return HSDB.debugger.getAddressValue(addr);
+    }
+
+    public static long getAddressValue(VMObject vmObject) {
+        return getAddressValue(vmObject.getAddress());
+    }
+
+    public static void print(String message, long address, PrintStream out) {
+        out.print(message);
+        print(address, out);
+    }
+
+    public static void println(String message, long address, PrintStream out) {
+        out.print(message);
+        println(address, out);
     }
 
     public static void print(long address, PrintStream out){
@@ -45,6 +86,14 @@ public class AddressUtil {
 
     public static void print(long address){
         print(address,System.out);
+    }
+
+    public static void print(String message, long address) {
+        print(message, address, System.out);
+    }
+
+    public static void println(String message, long address) {
+        println(message, address, System.out);
     }
 
     public static void println(long address, PrintStream out){
@@ -126,8 +175,7 @@ public class AddressUtil {
     }
 
     public static long getMethod(MethodInfo methodInfo) {
-        long klass_addr = getKlassAddress(methodInfo.holder);
-        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(toAddress(klass_addr));
+        InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
             if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
@@ -144,8 +192,7 @@ public class AddressUtil {
     }
 
     public static long getPointer2Method(MethodInfo methodInfo) {
-        long klass_addr = getKlassAddress(methodInfo.holder);
-        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(toAddress(klass_addr));
+        InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         MethodArray methods = klass.getMethods();
         long start = getAddressValue(methods.getAddress());
         long offset = methods.getElemType().getSize();
@@ -158,6 +205,32 @@ public class AddressUtil {
             }
         }
         return 0;
+    }
+
+    public static boolean safeAddress(String lib, long address) {
+        lib = SymbolLookup.toAbsoluteLibPath(lib);
+        LinkedList<ProcReader.MemoryMapping> mappings = ProcReader.parseProcMaps().get(lib);
+        for (ProcReader.MemoryMapping mapping : mappings) {
+            System.out.println(mapping);
+            if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
+                System.out.println("Find in " + mapping);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean safeAddress(long address) {
+        Collection<LinkedList<ProcReader.MemoryMapping>> list = ProcReader.parseProcMaps().values();
+        for (LinkedList<ProcReader.MemoryMapping> mappings : list) {
+            for (ProcReader.MemoryMapping mapping : mappings) {
+                if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
+                    System.out.println("Find in " + mapping);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

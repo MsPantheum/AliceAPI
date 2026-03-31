@@ -1,5 +1,6 @@
 package alice.test;
 
+import alice.Init;
 import alice.Platform;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
@@ -27,6 +28,7 @@ public class TestInlineHook4 {
     }
 
     static {
+        Init.ensureInit();
         PrintStream backup = System.out;
         try {
             System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
@@ -48,7 +50,8 @@ public class TestInlineHook4 {
         long func2 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func2","()V");
         long trampoline = InlineHook.hookWithTrampoline(func1,func2);
         func1();
-        Shellcode.setCompiledEntry(TestInlineHook4.class,"func3","()V",trampoline);
+        boolean success = Shellcode.setCompiledEntry(TestInlineHook4.class, "func3", "()V", trampoline);
+        assert success;
         func3();
         ProcessUtil.exit(0);
     }

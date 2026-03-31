@@ -1,8 +1,11 @@
 package alice.util;
 
 import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Klass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.tools.jcore.ClassWriter;
+import sun.misc.Resource;
+import sun.misc.URLClassPath;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,8 +44,8 @@ public class ClassUtil {
         }
     }
 
-    public static byte[] dump(Class<?> clazz) {
-        InstanceKlass klass = (InstanceKlass) Metadata.instantiateWrapperFor(AddressUtil.toAddress(AddressUtil.getKlassAddress(clazz)));
+    public static byte[] dumpFromMemory(Class<?> clazz) {
+        InstanceKlass klass = ClassUtil.getKlass(clazz);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ClassWriter cw = new ClassWriter(klass, bos);
         try {
@@ -53,7 +56,48 @@ public class ClassUtil {
         return bos.toByteArray();
     }
 
+    public static byte[] readRawBytes(String name) {
+        byte[] data = readRawBytes((URLClassLoader) ClassLoader.getSystemClassLoader(), name);
+        if (data == null) {
+            name = name.replace('.', '/').concat(".class");
+            try {
+                data = ClassLoaderUtil.bcp.getResource(name).getBytes();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return data;
+    }
+
+    public static byte[] readRawBytes(URLClassLoader loader, String name) {
+        name = name.replace('.', '/').concat(".class");
+        System.out.println(name);
+        URLClassPath ucp = ClassLoaderUtil.getUCP(loader);
+        Resource resource = ucp.getResource(name);
+        if (resource != null) {
+            try {
+                return resource.getBytes();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
     public static String getPath(Class<?> cls) {
         return cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/" + cls.getName().replace('.', '/') + ".class", "").replace("file:", "");
+    }
+
+    public static <T extends Klass> T getKlass(Class<?> clazz) {
+        return (T) Metadata.instantiateWrapperFor(AddressUtil.toAddress(AddressUtil.getKlassAddress(clazz)));
+    }
+
+    public static Class<?> getMainClass() {
+        StackTraceElement[] traces = Thread.currentThread().getStackTrace();
+        try {
+            return Class.forName(traces[traces.length - 1].getClassName());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

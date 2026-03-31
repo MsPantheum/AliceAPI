@@ -96,8 +96,11 @@ public class JNI_GetCreatedJavaVMs {
         payload[35] = (byte) 0xff;
         payload[36] = (byte) 0xe0;
         code_base = Platform.win32 ? VirtualAlloc.invoke(0, 37, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(0, 37, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        assert code_base != 0;
         Unsafe.writeBytes(code_base, payload);
-        Unsafe.putLong(code_base + 22, SymbolLookup.lookup("JNI_GetCreatedJavaVMs"));
+        long function = SymbolLookup.lookup("JNI_GetCreatedJavaVMs");
+        assert function != 0;
+        Unsafe.putLong(code_base + 22, function);
         long address = Shellcode.getCompiledEntry(JNI_GetCreatedJavaVMs.class, "holder", "()I");
         assert address != 0;
         InlineHook.simpleHook(address, code_base);

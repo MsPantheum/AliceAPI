@@ -1,10 +1,14 @@
 package alice.util;
 
 import alice.Platform;
+import com.sun.management.DiagnosticCommandMBean;
 import net.fornwall.jelf.ElfFile;
 import net.fornwall.jelf.ElfSymbol;
 import net.fornwall.jelf.ElfSymbolTableSection;
+import sun.management.ManagementFactoryHelper;
 
+import javax.management.MBeanException;
+import javax.management.ReflectionException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -80,11 +84,73 @@ public class ProcReader {
         }
     }
 
+    private static Map<String, LinkedList<MemoryMapping>> parseProcMapsMXBean() {
+        Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
+        DiagnosticCommandMBean dcmd = ManagementFactoryHelper.getDiagnosticCommandMBean();
+        try {
+            String result = (String) dcmd.invoke("vmDynlibs", new Object[]{}, new String[]{String[].class.getName()});
+            String[] lines = result.split("\n");
+            for (String line : lines) {
+                MemoryMapping mapping = parseMapping(line);
+                if (mapping != null) {
+                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new LinkedList<>());
+                    list.add(mapping);
+                }
+            }
+            return mappings;
+        } catch (MBeanException | ReflectionException e) {
+            return null;
+        }
+    }
+
     public static Map<String, LinkedList<MemoryMapping>> parseProcMaps() {
+        Map<String, LinkedList<MemoryMapping>> ret = parseProcMapsMXBean();
+        if (ret != null) {
+            return ret;
+        }
         if(Platform.win32){
             return parseProcMapsWin32(ProcessUtil.getPID());
         }
         return parseProcMaps(ProcessUtil.getPID());
+    }
+
+    private static MemoryMapping parseMapping(String line) {
+        MemoryMapping map = new MemoryMapping();
+        if (Platform.win32) {
+            map.addressRangeStart = line.substring(0, line.indexOf(" - "));
+            map.addressRangeEnd = line.substring(line.indexOf(" - ") + 3, line.indexOf("\t") - 1);
+            map.pathname = line.substring(line.indexOf("\t") + 1);
+            map.offset = -1;
+            map.inode = -1;
+            map.device = null;
+            map.permissions = null;
+        } else {
+            String[] parts = line.trim().split("\\s+");
+            if (parts.length >= 5) {
+                String[] tmp = parts[0].split("-");
+                map.addressRangeStart = tmp[0];
+                map.addressRangeEnd = tmp[1];
+                map.permissions = parts[1];
+                map.offset = Long.parseLong(parts[2], 16);
+                map.device = parts[3];
+                map.inode = Long.parseLong(parts[4]);
+
+                // Pathname may have spaces and appears after the first 5 parts
+                if (parts.length > 5) {
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 5; i < parts.length; i++) {
+                        builder.append(parts[i]).append(" ");
+                    }
+                    map.pathname = builder.toString().trim();
+                } else {
+                    map.pathname = ""; // Anonymous mapping
+                }
+                return map;
+            }
+            return null;
+        }
+
+        return map;
     }
 
     private static Map<String, LinkedList<MemoryMapping>> parseProcMapsWin32(int pid) {
@@ -102,15 +168,9 @@ public class ProcReader {
             String line;
             while ((line = reader.readLine()) != null) {
                 if(line.startsWith("0x")){
-                    MemoryMapping map = new MemoryMapping();
-                    map.addressRangeStart = line.substring(0, line.indexOf(" - "));
-                    map.addressRangeEnd = line.substring(line.indexOf(" - ") + 3, line.indexOf("\t") - 1);
-                    map.pathname = line.substring(line.indexOf("\t") + 1);
-                    map.offset = -1;
-                    map.inode = -1;
-                    map.device = null;
-                    map.permissions = null;
-                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname,k -> new LinkedList<>());
+                    MemoryMapping map = parseMapping(line);
+                    assert map != null;
+                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
                     list.add(map);
                 }
             }
@@ -132,28 +192,8 @@ public class ProcReader {
         ) {
             String line;
             while ((line = br.readLine()) != null) {
-                // Split the line by spaces or multiple spaces
-                String[] parts = line.trim().split("\\s+");
-                if (parts.length >= 5) {
-                    MemoryMapping map = new MemoryMapping();
-                    String[] tmp = parts[0].split("-");
-                    map.addressRangeStart = tmp[0];
-                    map.addressRangeEnd = tmp[1];
-                    map.permissions = parts[1];
-                    map.offset = Long.parseLong(parts[2],16);
-                    map.device = parts[3];
-                    map.inode = Long.parseLong(parts[4]);
-
-                    // Pathname may have spaces and appears after the first 5 parts
-                    if (parts.length > 5) {
-                        StringBuilder builder = new StringBuilder();
-                        for (int i = 5; i < parts.length; i++) {
-                            builder.append(parts[i]).append(" ");
-                        }
-                        map.pathname = builder.toString().trim();
-                    } else {
-                        map.pathname = ""; // Anonymous mapping
-                    }
+                MemoryMapping map = parseMapping(line);
+                if (map != null) {
                     LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname,k -> new LinkedList<>());
                     list.add(map);
                 }

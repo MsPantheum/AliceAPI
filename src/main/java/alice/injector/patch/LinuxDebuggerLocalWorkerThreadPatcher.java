@@ -6,7 +6,8 @@ public class LinuxDebuggerLocalWorkerThreadPatcher {
 
     //No need to do things on an attach thread as we are not really attached but in the same process.
 
-    public static byte[] patch(byte[] data) {
+    public static byte[] patch(byte[] data, String name) {
+        System.out.println("Patching " + name + ".");
         ClassReader cr = new ClassReader(data);
         ClassWriter cw = new ClassWriter(cr, 0);
         ClassVisitor cv = new ClassVisitor(Opcodes.ASM5, cw) {

@@ -82,13 +82,13 @@ public class mprotect {
         //__len here
         payload[20] = (byte) 0x48;
         payload[21] = (byte) 0xb8;
+        //function
         payload[30] = (byte) 0xba;
         //__prot here
         payload[35] = (byte) 0xff;
         payload[36] = (byte) 0xe0;
-        long tmp = Shellcode.inject(payload, mprotect.class,"holder","()I");
-        assert tmp != 0;
-        code_base = tmp;
+        code_base = Shellcode.inject(payload, mprotect.class, "holder", "()I");
+        assert code_base != 0;
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
     }
 

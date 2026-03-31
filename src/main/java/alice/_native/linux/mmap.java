@@ -104,7 +104,8 @@ public class mmap {
         code_base = Unsafe.allocateMemory(58);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 32, SymbolLookup.lookup("mmap"));
-        mprotect.invoke(AddressUtil.align(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        int success = mprotect.invoke(AddressUtil.align(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert success == 0;
         long address = Shellcode.getCompiledEntry(mmap.class, "holder", "()J");
         InlineHook.simpleHook(address, code_base);
     }
