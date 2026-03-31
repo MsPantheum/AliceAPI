@@ -2,6 +2,7 @@ package alice.util;
 
 import alice.Platform;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -16,7 +17,8 @@ public class DebugUtil {
 
     static {
         try {
-            NULL = new PrintStream(Files.newOutputStream(Paths.get(Platform.win32 ? "NUL" : "/dev/null")));
+            //noinspection IOStreamConstructor nio can't handle NUL file.
+            NULL = new PrintStream(Platform.win32 ? new FileOutputStream("NUL") :Files.newOutputStream(Paths.get("/dev/null")));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
