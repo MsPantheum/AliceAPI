@@ -88,9 +88,11 @@ public class ProcReader {
         Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
         DiagnosticCommandMBean dcmd = ManagementFactoryHelper.getDiagnosticCommandMBean();
         try {
-            String result = (String) dcmd.invoke("vmDynlibs", new Object[]{}, new String[]{String[].class.getName()});
+            String result = (String) dcmd.invoke("vmDynlibs", new Object[]{new String[]{}}, new String[]{String[].class.getName()});
             String[] lines = result.split("\n");
-            for (String line : lines) {
+            int i = Platform.win32 ? 1 : 0;
+            for (; i < lines.length;i++) {
+                String line = lines[i];
                 MemoryMapping mapping = parseMapping(line);
                 if (mapping != null) {
                     LinkedList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new LinkedList<>());
@@ -99,6 +101,7 @@ public class ProcReader {
             }
             return mappings;
         } catch (MBeanException | ReflectionException e) {
+            e.getCause().printStackTrace(System.err);
             return null;
         }
     }
@@ -108,6 +111,7 @@ public class ProcReader {
         if (ret != null) {
             return ret;
         }
+        System.err.println("Failed to parse memory mappings through MXBean!");
         if(Platform.win32){
             return parseProcMapsWin32(ProcessUtil.getPID());
         }

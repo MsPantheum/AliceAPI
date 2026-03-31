@@ -12,7 +12,7 @@ import static alice.util.ProcReader.parseProcMaps;
 
 public class TestProcReader {
     @Test
-    @EnabledOnOs(OS.LINUX)
+    @EnabledOnOs({OS.LINUX, OS.WINDOWS})
     public void test(){
         Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
         for (LinkedList<ProcReader.MemoryMapping> lists : maps.values()) {
