@@ -188,8 +188,9 @@ public class URLClassPathWrapper extends URLClassPath {
 
         @Override
         public Resource nextElement() {
+            Resource res = delegate.nextElement();
             try {
-                return processResource(delegate.nextElement(), delegate.nextElement().getName());
+                return processResource(res, res.getName());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
