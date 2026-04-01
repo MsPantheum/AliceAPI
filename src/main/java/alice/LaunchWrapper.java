@@ -1,15 +1,26 @@
 package alice;
 
+import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 
 public class LaunchWrapper {
-    public static void main(String[] args) throws Throwable {
+
+    public static void main(String[] args) {
         Init.ensureInit();
-        Class<?> launch_target = Class.forName(System.getProperty("AliceLaunchTarget"));
-        MethodHandle main = ReflectionUtil.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
-        main.invoke((Object[]) args);
+        ExtensionLoader.load();
+        try {
+            String target_name = System.getProperty("alice.launch_target");
+            if (target_name == null) {
+                target_name = "net.minecraft.launchwrapper.Launch";
+            }
+            Class<?> launch_target = Class.forName(target_name);
+            MethodHandle main = ReflectionUtil.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
+            main.invoke((Object[]) args);
+        } catch (Throwable t){
+            DebugUtil.printThrowableFully(t);
+        }
     }
 }

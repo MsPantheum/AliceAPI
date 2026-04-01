@@ -71,11 +71,18 @@ public class DebugUtil {
     public static void printThrowableFully(Throwable t, PrintStream out) {
         int depth = 0;
         while (t != null) {
+            for(int i = 0; i < depth; i++){
+                out.print('\t');
+            }
             out.println("Exception depth " + depth + ":" + t.getClass().getName() + " Message:" + t.getMessage());
             for (StackTraceElement ste : t.getStackTrace()) {
+                for(int i = 0; i < depth; i++){
+                    out.print('\t');
+                }
                 out.println(ste);
             }
             t = t.getCause();
+            depth++;
         }
     }
 }

@@ -21,6 +21,27 @@ public class FileUtil {
         }
     }
 
+    public static void createDirectory(String path){
+        Path dir = Paths.get(path);
+        if(Files.exists(dir) && !Files.isDirectory(dir)){
+            throw new IllegalStateException("File already exists!");
+        }
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Path[] list(String path){
+        Path dir = Paths.get(path);
+        try (Stream<Path> files = Files.list(dir)){
+            return files.toArray(Path[]::new);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static byte[] read(String path){
         try {
             return Files.readAllBytes(Paths.get(path));

@@ -1,20 +1,14 @@
 package alice.util;
 
-import alice.HSDB;
 import alice.Platform;
 import alice._native.linux.mmap;
 import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
 import alice.injector.SymbolLookup;
-import sun.jvm.hotspot.debugger.Address;
-import sun.jvm.hotspot.debugger.bsd.BsdDebuggerLocal;
-import sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal;
-import sun.jvm.hotspot.debugger.windbg.WindbgDebuggerLocal;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
-import sun.jvm.hotspot.runtime.VMObject;
 import sun.jvm.hotspot.utilities.MethodArray;
 
 import java.io.PrintStream;
@@ -62,14 +56,6 @@ public class AddressUtil {
         }
     }
 
-    public static long getAddressValue(Address addr) {
-        return HSDB.debugger.getAddressValue(addr);
-    }
-
-    public static long getAddressValue(VMObject vmObject) {
-        return getAddressValue(vmObject.getAddress());
-    }
-
     public static void print(String message, long address, PrintStream out) {
         out.print(message);
         print(address, out);
@@ -102,17 +88,6 @@ public class AddressUtil {
 
     public static void println(long address){
         println(address,System.out);
-    }
-
-    public static Address toAddress(long addr) {
-        if (Platform.linux) {
-            return ((LinuxDebuggerLocal) HSDB.debugger).newAddress(addr);
-        } else if (Platform.win32) {
-            return ((WindbgDebuggerLocal) HSDB.debugger).newAddress(addr);
-        } else if (Platform.bsd || Platform.darwin) {
-            return ((BsdDebuggerLocal) HSDB.debugger).newAddress(addr);
-        }
-        throw new IllegalStateException("Should not reach here");
     }
 
     public static long align(long address) {
@@ -179,7 +154,7 @@ public class AddressUtil {
         @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
             if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
-                return getAddressValue(method.getAddress());
+                return Converter.getAddressValue(method.getAddress());
             }
         }
         return 0;
@@ -194,12 +169,12 @@ public class AddressUtil {
     public static long getPointer2Method(MethodInfo methodInfo) {
         InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         MethodArray methods = klass.getMethods();
-        long start = getAddressValue(methods.getAddress());
+        long start = Converter.getAddressValue(methods.getAddress());
         long offset = methods.getElemType().getSize();
         for(int i = 0; i < methods.length(); i++) {
             long p = start + method_dataFieldOffset + i * offset;
             long m = Unsafe.getAddress(start + method_dataFieldOffset + i * offset);
-            Method method = (Method) Metadata.instantiateWrapperFor(toAddress(m));
+            Method method = (Method) Metadata.instantiateWrapperFor(Converter.toAddress(m));
             if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
                 return p;
             }
@@ -213,7 +188,6 @@ public class AddressUtil {
         for (ProcReader.MemoryMapping mapping : mappings) {
             System.out.println(mapping);
             if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
-                System.out.println("Find in " + mapping);
                 return true;
             }
         }
@@ -225,7 +199,6 @@ public class AddressUtil {
         for (LinkedList<ProcReader.MemoryMapping> mappings : list) {
             for (ProcReader.MemoryMapping mapping : mappings) {
                 if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
-                    System.out.println("Find in " + mapping);
                     return true;
                 }
             }

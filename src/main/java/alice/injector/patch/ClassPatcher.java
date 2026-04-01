@@ -4,36 +4,42 @@ import alice.api.ClassByteProcessor;
 import alice.util.ClassLoaderUtil;
 import alice.util.URLClassPathWrapper;
 import alice.util.Unsafe;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.ConstantDynamic;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.tree.ClassNode;
 import sun.misc.URLClassPath;
 
 import java.net.URLClassLoader;
+import java.util.LinkedList;
+import java.util.List;
 
-public class PatcherLoader {
+public class ClassPatcher {
 
+    private static final List<ClassByteProcessor> PROCESSORS = new LinkedList<>();
+
+    public static boolean shouldRunTransformers(){
+        return !PROCESSORS.isEmpty();
+    }
+
+    public static byte[] runTransformers(byte[] data,String name){
+        for (ClassByteProcessor processor : PROCESSORS) {
+            data = processor.process(data,name);
+        }
+        return data;
+    }
 
     public static void load() {
         Unsafe.ensureClassInitialized(URLClassLoader.class);
         Unsafe.ensureClassInitialized(URLClassPath.class);
         Unsafe.ensureClassInitialized(URLClassPathWrapper.class);
         Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticResource.class);
+        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticResources.class);
+        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticURLs.class);
         Unsafe.ensureClassInitialized(ClassByteProcessor.class);
         Unsafe.ensureClassInitialized(DebuggerLocalPatcher.class);
         Unsafe.ensureClassInitialized(LinuxDebuggerLocalWorkerThreadPatcher.class);
-        Unsafe.ensureClassInitialized(ClassReader.class);
-        Unsafe.ensureClassInitialized(ClassWriter.class);
-        Unsafe.ensureClassInitialized(ClassNode.class);
         Unsafe.ensureClassInitialized(UniversalPatcher.class);
-        Unsafe.ensureClassInitialized(Label.class);
-        Unsafe.ensureClassInitialized(ConstantDynamic.class);
+
         try {
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1"));
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1$1"));
-            Unsafe.ensureClassInitialized(Class.forName("org.objectweb.asm.Context"));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -45,7 +51,7 @@ public class PatcherLoader {
         System.out.println("Replacing URLClassPath.");
         ClassLoaderUtil.setUCP(loader, wrapper);
         System.out.println("Replaced.");
-        URLClassPathWrapper.registerProcessor(new ClassByteProcessor() {
+        registerProcessor(new ClassByteProcessor() {
             @Override
             public byte[] process(byte[] classBytes, String name) {
                 switch (name) {
@@ -65,5 +71,9 @@ public class PatcherLoader {
             }
         });
         System.out.println("Necessary processors registered.");
+    }
+
+    public static void registerProcessor(ClassByteProcessor processor) {
+        PROCESSORS.add(processor);
     }
 }

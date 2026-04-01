@@ -121,8 +121,8 @@ public class ProcReader {
     private static MemoryMapping parseMapping(String line) {
         MemoryMapping map = new MemoryMapping();
         if (Platform.win32) {
-            map.addressRangeStart = line.substring(0, line.indexOf(" - "));
-            map.addressRangeEnd = line.substring(line.indexOf(" - ") + 3, line.indexOf("\t") - 1);
+            map.addressRangeStart = line.substring(2, line.indexOf(" - "));
+            map.addressRangeEnd = line.substring(line.indexOf(" - ") + 5, line.indexOf("\t") - 1);
             map.pathname = line.substring(line.indexOf("\t") + 1);
             map.offset = -1;
             map.inode = -1;

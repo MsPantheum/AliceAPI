@@ -1,6 +1,6 @@
 package alice.test;
 
-import alice.injector.patch.PatcherLoader;
+import alice.injector.patch.ClassPatcher;
 import org.junit.jupiter.api.Test;
 import sun.jvm.hotspot.HSDB;
 import sun.jvm.hotspot.HotSpotAgent;
@@ -17,7 +17,7 @@ public class TestHSDB {
     @Test
     @SuppressWarnings("unchecked")
     public void test(){
-        PatcherLoader.load();
+        ClassPatcher.load();
         try {
             Constructor<HSDB> constructor = HSDB.class.getDeclaredConstructor(String[].class);
             constructor.setAccessible(true);

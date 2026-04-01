@@ -27,9 +27,10 @@ public class ClassUtil {
     static {
         try {
             addURL = ReflectionUtil.findVirtual(URLClassLoader.class, "addURL", MethodType.methodType(void.class, URL.class));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+
     }
 
     public static void append(String path, URLClassLoader classLoader) {
@@ -89,7 +90,8 @@ public class ClassUtil {
     }
 
     public static <T extends Klass> T getKlass(Class<?> clazz) {
-        return (T) Metadata.instantiateWrapperFor(AddressUtil.toAddress(AddressUtil.getKlassAddress(clazz)));
+        //noinspection unchecked
+        return (T) Metadata.instantiateWrapperFor(Converter.toAddress(AddressUtil.getKlassAddress(clazz)));
     }
 
     public static Class<?> getMainClass() {

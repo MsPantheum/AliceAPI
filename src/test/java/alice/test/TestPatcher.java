@@ -2,8 +2,7 @@ package alice.test;
 
 import alice.Meow;
 import alice.api.ClassByteProcessor;
-import alice.injector.patch.PatcherLoader;
-import alice.util.URLClassPathWrapper;
+import alice.injector.patch.ClassPatcher;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.*;
 
@@ -11,8 +10,8 @@ public class TestPatcher {
     @Test
     public void test() {
         System.out.println("Start loading...");
-        PatcherLoader.load();
-        URLClassPathWrapper.registerProcessor(new ClassByteProcessor() {
+        ClassPatcher.load();
+        ClassPatcher.registerProcessor(new ClassByteProcessor() {
             @Override
             public byte[] process(byte[] classBytes, String name) {
                 if (name.equals("alice/Meow.class")) {

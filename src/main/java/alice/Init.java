@@ -7,18 +7,25 @@ import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualFree;
 import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
-import alice.injector.patch.PatcherLoader;
+import alice.injector.patch.ClassPatcher;
 import alice.util.*;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.Method;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.util.Printer;
 
+import java.io.IOException;
 import java.net.URLClassLoader;
-
-import static org.objectweb.asm.Opcodes.*;
+import java.nio.file.Files;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class Init {
 
-    private static void checkHSDB(){
+    private static void checkHSDB() {
+
         URLClassLoader loader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 
         try {
@@ -32,19 +39,37 @@ public class Init {
         try {
             loader.loadClass("sun.jvm.hotspot.utilities.UnsupportedPlatformException");
         } catch (ClassNotFoundException e) {
+            System.out.println("Append HSDB.");
+            System.out.println("Path: " + FileUtil.getHSDB());
+            if (!Files.exists(FileUtil.getHSDB())) {
+                throw new RuntimeException("THE FUCK?");
+            }
             ClassUtil.append(FileUtil.getHSDB(), loader);
         }
+
     }
 
     private static void ensureASMLoaded() {
-        ClassWriter cw = new ClassWriter(0);
-        cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER, "tmp", null, "java/lang/Object", null);
-        cw.visitField(ACC_PUBLIC, "field", "I", null, null);
-        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "method", "()V", null, null);
-        mv.visitInsn(RETURN);
-        mv.visitMaxs(0, 0);
-        cw.visitSource("114514", "191980");
-        cw.toByteArray();
+        String[] jars = new String[]{ClassUtil.getPath(Opcodes.class), ClassUtil.getPath(Analyzer.class), ClassUtil.getPath(Method.class), ClassUtil.getPath(ClassNode.class), ClassUtil.getPath(Printer.class)};
+        for (String path : jars) {
+            try (JarFile jar = new JarFile(path)) {
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    String name = entry.getName();
+                    if(name.endsWith(".class") && !name.endsWith("module-info.class")){
+                        name = name.substring(0,name.length() - 6).replace('/','.');
+                        try {
+                            Unsafe.ensureClassInitialized(Class.forName(name));
+                        } catch (ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static boolean init = false;
@@ -62,7 +87,7 @@ public class Init {
         System.out.println("HSDB is ok.");
         Unsafe.ensureClassInitialized(Platform.class);
         ensureASMLoaded();
-        PatcherLoader.load();
+        ClassPatcher.load();
         System.out.println("UCP patch loaded.");
         Unsafe.ensureClassInitialized(HSDB.class);
         if (!Platform.win32) {
@@ -78,7 +103,7 @@ public class Init {
     }
 
     public static synchronized void ensureInit() {
-        if(!init){
+        if (!init) {
             System.out.println("AliceAPI init.");
             init();
         }

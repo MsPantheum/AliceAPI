@@ -11,7 +11,7 @@ import java.io.PrintStream;
 
 import static alice.HSDB.typeDataBase;
 import static alice.util.AddressUtil.checkNull;
-import static alice.util.AddressUtil.getAddressValue;
+import static alice.util.Converter.getAddressValue;
 import static alice.util.constants.AccessFlags.*;
 
 public class Shellcode {

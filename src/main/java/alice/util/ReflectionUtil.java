@@ -1,15 +1,17 @@
 package alice.util;
 
-import org.objectweb.asm.Type;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 public class ReflectionUtil {
+
     private static final MethodHandles.Lookup IMPL_LOOKUP;
+
+    public static MethodHandles.Lookup lookup(){
+        return IMPL_LOOKUP;
+    }
 
     static {
         IMPL_LOOKUP = Unsafe.allocateInstance(MethodHandles.Lookup.class);
@@ -52,36 +54,6 @@ public class ReflectionUtil {
             return IMPL_LOOKUP.findSpecial(owner, name, methodType, special_caller);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static MethodHandle get(Method method) {
-        try {
-            return IMPL_LOOKUP.unreflect(method);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static MethodHandle get(sun.jvm.hotspot.oops.Method method) {
-        try {
-            Class<?> holder = MemoryUtil.getObject(method.getMethodHolder().getJavaMirror().getHandle());
-            String name = method.getName().asString();
-            Type type = Type.getMethodType(method.getSignature().asString());
-            Class<?> ret = Class.forName(type.getReturnType().getClassName());
-
-            Type[] arg_types = type.getArgumentTypes();
-            Class<?>[] args = new Class<?>[arg_types.length];
-            for (int i = 0; i < args.length; i++) {
-                args[i] = Class.forName(arg_types[i].getClassName());
-            }
-            if (method.getAccessFlagsObj().isStatic()) {
-                return findStatic(holder, name, MethodType.methodType(ret, args));
-            } else {
-                return findVirtual(holder, name, MethodType.methodType(ret, args));
-            }
-        } catch (Throwable t) {
-            throw new RuntimeException(t);
         }
     }
 

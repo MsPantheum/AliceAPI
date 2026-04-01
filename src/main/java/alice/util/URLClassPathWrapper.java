@@ -1,6 +1,7 @@
 package alice.util;
 
-import alice.api.ClassByteProcessor;
+import alice.injector.patch.ClassPatcher;
+import org.apache.commons.io.IOUtils;
 import sun.misc.Resource;
 import sun.misc.URLClassPath;
 
@@ -8,19 +9,14 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.util.Enumeration;
-import java.util.LinkedList;
 import java.util.List;
 
 public class URLClassPathWrapper extends URLClassPath {
 
     private final URLClassPath delegate;
-
-    private static final List<ClassByteProcessor> PROCESSORS = new LinkedList<>();
-
-    public static void registerProcessor(ClassByteProcessor processor) {
-        PROCESSORS.add(processor);
-    }
 
     public URLClassPathWrapper(URLClassPath delegate) {
         super(delegate.getURLs());
@@ -28,28 +24,43 @@ public class URLClassPathWrapper extends URLClassPath {
     }
 
     @Override
-    public Resource getResource(String name, boolean check) {
-        Resource ret = delegate.getResource(name, check);
-        if(ret != null){
-            if(!PROCESSORS.isEmpty()){
-                try {
-                    byte[] data = ret.getBytes();
-                    for(ClassByteProcessor processor : PROCESSORS){
-                        data = processor.process(data, name);
-                    }
-                    InputStream is =  new ByteArrayInputStream(data);
-                    String _name = ret.getName();
-                    URL _url = ret.getURL();
-                    URL _cs_url = ret.getCodeSourceURL();
-                    int length = data.length;
-                    return new StaticResource(_name, _url, _cs_url, is, length);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+    public int hashCode() {
+        return delegate.hashCode();
+    }
 
-            }
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof URLClassPathWrapper) {
+            return ((URLClassPathWrapper) obj).delegate.equals(delegate);
+        } else if (obj instanceof URLClassPath) {
+            return obj.equals(delegate);
         }
-        return ret;
+        return super.equals(obj);
+    }
+
+    private static Resource processResource(Resource resource, String name) throws IOException {
+        if (resource == null) {
+            return null;
+        }
+        if (ClassPatcher.shouldRunTransformers()) {
+            byte[] data = ClassPatcher.runTransformers(resource.getBytes(), name);
+            InputStream is = new ByteArrayInputStream(data);
+            String _name = resource.getName();
+            URL _url = resource.getURL();
+            URL _cs_url = resource.getCodeSourceURL();
+            int length = data.length;
+            return new StaticResource(_name, _url, _cs_url, is, length);
+        }
+        return resource;
+    }
+
+    @Override
+    public Resource getResource(String name, boolean check) {
+        try {
+            return processResource(delegate.getResource(name, check), name);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -64,17 +75,125 @@ public class URLClassPathWrapper extends URLClassPath {
 
     @Override
     public URL[] getURLs() {
-        return delegate.getURLs();
+        URL[] ret = delegate.getURLs();
+        for (int i = 0; i < ret.length; i++) {
+            URL url = ret[i];
+            String path = url.getPath();
+            if (path.endsWith(".class")) {
+                try {
+                    ret[i] = processURL(url, path);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return ret;
     }
 
     @Override
     public Enumeration<Resource> getResources(String name, boolean check) {
-        return delegate.getResources(name, check);
+        return new StaticResources(delegate.getResources(name, check));
     }
 
     @Override
     public URL checkURL(URL url) {
-        return delegate.checkURL(url);
+        return url;
+    }
+
+    @Override
+    public URL findResource(String name, boolean check) {
+        URL url = delegate.findResource(name, check);
+        try {
+            return name.endsWith(".class") ? processURL(url, name) : url;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static URL processURL(URL url, String name) throws IOException {
+        if (url == null) {
+            return null;
+        }
+        if (ClassPatcher.shouldRunTransformers()) {
+            byte[] data = ClassPatcher.runTransformers(IOUtils.toByteArray(url), name);
+            return new URL("mem", null, -1, "", new URLStreamHandler() {
+                @Override
+                protected URLConnection openConnection(URL u) {
+                    return new URLConnection(u) {
+                        @Override
+                        public void connect() {
+                        }
+
+                        @Override
+                        public InputStream getInputStream() {
+                            return new ByteArrayInputStream(data);
+                        }
+                    };
+                }
+            });
+        }
+        return url;
+
+    }
+
+    @Override
+    public Enumeration<URL> findResources(String name, boolean check) {
+        return new StaticURLs(delegate.findResources(name, check));
+    }
+
+    @Override
+    public Enumeration<Resource> getResources(String name) {
+        return new StaticResources(delegate.getResources(name));
+    }
+
+    public static class StaticURLs implements Enumeration<URL> {
+        private final Enumeration<URL> delegate;
+
+        public StaticURLs(Enumeration<URL> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean hasMoreElements() {
+            return delegate.hasMoreElements();
+        }
+
+        @Override
+        public URL nextElement() {
+            URL url = delegate.nextElement();
+            String path = url.getPath();
+            if (path.endsWith(".class")) {
+                try {
+                    return processURL(url, path);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return url;
+        }
+    }
+
+    public static class StaticResources implements Enumeration<Resource> {
+
+        private final Enumeration<Resource> delegate;
+
+        public StaticResources(Enumeration<Resource> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean hasMoreElements() {
+            return delegate.hasMoreElements();
+        }
+
+        @Override
+        public Resource nextElement() {
+            try {
+                return processResource(delegate.nextElement(), delegate.nextElement().getName());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public static class StaticResource extends Resource {

@@ -4,6 +4,7 @@ import sun.misc.URLClassPath;
 
 import java.lang.reflect.Field;
 import java.net.URLClassLoader;
+import java.util.Objects;
 
 public class ClassLoaderUtil {
     public static final URLClassPath bcp;
@@ -23,10 +24,10 @@ public class ClassLoaderUtil {
     }
 
     public static URLClassPath getUCP(URLClassLoader loader) {
-        return Unsafe.getObject(loader, ucp_offset);
+        return Unsafe.getObject(Objects.requireNonNull(loader), ucp_offset);
     }
 
-    public static void setUCP(URLClassLoader loader, Object neo) {
-        Unsafe.putObject(loader, ucp_offset, neo);
+    public static void setUCP(URLClassLoader loader, URLClassPath neo) {
+        Unsafe.putObject(Objects.requireNonNull(loader), ucp_offset, Objects.requireNonNull(neo));
     }
 }

@@ -32,7 +32,7 @@ public class MemoryUtil {
 
     @SuppressWarnings("unchecked")
     public static <T> T getObject(Address address) {
-        return (T) Ptr2Obj.getFromPtr(AddressUtil.getAddressValue(address));
+        return (T) Ptr2Obj.getFromPtr(Converter.getAddressValue(address));
     }
 
     private static final long _narrow_klass_base = Universe.getNarrowKlassBase();
