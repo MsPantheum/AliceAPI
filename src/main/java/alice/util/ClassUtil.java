@@ -85,7 +85,7 @@ public class ClassUtil {
         return null;
     }
 
-    public static String getPath(Class<?> cls) {
+    public static String getJarPath(Class<?> cls) {
         return cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/" + cls.getName().replace('.', '/') + ".class", "").replace("file:", "");
     }
 

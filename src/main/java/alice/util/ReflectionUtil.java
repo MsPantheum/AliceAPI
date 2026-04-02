@@ -1,6 +1,7 @@
 package alice.util;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
@@ -23,6 +24,10 @@ public class ReflectionUtil {
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static MethodHandleInfo resolve(MethodHandle mh) {
+        return IMPL_LOOKUP.revealDirect(mh);
     }
 
     public static MethodHandle findVirtual(Class<?> owner, String name, MethodType methodType) {

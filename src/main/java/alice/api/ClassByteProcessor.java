@@ -6,4 +6,8 @@ public interface ClassByteProcessor {
     default byte[] process(byte[] classBytes, String name) {
         return classBytes;
     }
+
+    default int priority() {
+        return 0;
+    }
 }

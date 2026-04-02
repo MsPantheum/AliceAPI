@@ -9,6 +9,7 @@ import alice._native.win32.VirtualProtect;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
+import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
@@ -60,7 +61,7 @@ public class InlineHook {
                 return 0;
             }
             HDE64.Hde64s hs = new HDE64.Hde64s();
-            trampoline = AddressUtil.allocateNear(ori,128);
+            trampoline = MemoryUtil.allocateNear(ori, 128);
             if(trampoline==0){
                 trampoline = Platform.win32 ? VirtualAlloc.invoke(0,128,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(0,128,PROT_READ | PROT_WRITE | PROT_EXEC,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

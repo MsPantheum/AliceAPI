@@ -1,9 +1,5 @@
 package alice.util;
 
-import alice.Platform;
-import alice._native.linux.mmap;
-import alice._native.linux.munmap;
-import alice._native.win32.VirtualAlloc;
 import alice.injector.SymbolLookup;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
@@ -17,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static alice.HSDB.typeDataBase;
-import static alice.util.constants.Constants.*;
 
 public class AddressUtil {
 
@@ -92,47 +87,6 @@ public class AddressUtil {
 
     public static long align(long address) {
         return address & -Unsafe.PAGE_SIZE;
-    }
-
-    //From https://github.com/shdwmtr/libsnare.h
-    public static long allocateNear(long target, long size) {
-        long lo = target > 0x80000000L ? target - 0x80000000L : 0x10000L;
-        long hi = target + 0x80000000L;
-        if (hi < target) {
-            hi = -1;
-        }
-        long page_size = Unsafe.PAGE_SIZE;
-        @SuppressWarnings("PointlessBitwiseExpression") long page_mask = ~(page_size - 1);
-        long try_addr;
-
-        for (try_addr = (target & page_mask) - page_size;
-             try_addr >= lo; try_addr -= page_size) {
-            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr,size,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (p == MAP_FAILED)
-                continue;
-            if (inRel32Range(target, p))
-                return p;
-            munmap.invoke(p, size);
-        }
-
-        for (try_addr = (target & page_mask) + page_size;
-             try_addr <= hi; try_addr += page_size) {
-            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr,size,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (p == MAP_FAILED)
-                continue;
-            if (inRel32Range(target, p))
-                return p;
-            munmap.invoke(p, size);
-        }
-
-        return 0;
-    }
-
-    public static boolean inRel32Range(long p1, long p2) {
-        long diff = p2 - p1;
-        return diff >= -0x7FFFFF00L && diff <= 0x7FFFFF00L;
     }
 
     public static final long klass_offset;

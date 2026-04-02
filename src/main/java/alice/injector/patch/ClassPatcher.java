@@ -7,12 +7,12 @@ import alice.util.Unsafe;
 import sun.misc.URLClassPath;
 
 import java.net.URLClassLoader;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 public class ClassPatcher {
 
-    private static final List<ClassByteProcessor> PROCESSORS = new LinkedList<>();
+    private static final PriorityQueue<ClassByteProcessor> PROCESSORS = new PriorityQueue<>(Comparator.comparingInt(ClassByteProcessor::priority));
 
     public static boolean shouldRunTransformers(){
         return !PROCESSORS.isEmpty();
@@ -74,6 +74,8 @@ public class ClassPatcher {
     }
 
     public static void registerProcessor(ClassByteProcessor processor) {
-        PROCESSORS.add(processor);
+        synchronized (PROCESSORS) {
+            PROCESSORS.add(processor);
+        }
     }
 }

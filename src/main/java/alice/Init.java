@@ -50,7 +50,7 @@ public class Init {
     }
 
     private static void ensureASMLoaded() {
-        String[] jars = new String[]{ClassUtil.getPath(Opcodes.class), ClassUtil.getPath(Analyzer.class), ClassUtil.getPath(Method.class), ClassUtil.getPath(ClassNode.class), ClassUtil.getPath(Printer.class)};
+        String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class)};
         for (String path : jars) {
             try (JarFile jar = new JarFile(path)) {
                 Enumeration<JarEntry> entries = jar.entries();

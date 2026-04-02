@@ -10,6 +10,8 @@ import java.nio.file.Paths;
 
 public class DebugUtil {
 
+    public static final boolean LOG_KLASS_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_klass"));
+    public static final boolean LOG_UCP_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_ucp"));
     private static volatile PrintStream out;
     private static volatile PrintStream err;
 

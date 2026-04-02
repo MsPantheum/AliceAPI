@@ -1,22 +1,20 @@
 package alice;
 
-import sun.jvm.hotspot.types.Field;
-import sun.jvm.hotspot.types.Type;
-
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
+import java.util.PriorityQueue;
 
 public class Test {
 
     static {
-        Init.ensureInit();
+        //Init.ensureInit();
     }
 
-    public static void main(String[] args) throws Throwable {
-        Type type = HSDB.typeDataBase.lookupType("oopDesc");
-        Field field = type.getAddressField("_metadata._klass");
-        System.out.println(field.getName() + ":" +field.getOffset());
-        field = type.getAddressField("_metadata._compressed_klass");
-        System.out.println(field.getName() + ":" +field.getOffset());
+    public static void main(String[] args) {
+        PriorityQueue<Integer> test = new PriorityQueue<>();
+        test.add(456);
+        test.add(123);
+        test.add(789);
+        for (Integer i : test) {
+            System.out.println(i.intValue());
+        }
     }
 }
