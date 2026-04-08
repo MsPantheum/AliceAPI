@@ -1,46 +1,13 @@
 package alice.injector.patch;
 
-import alice.LaunchWrapper;
-import alice.util.ClassUtil;
-import alice.util.DebugUtil;
 import alice.util.FileUtil;
-import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.*;
 
-import java.io.IOException;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-
 public class UniversalPatcher implements Opcodes {
-
-    private static final Map<String, byte[]> _protected = new HashMap<>();
-
-    static {
-        if (!DebugUtil.isRunningTest()) {
-            try (JarFile jar = new JarFile(ClassUtil.getJarPath(LaunchWrapper.class))) {
-                Enumeration<JarEntry> entries = jar.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    if (entry.getName().endsWith(".class")) {
-                        _protected.put(entry.getName(), IOUtils.toByteArray(jar.getInputStream(entry)));
-                    }
-                }
-            } catch (IOException e) {
-                DebugUtil.printThrowableFully(e);
-            }
-        }
-    }
 
     public static byte[] patch(byte[] data, String name) {
         if (data == null) {
             return null;
-        }
-
-        if (_protected.containsKey(name)) {
-            return _protected.get(name);
         }
 
         final boolean[] changed = {false};

@@ -1,26 +1,32 @@
 package alice.injector.patch;
 
+import alice.LaunchWrapper;
 import alice.api.ClassByteProcessor;
-import alice.util.ClassLoaderUtil;
-import alice.util.URLClassPathWrapper;
-import alice.util.Unsafe;
+import alice.util.*;
+import org.apache.commons.io.IOUtils;
 import sun.misc.URLClassPath;
 
+import java.io.IOException;
 import java.net.URLClassLoader;
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ClassPatcher {
 
     private static final PriorityQueue<ClassByteProcessor> PROCESSORS = new PriorityQueue<>(Comparator.comparingInt(ClassByteProcessor::priority));
 
-    public static boolean shouldRunTransformers(){
+    public static boolean shouldRunTransformers() {
         return !PROCESSORS.isEmpty();
     }
 
-    public static byte[] runTransformers(byte[] data,String name){
+    public static byte[] runTransformers(byte[] data, String name) {
+        byte[] _try = _protected.get(name);
+        if (_try != null) {
+            return _try;
+        }
         for (ClassByteProcessor processor : PROCESSORS) {
-            data = processor.process(data,name);
+            data = processor.process(data, name);
         }
         return data;
     }
@@ -45,7 +51,7 @@ public class ClassPatcher {
         }
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         assert classLoader instanceof URLClassLoader;
-        URLClassLoader loader = (URLClassLoader)classLoader;
+        URLClassLoader loader = (URLClassLoader) classLoader;
         URLClassPath ucp = ClassLoaderUtil.getUCP(loader);
         URLClassPathWrapper wrapper = new URLClassPathWrapper(ucp);
         System.out.println("Replacing URLClassPath.");
@@ -58,9 +64,9 @@ public class ClassPatcher {
                     case "sun/jvm/hotspot/debugger/bsd/BsdDebuggerLocal.class":
                     case "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class":
                     case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal.class": {
-                        return DebuggerLocalPatcher.patch(classBytes,name);
+                        return DebuggerLocalPatcher.patch(classBytes, name);
                     }
-                    case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class":{
+                    case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class": {
                         return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes, name);
                     }
                     default: {
@@ -74,8 +80,33 @@ public class ClassPatcher {
     }
 
     public static void registerProcessor(ClassByteProcessor processor) {
+        System.out.println("Registering processor: " + processor.getClass().getName());
+        System.out.println("Loaded by class: " + processor.getClass().getClassLoader().getClass().getName());
+        System.out.println("CP loaded by: " + ClassPatcher.class.getClassLoader().getClass().getName());
         synchronized (PROCESSORS) {
             PROCESSORS.add(processor);
+        }
+    }
+
+    private static final Map<String, byte[]> _protected = new HashMap<>();
+
+    public static void addProtectedJar(String path) {
+        try (JarFile jar = new JarFile(path)) {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.getName().endsWith(".class")) {
+                    _protected.put(entry.getName(), IOUtils.toByteArray(jar.getInputStream(entry)));
+                }
+            }
+        } catch (IOException e) {
+            DebugUtil.printThrowableFully(e);
+        }
+    }
+
+    static {
+        if (!DebugUtil.isRunningTest()) {
+            addProtectedJar(ClassUtil.getJarPath(LaunchWrapper.class));
         }
     }
 }

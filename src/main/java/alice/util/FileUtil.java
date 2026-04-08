@@ -13,69 +13,109 @@ import java.util.Iterator;
 import java.util.stream.Stream;
 
 public class FileUtil {
-    public static void write(String path,byte[] data){
+
+    public static void createFile(String path) {
+        createFile(Paths.get(path));
+    }
+
+    public static void createFile(Path path) {
         try {
-            Files.write(Paths.get(path),data);
+            Files.createFile(path);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void createDirectory(String path){
-        Path dir = Paths.get(path);
-        if(Files.exists(dir) && !Files.isDirectory(dir)){
+    public static void write(String path, byte[] data) {
+        write(Paths.get(path), data);
+    }
+
+    public static void write(Path path, byte[] data) {
+        try {
+            if (path.getParent() != null) {
+                createDirectory(path.getParent());
+            }
+            if (!exists(path)) {
+                createFile(path);
+            }
+            Files.write(path, data);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void createDirectory(String path) {
+        createDirectory(Paths.get(path));
+    }
+
+    public static void createDirectory(Path path) {
+        if (isDirectory(path)) {
+            return;
+        }
+        if (exists(path)) {
             throw new IllegalStateException("File already exists!");
         }
+
         try {
-            Files.createDirectories(dir);
+            Files.createDirectories(path);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Path[] list(String path){
-        Path dir = Paths.get(path);
-        try (Stream<Path> files = Files.list(dir)){
+    public static Path[] list(String path) {
+        return list(Paths.get(path));
+    }
+
+    public static Path[] list(Path path) {
+
+        try (Stream<Path> files = Files.list(path)) {
             return files.toArray(Path[]::new);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static byte[] read(String path){
+    public static byte[] read(Path path) {
         try {
-            return Files.readAllBytes(Paths.get(path));
+            return Files.readAllBytes(path);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static String toString(String path){
+    public static byte[] read(String path) {
+        return read(Paths.get(path));
+    }
+
+    public static String toString(Path path) {
         try {
-            return new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+            return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Path search(String dir,String name){
+    public static String toString(String path) {
+        return toString(Paths.get(path));
+    }
 
+    public static Path search(Path dir, String name) {
         Path ret = null;
-        Path dir_p = Paths.get(dir);
-        if(!Files.isDirectory(dir_p)){
-            return null;
+        if (!isDirectory(dir)) {
+            throw new IllegalArgumentException("dir is not a directory!");
         }
-        try(Stream<Path> stream = Files.list(dir_p)){
+        try (Stream<Path> stream = Files.list(dir)) {
             Iterator<Path> iterator = stream.iterator();
-            while (iterator.hasNext()){
+            while (iterator.hasNext()) {
                 Path p = iterator.next();
-                if(Files.isDirectory(p)){
-                    ret = search(p.toString(),name);
-                    if(ret != null){
+                if (isDirectory(p)) {
+                    ret = search(p.toString(), name);
+                    if (ret != null) {
                         break;
                     }
                 } else {
-                    if(name.equals(p.getFileName().toString())){
+                    if (name.equals(p.getFileName().toString())) {
                         ret = p;
                         break;
                     }
@@ -88,21 +128,33 @@ public class FileUtil {
         return ret;
     }
 
+    public static Path search(String dir, String name) {
+        return search(Paths.get(dir), name);
+    }
+
     public static String getJavaHome() {
         String HOME = System.getProperty("java.home");
-        return HOME.endsWith("jre") ? HOME.substring(0, HOME.length()-3) : HOME;
+        return HOME.endsWith("jre") ? HOME.substring(0, HOME.length() - 3) : HOME;
     }
 
-    public static Path getHSDB(){
-        return search(getJavaHome(),"sa-jdi.jar");
+    public static Path getHSDB() {
+        return search(getJavaHome(), "sa-jdi.jar");
     }
 
-    public static boolean exists(String filePath) {
-        return Files.exists(Paths.get(filePath));
+    public static boolean exists(String path) {
+        return exists(Paths.get(path));
+    }
+
+    public static boolean exists(Path path) {
+        return Files.exists(path);
+    }
+
+    public static boolean isDirectory(Path path) {
+        return Files.isDirectory(path);
     }
 
     public static boolean isDirectory(String path) {
-        return Files.isDirectory(Paths.get(path));
+        return isDirectory(Paths.get(path));
     }
 
     public static String getJarPath(Class<?> cls) {

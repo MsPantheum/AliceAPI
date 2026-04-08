@@ -15,6 +15,9 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ClassUtil {
 
@@ -100,6 +103,28 @@ public class ClassUtil {
             return Class.forName(traces[traces.length - 1].getClassName());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void ensureClassesInJarLoaded(String... jars) {
+        for (String path : jars) {
+            try (JarFile jar = new JarFile(path)) {
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    String name = entry.getName();
+                    if (name.endsWith(".class") && !name.endsWith("module-info.class")) {
+                        name = name.substring(0, name.length() - 6).replace('/', '.');
+                        try {
+                            Unsafe.ensureClassInitialized(Class.forName(name));
+                        } catch (ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

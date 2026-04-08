@@ -9,18 +9,15 @@ import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
 import alice.injector.patch.ClassPatcher;
 import alice.util.*;
+import com.google.common.base.Objects;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.util.Printer;
 
-import java.io.IOException;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
-import java.util.Enumeration;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 public class Init {
 
@@ -49,29 +46,6 @@ public class Init {
 
     }
 
-    private static void ensureASMLoaded() {
-        String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class)};
-        for (String path : jars) {
-            try (JarFile jar = new JarFile(path)) {
-                Enumeration<JarEntry> entries = jar.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    if(name.endsWith(".class") && !name.endsWith("module-info.class")){
-                        name = name.substring(0,name.length() - 6).replace('/','.');
-                        try {
-                            Unsafe.ensureClassInitialized(Class.forName(name));
-                        } catch (ClassNotFoundException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
     private static boolean init = false;
 
     private static void init() {
@@ -86,7 +60,8 @@ public class Init {
         checkHSDB();
         System.out.println("HSDB is ok.");
         Unsafe.ensureClassInitialized(Platform.class);
-        ensureASMLoaded();
+        String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class), ClassUtil.getJarPath(Objects.class)};
+        ClassUtil.ensureClassesInJarLoaded(jars);
         ClassPatcher.load();
         System.out.println("UCP patch loaded.");
         Unsafe.ensureClassInitialized(HSDB.class);

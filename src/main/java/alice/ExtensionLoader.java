@@ -1,5 +1,6 @@
 package alice;
 
+import alice.injector.patch.ClassPatcher;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
 import alice.util.ReflectionUtil;
@@ -24,6 +25,7 @@ public class ExtensionLoader {
         for (Path path : FileUtil.list(extension_dir)) {
             if(path.toString().endsWith(".jar")){
                 ClassUtil.append(path, (URLClassLoader) ClassLoader.getSystemClassLoader());
+                ClassPatcher.addProtectedJar(path.toString());
                 try (JarFile jar = new JarFile(path.toFile())){
                     String target = jar.getManifest().getMainAttributes().getValue("Alice-Extension");
                     if(target == null){

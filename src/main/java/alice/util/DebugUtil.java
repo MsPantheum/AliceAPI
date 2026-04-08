@@ -20,7 +20,7 @@ public class DebugUtil {
     static {
         try {
             //noinspection IOStreamConstructor nio can't handle NUL file.
-            NULL = new PrintStream(Platform.win32 ? new FileOutputStream("NUL") :Files.newOutputStream(Paths.get("/dev/null")));
+            NULL = new PrintStream(Platform.win32 ? new FileOutputStream("NUL") : Files.newOutputStream(Paths.get("/dev/null")));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -73,12 +73,12 @@ public class DebugUtil {
     public static void printThrowableFully(Throwable t, PrintStream out) {
         int depth = 0;
         while (t != null) {
-            for(int i = 0; i < depth; i++){
+            for (int i = 0; i < depth; i++) {
                 out.print('\t');
             }
             out.println("Exception depth " + depth + ":" + t.getClass().getName() + " Message:" + t.getMessage());
             for (StackTraceElement ste : t.getStackTrace()) {
-                for(int i = 0; i < depth; i++){
+                for (int i = 0; i < depth; i++) {
                     out.print('\t');
                 }
                 out.println(ste);
@@ -86,5 +86,13 @@ public class DebugUtil {
             t = t.getCause();
             depth++;
         }
+    }
+
+    public static void println(String str) {
+        System.out.println(str);
+    }
+
+    public static void println(Object o) {
+        System.out.println(o.getClass().getName());
     }
 }
