@@ -42,6 +42,7 @@ shadowJar {
         exclude("com/**")
         exclude("org/**")
         exclude("it/**")
+        exclude("java/**")
         // Example: exclude(dependency('org.scala-lang:.*:.*'))
     }
 }
@@ -55,6 +56,8 @@ jar {
                 'Main-Class': 'alice.LaunchWrapper',
         )
     }
+
+    exclude("java/**");
 }
 
 java {

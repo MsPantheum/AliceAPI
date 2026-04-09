@@ -4,7 +4,6 @@ import alice.Init;
 import alice.Platform;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
-import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -28,7 +27,7 @@ public class TestInlineHook4 {
     }
 
     static {
-        Init.ensureInit();
+
         PrintStream backup = System.out;
         try {
             System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
@@ -46,6 +45,7 @@ public class TestInlineHook4 {
     @Test
     @EnabledOnOs(OS.LINUX) //I don't know why JUnit crashed on this.
     public void test(){
+        Init.ensureInit();
         long func1 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func1","()V");
         long func2 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func2","()V");
         long trampoline = InlineHook.hookWithTrampoline(func1,func2);
@@ -53,6 +53,5 @@ public class TestInlineHook4 {
         boolean success = Shellcode.setCompiledEntry(TestInlineHook4.class, "func3", "()V", trampoline);
         assert success;
         func3();
-        ProcessUtil.exit(0);
     }
 }

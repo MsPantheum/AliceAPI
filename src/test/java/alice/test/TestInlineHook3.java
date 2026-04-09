@@ -3,8 +3,9 @@ package alice.test;
 import alice.Init;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.util.ArrayList;
 
@@ -17,7 +18,6 @@ public class TestInlineHook3 {
     }
 
     static {
-        Init.ensureInit();
         @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") ArrayList tmp = new ArrayList(1);
         for(int i = 0;i < 20000;i ++){
             //noinspection ResultOfMethodCallIgnored
@@ -28,8 +28,9 @@ public class TestInlineHook3 {
     }
 
     @Test
-    @Disabled
+    @EnabledOnOs({OS.LINUX})
     public void test(){
+        Init.ensureInit();
         Class<?> clazz = ArrayList.class;
         assert clazz.getClassLoader() == null;
         long ori = Shellcode.getCompiledEntry(ArrayList.class,"add","(Ljava/lang/Object;)Z");

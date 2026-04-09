@@ -1,5 +1,7 @@
 package alice.util;
 
+import alice.Platform;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.MethodHandles;
@@ -10,7 +12,7 @@ public class ReflectionUtil {
 
     private static final MethodHandles.Lookup IMPL_LOOKUP;
 
-    public static MethodHandles.Lookup lookup(){
+    public static MethodHandles.Lookup lookup() {
         return IMPL_LOOKUP;
     }
 
@@ -66,14 +68,21 @@ public class ReflectionUtil {
     private static final MethodHandle getFields;
 
     static {
-        try {
-            getFields = IMPL_LOOKUP.findVirtual(Class.class, "getDeclaredFields0", MethodType.methodType(Field[].class, boolean.class));
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+        if (!Platform.module) {
+            try {
+                getFields = IMPL_LOOKUP.findVirtual(Class.class, "getDeclaredFields0", MethodType.methodType(Field[].class, boolean.class));
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            getFields = null;
         }
     }
 
     public static Field[] getFields(Class<?> clazz) {
+        if (Platform.module) {
+            throw new IllegalStateException();
+        }
         try {
             return (Field[]) getFields.invoke(clazz, false);
         } catch (Throwable e) {
@@ -82,6 +91,9 @@ public class ReflectionUtil {
     }
 
     public static Field getField(Class<?> clazz, String name) {
+        if (Platform.module) {
+            throw new IllegalStateException();
+        }
         for (Field f : getFields(clazz)) {
             if (name.equals(f.getName())) {
                 return f;

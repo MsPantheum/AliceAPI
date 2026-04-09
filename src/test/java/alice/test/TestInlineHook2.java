@@ -1,19 +1,15 @@
 package alice.test;
 
 import alice.Init;
-import alice.Platform;
 import alice._native.InlineHook;
 import alice._native.linux.mprotect;
 import alice.injector.Shellcode;
 import alice.util.AddressUtil;
+import alice.util.DebugUtil;
 import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
-
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 
 public class TestInlineHook2 {
 
@@ -80,25 +76,20 @@ public class TestInlineHook2 {
     }
 
     static {
-        Init.ensureInit();
         for (int i = 0; i < 20000; i++) {
             func();
         }
-        PrintStream backup = System.out;
-        try {
-            System.setOut(new PrintStream(new FileOutputStream(Platform.win32 ? "NUL" : "/dev/null")));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        DebugUtil.disableOutput();
         for (int i = 0; i < 20000; i++) {
             hello();
         }
-        System.setOut(backup);
+        DebugUtil.restoreOutput();
     }
 
     @Test
-    @EnabledOnOs({OS.LINUX})
+    @EnabledOnOs({OS.LINUX, OS.WINDOWS})
     public void test() {
+        Init.ensureInit();
         byte[] payload = new byte[]{(byte)0xb8,(byte)0x01,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0xbf,(byte)0x01,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x48,(byte)0x8d,(byte)0x35,(byte)0xef,(byte)0x0f,(byte)0x00,(byte)0x00,(byte)0xba,(byte)0x0e,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x0f,(byte)0x05,(byte)0xb8,(byte)0x3c,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x48,(byte)0x31,(byte)0xff,(byte)0x0f,(byte)0x05};
         System.out.println(payload.length);
         long neo = Unsafe.allocateMemory(payload.length);

@@ -1,0 +1,34 @@
+package java.lang;
+
+import java.lang.reflect.Field;
+import java.security.ProtectionDomain;
+
+public class Class<T> {
+    public Module getModule() {
+        return null;
+    }
+
+    public String getName() {
+        return null;
+    }
+
+    public boolean desiredAssertionStatus() {
+        return true;
+    }
+
+    public Field getDeclaredField(String name) throws NoSuchFieldException {
+        return null;
+    }
+
+    public static Class<?> forName(String name) throws ClassNotFoundException {
+        return null;
+    }
+
+    public ClassLoader getClassLoader() {
+        return null;
+    }
+
+    public ProtectionDomain getProtectionDomain() {
+        return null;
+    }
+}

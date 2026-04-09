@@ -117,8 +117,7 @@ public class ClassUtil {
                         name = name.substring(0, name.length() - 6).replace('/', '.');
                         try {
                             Unsafe.ensureClassInitialized(Class.forName(name));
-                        } catch (ClassNotFoundException e) {
-                            throw new RuntimeException(e);
+                        } catch (Throwable ignored) {
                         }
                     }
                 }

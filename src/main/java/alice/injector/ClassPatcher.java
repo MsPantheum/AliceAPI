@@ -104,7 +104,7 @@ public class ClassPatcher {
             Enumeration<JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
-                if (entry.getName().endsWith(".class")) {
+                if (entry.getName().endsWith(".class") && !entry.getName().startsWith("java/")) {
                     _protected.put(entry.getName(), IOUtils.toByteArray(jar.getInputStream(entry)));
                 }
             }
