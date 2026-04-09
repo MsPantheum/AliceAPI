@@ -1,10 +1,16 @@
 package java.lang;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 
 public class Class<T> {
+    public Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes)
+            throws NoSuchMethodException, SecurityException {
+        return null;
+    }
+
     public Module getModule() {
         return null;
     }
