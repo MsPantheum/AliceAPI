@@ -1,6 +1,7 @@
 package java.lang;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 
 public class Class<T> {
@@ -29,6 +30,11 @@ public class Class<T> {
     }
 
     public ProtectionDomain getProtectionDomain() {
+        return null;
+    }
+
+    public Method getDeclaredMethod(String name, Class<?>... parameterTypes)
+            throws NoSuchMethodException, SecurityException {
         return null;
     }
 }

@@ -7,6 +7,8 @@ import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public class ReflectionUtil {
 
@@ -19,11 +21,34 @@ public class ReflectionUtil {
     static {
         IMPL_LOOKUP = Unsafe.allocateInstance(MethodHandles.Lookup.class);
         try {
-            Field f = MethodHandles.Lookup.class.getDeclaredField("lookupClass");
-            Unsafe.putObject(IMPL_LOOKUP, Unsafe.objectFieldOffset(f), Object.class);
-            f = MethodHandles.Lookup.class.getDeclaredField("allowedModes");
-            Unsafe.putInt(IMPL_LOOKUP, Unsafe.objectFieldOffset(f), -1);
-        } catch (NoSuchFieldException e) {
+            if (!Platform.module) {
+                Field f = MethodHandles.Lookup.class.getDeclaredField("lookupClass");
+                Unsafe.putObject(IMPL_LOOKUP, Unsafe.objectFieldOffset(f), Object.class);
+                f = MethodHandles.Lookup.class.getDeclaredField("allowedModes");
+                Unsafe.putInt(IMPL_LOOKUP, Unsafe.objectFieldOffset(f), -1);
+            } else {
+                Module module = Class.class.getModule();
+                long m_offset = Unsafe.objectFieldOffset(Class.class.getDeclaredField("module"));
+                Unsafe.putObject(Class.class, m_offset, ReflectionUtil.class.getModule());
+                Method m = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+                m.setAccessible(true);
+                Field[] fields = (Field[]) m.invoke(MethodHandles.Lookup.class, false);
+                boolean success1 = false, success2 = false;
+                for (Field field : fields) {
+                    if (field.getName().equals("lookupClass")) {
+                        Unsafe.putObject(IMPL_LOOKUP, Unsafe.objectFieldOffset(field), Object.class);
+                        success1 = true;
+                    } else if (field.getName().equals("allowedModes")) {
+                        Unsafe.putInt(IMPL_LOOKUP, Unsafe.objectFieldOffset(field), -1);
+                        success2 = true;
+                    }
+                }
+                if (!success1 || !success2) {
+                    throw new IllegalStateException();
+                }
+                Unsafe.putObject(Class.class, m_offset, module);
+            }
+        } catch (NoSuchFieldException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
