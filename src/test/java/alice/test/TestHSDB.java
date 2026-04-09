@@ -1,6 +1,6 @@
 package alice.test;
 
-import alice.injector.patch.ClassPatcher;
+import alice.injector.ClassPatcher;
 import org.junit.jupiter.api.Test;
 import sun.jvm.hotspot.HSDB;
 import sun.jvm.hotspot.HotSpotAgent;

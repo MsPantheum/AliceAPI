@@ -1,6 +1,6 @@
 package alice;
 
-import alice.injector.patch.ClassPatcher;
+import alice.injector.ClassPatcher;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
 import alice.util.ReflectionUtil;

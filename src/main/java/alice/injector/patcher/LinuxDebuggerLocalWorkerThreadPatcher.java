@@ -1,4 +1,4 @@
-package alice.injector.patch;
+package alice.injector.patcher;
 
 import org.objectweb.asm.*;
 

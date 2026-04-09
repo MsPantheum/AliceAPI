@@ -2,7 +2,7 @@ package alice.test;
 
 import alice.Meow;
 import alice.api.ClassByteProcessor;
-import alice.injector.patch.ClassPatcher;
+import alice.injector.ClassPatcher;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.*;
 

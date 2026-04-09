@@ -95,4 +95,10 @@ public class DebugUtil {
     public static void println(Object o) {
         System.out.println(o.getClass().getName());
     }
+
+    public static void printStackTrace() {
+        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+            System.out.println(ste.toString());
+        }
+    }
 }

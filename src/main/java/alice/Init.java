@@ -7,7 +7,7 @@ import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualFree;
 import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
-import alice.injector.patch.ClassPatcher;
+import alice.injector.ClassPatcher;
 import alice.util.*;
 import com.google.common.base.Objects;
 import org.objectweb.asm.Opcodes;

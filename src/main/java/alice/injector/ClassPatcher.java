@@ -1,11 +1,15 @@
-package alice.injector.patch;
+package alice.injector;
 
 import alice.LaunchWrapper;
 import alice.api.ClassByteProcessor;
+import alice.injector.patcher.DebuggerLocalPatcher;
+import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
+import alice.injector.patcher.UniversalPatcher;
 import alice.util.*;
 import org.apache.commons.io.IOUtils;
 import sun.misc.URLClassPath;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -13,6 +17,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class ClassPatcher {
+
+    private static final boolean DUMP_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.dump"));
 
     private static final PriorityQueue<ClassByteProcessor> PROCESSORS = new PriorityQueue<>(Comparator.comparingInt(ClassByteProcessor::priority));
 
@@ -27,6 +33,9 @@ public class ClassPatcher {
         }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
+        }
+        if (DUMP_CLASS && data != null) {
+            FileUtil.write("AliceClassDump" + File.separator + name, data);
         }
         return data;
     }
@@ -44,8 +53,8 @@ public class ClassPatcher {
         Unsafe.ensureClassInitialized(UniversalPatcher.class);
 
         try {
-            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1"));
-            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patch.UniversalPatcher$1$1"));
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patcher.UniversalPatcher$1"));
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.patcher.UniversalPatcher$1$1"));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

@@ -1,6 +1,6 @@
 package alice.util;
 
-import alice.injector.patch.ClassPatcher;
+import alice.injector.ClassPatcher;
 import org.apache.commons.io.IOUtils;
 import sun.misc.Resource;
 import sun.misc.URLClassPath;
@@ -111,11 +111,11 @@ public class URLClassPathWrapper extends URLClassPath {
     }
 
     private static URL processURL(URL url, String name) throws IOException {
-        if (url == null) {
-            return null;
-        }
         if (ClassPatcher.shouldRunTransformers()) {
-            byte[] data = ClassPatcher.runTransformers(IOUtils.toByteArray(url), name);
+            byte[] data = ClassPatcher.runTransformers(url != null ? IOUtils.toByteArray(url) : null, name);
+            if (data == null) {//Some idiots will generate class in transformers. :(
+                return null;
+            }
             return new URL("mem", null, -1, "", new URLStreamHandler() {
                 @Override
                 protected URLConnection openConnection(URL u) {

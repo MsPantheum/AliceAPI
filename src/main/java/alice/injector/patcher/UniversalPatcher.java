@@ -1,6 +1,5 @@
-package alice.injector.patch;
+package alice.injector.patcher;
 
-import alice.util.FileUtil;
 import org.objectweb.asm.*;
 
 public class UniversalPatcher implements Opcodes {
@@ -72,9 +71,6 @@ public class UniversalPatcher implements Opcodes {
 
         cr.accept(cv, 0);
         byte[] ret = cw.toByteArray();
-        if (changed[0]) {
-            FileUtil.write(name.replace('/', '.'), ret);
-        }
         return changed[0] ? ret : data;
     }
 }
