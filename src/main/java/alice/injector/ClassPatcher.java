@@ -1,24 +1,73 @@
 package alice.injector;
 
 import alice.LaunchWrapper;
+import alice.Platform;
 import alice.api.ClassByteProcessor;
+import alice.injector.classloading.*;
 import alice.injector.patcher.DebuggerLocalPatcher;
 import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
 import alice.injector.patcher.UniversalPatcher;
 import alice.util.*;
 import org.apache.commons.io.IOUtils;
+import org.objectweb.asm.Opcodes;
 import sun.misc.URLClassPath;
+import sun.net.www.protocol.jar.Handler;
+import sun.net.www.protocol.jar.JarURLConnection;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.URLClassLoader;
+import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
+import java.lang.module.ModuleReader;
+import java.lang.module.ModuleReference;
+import java.net.*;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class ClassPatcher {
+public class ClassPatcher implements Opcodes {
+
+    private static final boolean LOG_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.log_class"));
 
     private static final boolean DUMP_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.dump"));
+
+    private static final Class<?> overrideJarLoader;
+    private static final MethodHandle overrideJarLoaderConstructor;
+
+    static {
+        try {
+            Class<?> target = Platform.jigsaw ? Class.forName("jdk.internal.loader.URLClassPath$JarLoader") : Class.forName("sun.misc.URLClassPath$JarLoader");
+            String res = Platform.jigsaw ? "jdk/internal/loader/Resource" : "sun/misc/Resource";
+            String res_type = 'L' + res + ';';
+            overrideJarLoader = Overrider.override(target, (method, desc) -> {
+                if (method.equals("getResource") && desc.equals("(Ljava/lang/String;Z)" + res_type)) {
+                    return mv -> {
+                        mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "resourceProcessor", "Ljava/util/function/BiFunction;");
+                        mv.visitInsn(SWAP);
+                        mv.visitVarInsn(ALOAD, 1);
+                        mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/BiFunction", "apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+                        mv.visitTypeInsn(CHECKCAST, res);
+                    };
+                }
+                return null;
+            }, cw -> cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", "Ljava/util/function/BiFunction<" + res_type + "Ljava/lang/String;>;", null));
+            ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(Platform.jigsaw ? ResourceWrapper.resourceConsumer : ResourceWrapper.LegacyResource.legacyResourceConsumer);
+            overrideJarLoaderConstructor = ReflectionUtil.findConstructor(overrideJarLoader, MethodType.methodType(void.class, target));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Object wrapJarLoader(Object o) {
+        try {
+            return overrideJarLoaderConstructor.invoke(o);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static final PriorityQueue<ClassByteProcessor> PROCESSORS = new PriorityQueue<>(Comparator.comparingInt(ClassByteProcessor::priority));
 
@@ -31,6 +80,9 @@ public class ClassPatcher {
         if (_try != null) {
             return _try;
         }
+        if (LOG_CLASS) {
+            System.out.println("Transforming class:" + name);
+        }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
         }
@@ -40,17 +92,74 @@ public class ClassPatcher {
         return data;
     }
 
+    private static void replaceUCP(ClassLoader loader) {
+        Object ucp = ClassLoaderUtil.getUCP(loader);
+        if (ucp == null) {
+            return;
+        }
+        Object wrapper = new UCPWrapper.LegacyURLClassPathWrapper((URLClassPath) ucp);
+        System.out.println("Replacing URLClassPath of " + loader.getClass().getName() + ".");
+        ClassLoaderUtil.setUCP(loader, wrapper);
+    }
+
+    private static void replaceJarHandler(Object ucp) {
+        Handler old = (Handler) UCPUtil.getJarHandler(ucp);
+        UCPUtil.setJarHandler(ucp, new StreamPatcher(old == null ? new Handler() : old));
+    }
+
+    private static void replaceModule2Reader(ClassLoader loader) {
+        Map<ModuleReference, ModuleReader> old = ClassLoaderUtil.getModule2Reader(loader);
+        System.out.println("Replacing moduleToReader of " + loader.getClass().getName() + ".");
+        ClassLoaderUtil.setModule2Reader(loader, new Module2Reader(old));
+    }
+
+    private static class WrappedLoaders extends ArrayList<Object> {
+
+        public WrappedLoaders(Collection<Object> orig) {
+            for (Object t : orig) {
+                if (UCPUtil.isJarLoader(t)) {
+                    System.out.println("Wrap JarLoader:" + t);
+                    t = wrapJarLoader(t);
+                } else {
+                    System.out.println("Ignore Loader:" + t);
+                }
+                super.add(t);
+            }
+        }
+
+        @Override
+        public boolean add(Object t) {
+            if (UCPUtil.isJarLoader(t)) {
+                System.out.println("Wrap JarLoader:" + t);
+                t = wrapJarLoader(t);
+            }
+            return super.add(t);
+        }
+    }
+
     public static void load() {
-        Unsafe.ensureClassInitialized(URLClassLoader.class);
-        Unsafe.ensureClassInitialized(URLClassPath.class);
-        Unsafe.ensureClassInitialized(URLClassPathWrapper.class);
-        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticResource.class);
-        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticResources.class);
-        Unsafe.ensureClassInitialized(URLClassPathWrapper.StaticURLs.class);
+
+        if (Platform.jigsaw) {
+            Unsafe.ensureClassInitialized(jdk.internal.loader.URLClassPath.class);
+            Unsafe.ensureClassInitialized(Module2Reader.class);
+            Unsafe.ensureClassInitialized(WrappedModuleReader.class);
+            Unsafe.ensureClassInitialized(ResourceWrapper.StaticResource.class);
+            Unsafe.ensureClassInitialized(CollectionWrapper.StaticResources.class);
+        } else {
+            Unsafe.ensureClassInitialized(URLClassLoader.class);
+            Unsafe.ensureClassInitialized(URLClassPath.class);
+            Unsafe.ensureClassInitialized(UCPWrapper.LegacyURLClassPathWrapper.class);
+            Unsafe.ensureClassInitialized(ResourceWrapper.LegacyResource.LegacyStaticResource.class);
+            Unsafe.ensureClassInitialized(CollectionWrapper.LegacyStaticResources.class);
+        }
+
+        Unsafe.ensureClassInitialized(UCPUtil.class);
+        Unsafe.ensureClassInitialized(UCPWrapper.StaticURLs.class);
         Unsafe.ensureClassInitialized(ClassByteProcessor.class);
         Unsafe.ensureClassInitialized(DebuggerLocalPatcher.class);
         Unsafe.ensureClassInitialized(LinuxDebuggerLocalWorkerThreadPatcher.class);
         Unsafe.ensureClassInitialized(UniversalPatcher.class);
+        Unsafe.ensureClassInitialized(Overrider.class);
 
         try {
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.patcher.UniversalPatcher$1"));
@@ -58,14 +167,23 @@ public class ClassPatcher {
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        assert classLoader instanceof URLClassLoader;
-        URLClassLoader loader = (URLClassLoader) classLoader;
-        URLClassPath ucp = ClassLoaderUtil.getUCP(loader);
-        URLClassPathWrapper wrapper = new URLClassPathWrapper(ucp);
-        System.out.println("Replacing URLClassPath.");
-        ClassLoaderUtil.setUCP(loader, wrapper);
-        System.out.println("Replaced.");
+
+        ClassLoader app = ClassLoader.getSystemClassLoader();
+        if (Platform.jigsaw) {
+            ClassLoader platform = ClassLoader.getPlatformClassLoader();
+            Object ucp = ClassLoaderUtil.getUCP(app);
+            replaceLoaders(ucp);
+            replaceJarHandler(ucp);
+            ucp = ClassLoaderUtil.getUCP(platform);
+            if (ucp != null) {
+                replaceLoaders(ucp);
+                replaceJarHandler(ucp);
+            }
+            replaceModule2Reader(app);
+            replaceModule2Reader(platform);
+        } else {
+            replaceUCP(app);
+        }
         registerProcessor(new ClassByteProcessor() {
             @Override
             public byte[] process(byte[] classBytes, String name) {
@@ -86,6 +204,12 @@ public class ClassPatcher {
             }
         });
         System.out.println("Necessary processors registered.");
+    }
+
+    private static void replaceLoaders(Object ucp) {
+        ArrayList<?> loaders = UCPUtil.getLoaders(ucp);
+        WrappedLoaders neo = new WrappedLoaders((Collection<Object>) loaders);
+        UCPUtil.setLoaders(ucp, neo);
     }
 
     public static void registerProcessor(ClassByteProcessor processor) {
@@ -116,6 +240,52 @@ public class ClassPatcher {
     static {
         if (!DebugUtil.isRunningTest()) {
             addProtectedJar(ClassUtil.getJarPath(LaunchWrapper.class));
+        }
+    }
+
+    public static URL create(byte[] data) throws MalformedURLException {
+        return new URL("mem", null, -1, "", new URLStreamHandler() {
+            @Override
+            protected URLConnection openConnection(URL u) {
+                return new URLConnection(u) {
+                    @Override
+                    public void connect() {
+                    }
+
+                    @Override
+                    public InputStream getInputStream() {
+                        return new ByteArrayInputStream(data);
+                    }
+                };
+            }
+        });
+    }
+
+    public static class StreamPatcher extends URLStreamHandler {
+
+        private final Handler delegate;
+
+        public StreamPatcher(Handler delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        protected URLConnection openConnection(URL u) throws IOException {
+            System.out.println("MEOWWWWWWWWW");
+            sun.net.www.protocol.jar.JarURLConnection juc = new JarURLConnection(u, delegate);
+            byte[] data = juc.getInputStream().readAllBytes();
+            System.out.println(u.getProtocol());
+            System.out.println(u.getPath());
+            return new URLConnection(u) {
+                @Override
+                public void connect() {
+                }
+
+                @Override
+                public InputStream getInputStream() {
+                    return new ByteArrayInputStream(data);
+                }
+            };
         }
     }
 }

@@ -17,6 +17,9 @@ import java.util.Objects;
 import static alice.util.ProcReader.isElf;
 import static alice.util.ProcReader.parseProcMaps;
 
+/**
+ * Lookup symbols in dynamic libraries.
+ */
 public class SymbolLookup {
     private static final Object2LongOpenHashMap<String> bases = new Object2LongOpenHashMap<>();
     private static final Object2LongOpenHashMap<String> cache = new Object2LongOpenHashMap<>();
@@ -36,6 +39,12 @@ public class SymbolLookup {
         return table;
     }
 
+    /**
+     * Lookup up a symbol from all loaded libraries.
+     *
+     * @param symbol the symbol to lookup.
+     * @return the symbol value in current process.
+     */
     public static long lookup(String symbol) {
         if (cache.containsKey(symbol)) {
             return cache.getLong(symbol);
@@ -116,6 +125,11 @@ public class SymbolLookup {
         return ret[0];
     }
 
+    /**
+     * Convert the path of a dynamic library to an absolute path.
+     * @param lib the path of the dynamic library.
+     * @return the absolute path of the dynamic library.
+     */
     public static String toAbsoluteLibPath(String lib) {
         if (!Platform.win32) {
             lib = File.separator + lib;
@@ -133,6 +147,12 @@ public class SymbolLookup {
         throw new RuntimeException("Can't find absolute lib path for " + lib);
     }
 
+    /**
+     * Lookup up a symbol from a specific dynamic library.
+     * @param lib the dynamic library to use.
+     * @param symbol the symbol to lookup.
+     * @return the symbol value in current process.
+     */
     public static long lookup(String lib, String symbol) {
         if (!Paths.get(lib).isAbsolute()) {
             lib = toAbsoluteLibPath(lib);

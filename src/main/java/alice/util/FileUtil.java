@@ -9,8 +9,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class FileUtil {
 
@@ -132,13 +138,38 @@ public class FileUtil {
         return search(Paths.get(dir), name);
     }
 
-    public static String getJavaHome() {
-        String HOME = System.getProperty("java.home");
-        return HOME.endsWith("jre") ? HOME.substring(0, HOME.length() - 3) : HOME;
-    }
+    public static final Path JAVA_HOME = Paths.get(System.getProperty("java.home").endsWith("jre") ? System.getProperty("java.home").substring(0, System.getProperty("java.home").length() - 3) : System.getProperty("java.home"));
+    public static final Path TEMP_DIR = Paths.get(System.getProperty("java.io.tmpdir"));
 
     public static Path getHSDB() {
-        return search(getJavaHome(), "sa-jdi.jar");
+        if (!Platform.jigsaw) {
+            return search(JAVA_HOME, "sa-jdi.jar");
+        } else {
+            Path path = FileUtil.TEMP_DIR.resolve("jdk.hotspot.agent.jar");
+            if (FileUtil.exists(path)) {
+                FileUtil.delete(path);
+            }
+            Manifest manifest = new Manifest();
+            try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(path), manifest)) {
+                try (ZipFile zip = new ZipFile(FileUtil.JAVA_HOME.resolve("jmods").resolve("jdk.hotspot.agent.jmod").toFile())) {
+                    Enumeration<? extends ZipEntry> entries = zip.entries();
+                    while (entries.hasMoreElements()) {
+                        ZipEntry entry = entries.nextElement();
+                        String name = entry.getName();
+                        if (name.startsWith("classes/") && name.endsWith(".class")) {
+                            name = name.substring(8);
+                            JarEntry je = new JarEntry(name);
+                            jos.putNextEntry(je);
+                            jos.write(zip.getInputStream(entry).readAllBytes());
+                            jos.closeEntry();
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return path;
+        }
     }
 
     public static boolean exists(String path) {
@@ -169,5 +200,17 @@ public class FileUtil {
         }
 
         return tmp;
+    }
+
+    public static void delete(String path) {
+        delete(Paths.get(path));
+    }
+
+    public static void delete(Path path) {
+        try {
+            Files.delete(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

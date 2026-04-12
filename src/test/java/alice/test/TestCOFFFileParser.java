@@ -21,7 +21,7 @@ public class TestCOFFFileParser {
     @EnabledOnOs(OS.WINDOWS)
     public void test(){
         COFFFileParser parser = COFFFileParser.getParser();
-        COFFFile coffFile = parser.parse(Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString());
+        COFFFile coffFile = parser.parse(Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString());
         COFFHeader header = coffFile.getHeader();
         ExportDirectoryTable exports = header.getOptionalHeader().getDataDirectories().getExportDirectoryTable();
         if(exports == null){

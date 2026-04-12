@@ -1,5 +1,6 @@
 package alice.injector.patcher;
 
+import alice.Platform;
 import org.objectweb.asm.*;
 
 public class UniversalPatcher implements Opcodes {
@@ -13,10 +14,10 @@ public class UniversalPatcher implements Opcodes {
         ClassReader cr = new ClassReader(data);
 
         ClassWriter cw = new ClassWriter(cr, 0);
-        ClassVisitor cv = new ClassVisitor(Opcodes.ASM5, cw) {
+        ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int _access, String _name, String _descriptor, String _signature, String[] _exceptions) {
-                return new MethodVisitor(ASM5, cv.visitMethod(_access, _name, _descriptor, _signature, _exceptions)) {
+                return new MethodVisitor(Platform.ASM_LEVEL, cv.visitMethod(_access, _name, _descriptor, _signature, _exceptions)) {
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
                         if (owner.equals("sun/misc/Unsafe")) {

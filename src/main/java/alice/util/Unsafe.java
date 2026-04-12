@@ -5,6 +5,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.security.ProtectionDomain;
 
+/**
+ * Wrapper of Unsafe class. No longer necessary to obtain an Unsafe instance next time!
+ */
 public class Unsafe {
     private static final sun.misc.Unsafe UNSAFE;
 

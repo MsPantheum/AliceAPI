@@ -1,10 +1,16 @@
 package alice;
 
 import alice.exception.BadEnvironment;
+import org.objectweb.asm.Opcodes;
 
+/**
+ * Provides platform info.
+ */
 public class Platform {
 
-    public static final boolean module;
+    public static final int ASM_LEVEL;
+
+    public static final boolean jigsaw;
 
     public static final boolean win32;
     public static final boolean linux;
@@ -84,6 +90,11 @@ public class Platform {
             _module = true;
         } catch (NoSuchFieldException ignored) {
         }
-        module = _module;
+        jigsaw = _module;
+        if (jigsaw) {
+            ASM_LEVEL = Opcodes.ASM7;
+        } else {
+            ASM_LEVEL = Opcodes.ASM5;
+        }
     }
 }

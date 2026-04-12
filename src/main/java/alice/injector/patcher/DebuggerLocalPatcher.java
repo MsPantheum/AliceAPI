@@ -1,5 +1,6 @@
 package alice.injector.patcher;
 
+import alice.Platform;
 import alice.util.Unsafe;
 import org.objectweb.asm.*;
 
@@ -8,7 +9,7 @@ public class DebuggerLocalPatcher {
         System.out.println("Patching " + name + ".");
         ClassReader cr = new ClassReader(data);
         ClassWriter cw = new ClassWriter(cr,0);
-        ClassVisitor cv = new ClassVisitor(Opcodes.ASM5,cw) {
+        ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 

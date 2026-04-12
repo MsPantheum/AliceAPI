@@ -7,6 +7,7 @@ import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualFree;
 import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
+import alice.exception.ExitNow;
 import alice.injector.ClassPatcher;
 import alice.util.*;
 import com.google.common.base.Objects;
@@ -16,17 +17,18 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.util.Printer;
 
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 
 public class Init {
 
+    /*
+     * Check whether hotspot debugger database is in the classpath, if not, append it into classpath.
+     */
     private static void checkHSDB() {
-
-        URLClassLoader loader = (URLClassLoader) ClassLoader.getSystemClassLoader();
+        ClassLoader loader = ClassLoader.getSystemClassLoader();
 
         try {
-            Class<?> app = loader.loadClass("sun.misc.Launcher$AppClassLoader");
+            Class<?> app = Class.forName(Platform.jigsaw ? "jdk.internal.loader.ClassLoaders$AppClassLoader" : "sun.misc.Launcher$AppClassLoader");
             if (loader.getClass() != app) {
                 throw new BadEnvironment("Modified system classloader! Current is " + loader.getClass().getName() + " loaded by " + loader.getClass().getClassLoader());
             }
@@ -48,22 +50,36 @@ public class Init {
 
     private static boolean init = false;
 
+    /**
+     * Internal mechanism of AliceAPI initialization.
+     */
     private static void init() {
         Thread.UncaughtExceptionHandler handle = (t, e) -> {
-            System.err.println("Uncaught exception in thread " + t.getName());
-            DebugUtil.printThrowableFully(e);
-            System.out.println(ProcessUtil.getPID());
-            ProcessUtil.guiPause();
+            if (!(e instanceof ExitNow)) {
+                System.err.println("Uncaught exception in thread " + t.getName());
+                DebugUtil.printThrowableFully(e);
+                System.out.println(ProcessUtil.getPID());
+                ProcessUtil.guiPause();
+            } else {
+                Runtime.getRuntime().exit(-1);
+            }
         };
         Thread.setDefaultUncaughtExceptionHandler(handle);
         Thread.currentThread().setUncaughtExceptionHandler(handle);
-        checkHSDB();
-        System.out.println("HSDB is ok.");
+        Unsafe.ensureClassInitialized(ReflectionUtil.class);
+        if (Platform.jigsaw) {
+            ModuleUtil.openAll();
+        }
         Unsafe.ensureClassInitialized(Platform.class);
         String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class), ClassUtil.getJarPath(Objects.class)};
         ClassUtil.ensureClassesInJarLoaded(jars);
         ClassPatcher.load();
-        System.out.println("UCP patch loaded.");
+        System.out.println("ClassPatcher loaded.");
+        checkHSDB();
+        System.out.println("HSDB is ok.");
+
+        Unsafe.ensureClassInitialized(sun.jvm.hotspot.HSDB.class);
+
         Unsafe.ensureClassInitialized(HSDB.class);
         if (!Platform.win32) {
             Unsafe.ensureClassInitialized(mprotect.class);
@@ -77,6 +93,11 @@ public class Init {
         init = true;
     }
 
+    /**
+     * The init method of AliceAPI. This method should be called before any other thing.
+     * If you are using LaunchWrapper you won't mind this.
+     * Otherwise, you should call it in your main method.
+     */
     public static synchronized void ensureInit() {
         if (!init) {
             System.out.println("AliceAPI init.");

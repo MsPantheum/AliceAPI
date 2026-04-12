@@ -2,18 +2,23 @@ package alice.util;
 
 import alice.Platform;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandleInfo;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
+import java.lang.invoke.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+/*
+ * Util for dynamic method invoking.
+ */
 public class ReflectionUtil {
 
+    /* A trusted lookup. */
     private static final MethodHandles.Lookup IMPL_LOOKUP;
 
+    /*
+     * Get a trusted lookup.
+     * @return a trusted lookup.
+     */
     public static MethodHandles.Lookup lookup() {
         return IMPL_LOOKUP;
     }
@@ -21,7 +26,7 @@ public class ReflectionUtil {
     static {
         IMPL_LOOKUP = Unsafe.allocateInstance(MethodHandles.Lookup.class);
         try {
-            if (!Platform.module) {
+            if (!Platform.jigsaw) {
                 Field f = MethodHandles.Lookup.class.getDeclaredField("lookupClass");
                 Unsafe.putObject(IMPL_LOOKUP, Unsafe.objectFieldOffset(f), Object.class);
                 f = MethodHandles.Lookup.class.getDeclaredField("allowedModes");
@@ -91,23 +96,28 @@ public class ReflectionUtil {
 
 
     private static final MethodHandle getFields;
+    private static final MethodHandle getMethods;
+    private static final MethodHandle getGenericSignature;
 
     static {
-        if (!Platform.module) {
-            try {
-                getFields = IMPL_LOOKUP.findVirtual(Class.class, "getDeclaredFields0", MethodType.methodType(Field[].class, boolean.class));
-            } catch (NoSuchMethodException | IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            getFields = null;
+        try {
+            getFields = IMPL_LOOKUP.findVirtual(Class.class, "getDeclaredFields0", MethodType.methodType(Field[].class, boolean.class));
+            getMethods = IMPL_LOOKUP.findVirtual(Class.class, "getDeclaredMethods0", MethodType.methodType(Method[].class, boolean.class));
+            getGenericSignature = IMPL_LOOKUP.findVirtual(Method.class, "getGenericSignature", MethodType.methodType(String.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getGenericSignature(Method method) {
+        try {
+            return (String) getGenericSignature.invoke(method);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 
     public static Field[] getFields(Class<?> clazz) {
-        if (Platform.module) {
-            throw new IllegalStateException();
-        }
         try {
             return (Field[]) getFields.invoke(clazz, false);
         } catch (Throwable e) {
@@ -116,15 +126,45 @@ public class ReflectionUtil {
     }
 
     public static Field getField(Class<?> clazz, String name) {
-        if (Platform.module) {
-            throw new IllegalStateException();
-        }
         for (Field f : getFields(clazz)) {
             if (name.equals(f.getName())) {
                 return f;
             }
         }
         throw new NoSuchFieldError();
+    }
+
+    public static Method[] getMethods(Class<?> clazz) {
+        try {
+            return (Method[]) getMethods.invoke(clazz, false);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Method getMethod(Class<?> clazz, String name, Class<?>... parameterTypes) {
+        for (Method m : getMethods(clazz)) {
+            if (name.equals(m.getName()) && parameterTypes == m.getParameterTypes()) {
+                return m;
+            }
+        }
+        throw new NoSuchMethodError();
+    }
+
+    public static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
+        try {
+            return IMPL_LOOKUP.findVarHandle(recv, name, type);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static VarHandle findStaticVarHandle(Class<?> decl, String name, Class<?> type) {
+        try {
+            return IMPL_LOOKUP.findStaticVarHandle(decl, name, type);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

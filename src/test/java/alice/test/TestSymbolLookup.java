@@ -12,7 +12,7 @@ public class TestSymbolLookup {
     @Test
     public void test() {
         System.out.println("Pid:"+ProcessUtil.getPID());
-        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString();
+        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();
         NativeLibrary lib = NativeLibrary.load(libjvm, false);
         assert lib != null;
         System.out.println("Base:"+lib.getBase());

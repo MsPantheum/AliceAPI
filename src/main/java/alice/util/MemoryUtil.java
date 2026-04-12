@@ -6,6 +6,8 @@ import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.memory.Universe;
+import sun.jvm.hotspot.oops.CompressedKlassPointers;
+import sun.jvm.hotspot.oops.CompressedOops;
 import sun.jvm.hotspot.types.Type;
 
 import java.nio.charset.StandardCharsets;
@@ -36,8 +38,8 @@ public class MemoryUtil {
         return (T) Ptr2Obj.getFromPtr(Converter.getAddressValue(address));
     }
 
-    private static final long _narrow_klass_base = Universe.getNarrowKlassBase();
-    private static final int _narrow_klass_shift = Universe.getNarrowKlassShift();
+    private static final long _narrow_klass_base = Platform.jigsaw ? CompressedKlassPointers.getBase() : Universe.getNarrowKlassBase();
+    private static final int _narrow_klass_shift = Platform.jigsaw ? CompressedKlassPointers.getShift() : Universe.getNarrowKlassShift();
 
     public static long decodeNarrowKlass(int narrow) {
         return ((long) narrow << _narrow_klass_shift) + _narrow_klass_base;
@@ -92,8 +94,8 @@ public class MemoryUtil {
      * This class was tested under permanent System.gc calls and doesn't seem to crash JVM due to object relocations
      */
     public static class Ptr2Obj {
-        private static final long _narrow_oop_base = Universe.getNarrowOopBase();
-        private static final int _narrow_oop_shift = Universe.getNarrowOopShift();
+        private static final long _narrow_oop_base = Platform.jigsaw ? CompressedOops.getBase() : Universe.getNarrowOopBase();
+        private static final int _narrow_oop_shift = Platform.jigsaw ? CompressedOops.getShift() : Universe.getNarrowOopShift();
         private static final long objFieldOffset;
 
         static {

@@ -37,12 +37,14 @@ test {
 
 shadowJar {
     dependencies {
-        exclude(dependency('org.ow2.asm:.*:.*'))
+//        exclude(dependency('org.ow2.asm:.*:.*'))
         exclude("sun/**")
-        exclude("com/**")
-        exclude("org/**")
-        exclude("it/**")
+//        exclude("com/**")
+//        exclude("org/**")
+//        exclude("it/**")
         exclude("java/**")
+        exclude("javax/**")
+        exclude("jdk/**")
         // Example: exclude(dependency('org.scala-lang:.*:.*'))
     }
 }
@@ -57,9 +59,25 @@ jar {
         )
     }
 
-    exclude("java/**");
+    exclude("java/**")
+    exclude("sun/**")
+    exclude("jdk/**")
+    exclude("javax/**")
+    exclude("com/**")
 }
 
 java {
     withSourcesJar()
+}
+
+tasks.register('cleanExtraDir', Delete) {
+    delete 'build/classes/java/main/java'
+    delete 'build/classes/java/main/jdk'
+    delete 'build/classes/java/main/sun'
+    delete 'build/classes/java/main/com'
+    delete 'build/classes/java/main/javax'
+}
+
+tasks.named("compileJava") {
+    dependsOn(cleanExtraDir)
 }

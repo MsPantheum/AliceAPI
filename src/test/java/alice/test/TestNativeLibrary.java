@@ -17,7 +17,7 @@ public class TestNativeLibrary {
 
     @Test
     public void test(){
-        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.getJavaHome(), System.mapLibraryName("jvm"))).toString();
+        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();
         NativeLibrary lib = NativeLibrary.load(libjvm,false);
         System.out.println(ProcessUtil.getPID());
         Assertions.assertNotNull(lib);

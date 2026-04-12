@@ -1,6 +1,7 @@
 package alice.test;
 
 import alice.Meow;
+import alice.Platform;
 import alice.api.ClassByteProcessor;
 import alice.injector.ClassPatcher;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ public class TestPatcher {
                 if (name.equals("alice/Meow.class")) {
                     ClassReader cr = new ClassReader(classBytes);
                     ClassWriter cw = new ClassWriter(cr, 0);
-                    ClassVisitor cv = new ClassVisitor(Opcodes.ASM5, cw) {
+                    ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
                         @Override
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 

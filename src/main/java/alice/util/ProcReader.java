@@ -1,15 +1,13 @@
 package alice.util;
 
 import alice.Platform;
-import com.sun.management.DiagnosticCommandMBean;
 import net.fornwall.jelf.ElfFile;
 import net.fornwall.jelf.ElfSymbol;
 import net.fornwall.jelf.ElfSymbolTableSection;
-import sun.management.ManagementFactoryHelper;
 
-import javax.management.MBeanException;
-import javax.management.ReflectionException;
+import javax.management.*;
 import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,10 +18,10 @@ import java.util.Map;
 
 public class ProcReader {
 
-    private static final Map<Object,Map<String,SymbolInfo>> cache = new HashMap<>();
+    private static final Map<Object, Map<String, SymbolInfo>> cache = new HashMap<>();
 
-    public static boolean isElf(String path){
-        try (InputStream is = Files.newInputStream(Paths.get(path))){
+    public static boolean isElf(String path) {
+        try (InputStream is = Files.newInputStream(Paths.get(path))) {
             byte[] head = new byte[4];
             int ret = is.read(head);
             return ret == 4 && 0x7f == head[0] && 'E' == head[1] && 'L' == head[2] && 'F' == head[3];
@@ -32,8 +30,8 @@ public class ProcReader {
         }
     }
 
-    public static Map<String, SymbolInfo> readElf(String path){
-        if(cache.containsKey(path)){
+    public static Map<String, SymbolInfo> readElf(String path) {
+        if (cache.containsKey(path)) {
             return cache.get(path);
         }
         try {
@@ -43,7 +41,7 @@ public class ProcReader {
             iterateSymbols(map, symbols);
             symbols = elf.getDynamicSymbolTableSection();
             iterateSymbols(map, symbols);
-            cache.put(path,map);
+            cache.put(path, map);
             return map;
         } catch (Throwable e) {
             System.err.println(path);
@@ -52,7 +50,7 @@ public class ProcReader {
     }
 
     private static void iterateSymbols(Map<String, SymbolInfo> map, ElfSymbolTableSection symbols) {
-        if(symbols != null){
+        if (symbols != null) {
             for (ElfSymbol symbol : symbols.symbols) {
                 if (symbol.getName() != null && symbol.st_shndx != 0x0) {
                     map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
@@ -86,12 +84,14 @@ public class ProcReader {
 
     private static Map<String, LinkedList<MemoryMapping>> parseProcMapsMXBean() {
         Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
-        DiagnosticCommandMBean dcmd = ManagementFactoryHelper.getDiagnosticCommandMBean();
         try {
-            String result = (String) dcmd.invoke("vmDynlibs", new Object[]{new String[]{}}, new String[]{String[].class.getName()});
+            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+            ObjectName name = new ObjectName("com.sun.management:type=DiagnosticCommand");
+            String result = (String) server.invoke(name, "vmDynlibs",
+                    new Object[]{null}, new String[]{"[Ljava.lang.String;"});
             String[] lines = result.split("\n");
             int i = Platform.win32 ? 1 : 0;
-            for (; i < lines.length;i++) {
+            for (; i < lines.length; i++) {
                 String line = lines[i];
                 MemoryMapping mapping = parseMapping(line);
                 if (mapping != null) {
@@ -100,7 +100,7 @@ public class ProcReader {
                 }
             }
             return mappings;
-        } catch (MBeanException | ReflectionException e) {
+        } catch (InstanceNotFoundException | MBeanException | ReflectionException | MalformedObjectNameException e) {
             e.getCause().printStackTrace(System.err);
             return null;
         }
@@ -112,7 +112,7 @@ public class ProcReader {
             return ret;
         }
         System.err.println("Failed to parse memory mappings through MXBean!");
-        if(Platform.win32){
+        if (Platform.win32) {
             return parseProcMapsWin32(ProcessUtil.getPID());
         }
         return parseProcMaps(ProcessUtil.getPID());
@@ -159,9 +159,9 @@ public class ProcReader {
 
     private static Map<String, LinkedList<MemoryMapping>> parseProcMapsWin32(int pid) {
         Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
-        Path jcmd = FileUtil.search(FileUtil.getJavaHome(),"jcmd.exe");
+        Path jcmd = FileUtil.search(FileUtil.JAVA_HOME, "jcmd.exe");
         assert jcmd != null;
-        ProcessBuilder processBuilder = new ProcessBuilder(jcmd.toString(),String.valueOf(pid),"VM.dynlibs");
+        ProcessBuilder processBuilder = new ProcessBuilder(jcmd.toString(), String.valueOf(pid), "VM.dynlibs");
         Process process;
         try {
             process = processBuilder.start();
@@ -171,7 +171,7 @@ public class ProcReader {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if(line.startsWith("0x")){
+                if (line.startsWith("0x")) {
                     MemoryMapping map = parseMapping(line);
                     assert map != null;
                     LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
@@ -198,7 +198,7 @@ public class ProcReader {
             while ((line = br.readLine()) != null) {
                 MemoryMapping map = parseMapping(line);
                 if (map != null) {
-                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname,k -> new LinkedList<>());
+                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
                     list.add(map);
                 }
             }
@@ -212,6 +212,7 @@ public class ProcReader {
         public final long offset;
         public final char type;
         public final String name;
+
         public SymbolInfo(long offset, char type, String name) {
             this.offset = offset;
             this.type = type;
@@ -225,7 +226,7 @@ public class ProcReader {
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof SymbolInfo && name.equals(((SymbolInfo)obj).name);
+            return obj instanceof SymbolInfo && name.equals(((SymbolInfo) obj).name);
         }
 
         @Override

@@ -1,5 +1,7 @@
 package alice.util;
 
+import alice.Meow;
+import alice.Platform;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Klass;
 import sun.jvm.hotspot.oops.Metadata;
@@ -15,6 +17,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.ProtectionDomain;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -28,21 +31,32 @@ public class ClassUtil {
     private static final MethodHandle addURL;
 
     static {
-        try {
-            addURL = ReflectionUtil.findVirtual(URLClassLoader.class, "addURL", MethodType.methodType(void.class, URL.class));
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
+
+        if (!Platform.jigsaw) {
+            try {
+                addURL = ReflectionUtil.findVirtual(URLClassLoader.class, "addURL", MethodType.methodType(void.class, URL.class));
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            addURL = null;
         }
 
     }
 
-    public static void append(String path, URLClassLoader classLoader) {
+    public static void append(String path, ClassLoader classLoader) {
         append(Paths.get(path), classLoader);
     }
 
-    public static void append(Path path, URLClassLoader classLoader) {
+    public static void append(Path path, ClassLoader classLoader) {
+        Object ucp = ClassLoaderUtil.getUCP(classLoader);
         try {
-            addURL.invoke(classLoader, path.toUri().toURL());
+            URL url = path.toUri().toURL();
+            if (Platform.jigsaw) {
+                ((jdk.internal.loader.URLClassPath) ucp).addURL(url);
+            } else {
+                ((URLClassPath) ucp).addURL(url);
+            }
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -65,7 +79,7 @@ public class ClassUtil {
         if (data == null) {
             name = name.replace('.', '/').concat(".class");
             try {
-                data = ClassLoaderUtil.bcp.getResource(name).getBytes();
+                data = ((URLClassPath) ClassLoaderUtil.bcp).getResource(name).getBytes();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -76,7 +90,7 @@ public class ClassUtil {
     public static byte[] readRawBytes(URLClassLoader loader, String name) {
         name = name.replace('.', '/').concat(".class");
         System.out.println(name);
-        URLClassPath ucp = ClassLoaderUtil.getUCP(loader);
+        URLClassPath ucp = (URLClassPath) ClassLoaderUtil.getUCP(loader);
         Resource resource = ucp.getResource(name);
         if (resource != null) {
             try {
@@ -106,8 +120,14 @@ public class ClassUtil {
         }
     }
 
+    private static final String ALICE_PATH = getJarPath(Meow.class);
+
     public static void ensureClassesInJarLoaded(String... jars) {
         for (String path : jars) {
+            if (path.equals(ALICE_PATH)) {
+                continue;
+            }
+            System.out.println("Ensure classes in " + path + " is loaded...");
             try (JarFile jar = new JarFile(path)) {
                 Enumeration<JarEntry> entries = jar.entries();
                 while (entries.hasMoreElements()) {
@@ -124,6 +144,46 @@ public class ClassUtil {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private static final MethodHandle defineClass0;
+    private static final MethodHandle defineClass1;
+
+    static {
+        if (Platform.jigsaw) {
+            defineClass0 = ReflectionUtil.findStatic(ClassLoader.class, "defineClass0", MethodType.methodType(Class.class, ClassLoader.class, Class.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, boolean.class, int.class, Object.class));
+            defineClass1 = ReflectionUtil.findStatic(ClassLoader.class, "defineClass1", MethodType.methodType(Class.class, ClassLoader.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, String.class));
+        } else {
+            defineClass0 = null;
+            defineClass1 = null;
+        }
+    }
+
+    public static Class<?> defineClass0(ClassLoader loader,
+                                        Class<?> lookup,
+                                        String name,
+                                        byte[] b, int off, int len,
+                                        ProtectionDomain pd,
+                                        boolean initialize,
+                                        int flags,
+                                        Object classData) {
+        if (!Platform.jigsaw) {
+            throw new IllegalStateException();
+        }
+        try {
+            return (Class<?>) defineClass0.invoke(loader, lookup, name, b, off, len, pd, initialize, flags, classData);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len,
+                                        ProtectionDomain pd, String source) {
+        try {
+            return (Class<?>) defineClass1.invoke(loader, name, b, off, len, pd, source);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 }
