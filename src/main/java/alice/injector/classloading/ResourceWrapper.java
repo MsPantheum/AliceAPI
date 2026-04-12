@@ -13,7 +13,7 @@ public class ResourceWrapper {
 
     public static class LegacyResource {
 
-        public static BiFunction<Resource, String, Resource> legacyResourceConsumer = (resource, name) -> {
+        public static BiFunction<Resource, String, Resource> legacyResourceFunction = (resource, name) -> {
             try {
                 return processLegacyResource(resource, name);
             } catch (IOException e) {
@@ -79,7 +79,7 @@ public class ResourceWrapper {
         }
     }
 
-    public static BiFunction<jdk.internal.loader.Resource, String, jdk.internal.loader.Resource> resourceConsumer = (resource, name) -> {
+    public static BiFunction<jdk.internal.loader.Resource, String, jdk.internal.loader.Resource> resourceFunction = (resource, name) -> {
         try {
             return processResource(resource, name);
         } catch (IOException e) {

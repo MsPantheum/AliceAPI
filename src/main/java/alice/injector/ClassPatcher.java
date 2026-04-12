@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.module.ModuleReader;
 import java.lang.module.ModuleReference;
+import java.lang.reflect.Field;
 import java.net.*;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -54,7 +55,12 @@ public class ClassPatcher implements Opcodes {
                 }
                 return null;
             }, cw -> cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", "Ljava/util/function/BiFunction<" + res_type + "Ljava/lang/String;>;", null));
-            ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(Platform.jigsaw ? ResourceWrapper.resourceConsumer : ResourceWrapper.LegacyResource.legacyResourceConsumer);
+            if (Platform.jigsaw) {
+                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.resourceFunction);
+            } else {
+                Field f = ReflectionUtil.getField(overrideJarLoader, "resourceProcessor");
+                Unsafe.putObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f), ResourceWrapper.LegacyResource.legacyResourceFunction);
+            }
             overrideJarLoaderConstructor = ReflectionUtil.findConstructor(overrideJarLoader, MethodType.methodType(void.class, target));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
