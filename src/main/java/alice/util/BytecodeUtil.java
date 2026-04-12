@@ -22,14 +22,26 @@ public class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * generate a println invoke.
+     * Generate a println invoke which prints a given string.
      *
-     * @param mv      the method to inject.
-     * @param message the str to print.
+     * @param mv      the method to inject
+     * @param message the str to print
      */
     public static void println(MethodVisitor mv, String message) {
         mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
         mv.visitLdcInsn(message);
         mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+    }
+
+    /**
+     * Generate a println invoke which prints a object read from local variables.
+     *
+     * @param mv    the method to inject
+     * @param index the index of the local variable
+     */
+    public static void println(MethodVisitor mv, int index) {
+        mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+        mv.visitVarInsn(ALOAD, index);
+        mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", false);
     }
 }

@@ -249,20 +249,47 @@ public class ClassPatcher implements Opcodes {
         }
     }
 
-    public static URL create(byte[] data) throws MalformedURLException {
-        return new URL("mem", null, -1, "", new URLStreamHandler() {
+    public static URL create(byte[] data, URL original) throws MalformedURLException {
+        boolean flag = original != null;
+        return new URL(flag ? original.getProtocol() : "AliceClassCache", flag ? original.getHost() : null, flag ? original.getPort() : -1, flag ? original.getFile() : "null", new URLStreamHandler() {
             @Override
             protected URLConnection openConnection(URL u) {
-                return new URLConnection(u) {
-                    @Override
-                    public void connect() {
-                    }
+                if (u.getProtocol().equals("jar")) {
+                    try {
+                        return new java.net.JarURLConnection(u) {
+                            @Override
+                            public JarFile getJarFile() throws IOException {
+                                if (original != null) {
+                                    String s = original.toString().substring(4);
+                                    return new JarFile(s.substring(0, s.indexOf("!")));
+                                }
+                                return null;
+                            }
 
-                    @Override
-                    public InputStream getInputStream() {
-                        return new ByteArrayInputStream(data);
+                            @Override
+                            public void connect() {
+                            }
+
+                            @Override
+                            public InputStream getInputStream() {
+                                return new ByteArrayInputStream(data);
+                            }
+                        };
+                    } catch (MalformedURLException e) {
+                        throw new RuntimeException(e);
                     }
-                };
+                } else {
+                    return new URLConnection(u) {
+                        @Override
+                        public void connect() {
+                        }
+
+                        @Override
+                        public InputStream getInputStream() {
+                            return new ByteArrayInputStream(data);
+                        }
+                    };
+                }
             }
         });
     }

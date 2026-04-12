@@ -54,7 +54,7 @@ public class UniversalPatcher implements Opcodes {
                             if (name.equals("invoke") || name.equals("invokeExact")) {
                                 changed[0] = true;
                                 opcode = INVOKESTATIC;
-                                owner = "alice/interceptor/MethodHandleInterceptor";
+                                owner = "alice/interceptor/ReflectionInterceptor";
                                 descriptor = "(Ljava/lang/invoke/MethodHandle;" + descriptor.substring(1);
                             }
                         }

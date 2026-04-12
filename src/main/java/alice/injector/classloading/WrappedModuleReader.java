@@ -43,7 +43,7 @@ public class WrappedModuleReader implements ModuleReader {
             }
             assert data != null;
             data = ClassPatcher.runTransformers(data, name);
-            URL url = ClassPatcher.create(data);
+            URL url = ClassPatcher.create(data, uri.toURL());
             return url.toURI();
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);

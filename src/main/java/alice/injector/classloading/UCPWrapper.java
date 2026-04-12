@@ -17,10 +17,10 @@ public class UCPWrapper {
     private static URL processURL(URL url, String name) throws IOException {
         if (ClassPatcher.shouldRunTransformers()) {
             byte[] data = ClassPatcher.runTransformers(url != null ? IOUtils.toByteArray(url) : null, name);
-            if (data == null) {//Some idiots will generate class in transformers. :(
+            if (data == null) {
                 return null;
             }
-            return ClassPatcher.create(data);
+            return ClassPatcher.create(data, url);
         }
         return url;
     }
