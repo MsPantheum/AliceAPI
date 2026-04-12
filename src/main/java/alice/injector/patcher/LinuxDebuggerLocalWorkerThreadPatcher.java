@@ -1,7 +1,10 @@
 package alice.injector.patcher;
 
 import alice.Platform;
-import org.objectweb.asm.*;
+import alice.util.BytecodeUtil;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 public class LinuxDebuggerLocalWorkerThreadPatcher {
 
@@ -9,9 +12,7 @@ public class LinuxDebuggerLocalWorkerThreadPatcher {
 
     public static byte[] patch(byte[] data, String name) {
         System.out.println("Patching " + name + ".");
-        ClassReader cr = new ClassReader(data);
-        ClassWriter cw = new ClassWriter(cr, 0);
-        ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
+        return BytecodeUtil.patchClass(data, cw -> new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                 switch (name) {
@@ -35,9 +36,6 @@ public class LinuxDebuggerLocalWorkerThreadPatcher {
                 }
                 return super.visitMethod(access, name, descriptor, signature, exceptions);
             }
-        };
-
-        cr.accept(cv, 0);
-        return cw.toByteArray();
+        });
     }
 }

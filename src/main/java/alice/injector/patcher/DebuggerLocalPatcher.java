@@ -1,15 +1,16 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.util.BytecodeUtil;
 import alice.util.Unsafe;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 public class DebuggerLocalPatcher {
-    public static byte[] patch(byte[] data,String name){
+    public static byte[] patch(byte[] data, String name) {
         System.out.println("Patching " + name + ".");
-        ClassReader cr = new ClassReader(data);
-        ClassWriter cw = new ClassWriter(cr,0);
-        ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
+        return BytecodeUtil.patchClass(data, cw -> new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 
@@ -17,78 +18,75 @@ public class DebuggerLocalPatcher {
                     case "detach0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, null);
                         mv.visitInsn(Opcodes.RETURN);
-                        mv.visitMaxs(0,1);
+                        mv.visitMaxs(0, 1);
                         return null;
                     }
                     case "attach0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.RETURN);
-                        mv.visitMaxs(0,descriptor.contains("L") ? 3 : 2);
+                        mv.visitMaxs(0, descriptor.contains("L") ? 3 : 2);
                         return null;
                     }//Don't need to attach as we are in the same process.
                     case "getCDebugger": {
                         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.ACONST_NULL);
                         mv.visitInsn(Opcodes.ARETURN);
-                        mv.visitMaxs(1,1);
+                        mv.visitMaxs(1, 1);
                         return null;
                     }//No we won't implement this.
                     case "getAddressSize": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name, descriptor, signature, exceptions);
                         int size = Unsafe.ADDRESS_SIZE;
-                        if(size == 4){
+                        if (size == 4) {
                             mv.visitInsn(Opcodes.ICONST_4);
                         } else {
                             mv.visitLdcInsn(size);
                         }
                         mv.visitInsn(Opcodes.IRETURN);
-                        mv.visitMaxs(1,1);
+                        mv.visitMaxs(1, 1);
                         return null;
                     }
                     case "lookupByName0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
-                        mv.visitVarInsn(Opcodes.ALOAD,1);
-                        mv.visitVarInsn(Opcodes.ALOAD,2);
-                        mv.visitMethodInsn(Opcodes.INVOKESTATIC,"alice/injector/SymbolLookup","lookup","(Ljava/lang/String;Ljava/lang/String;)J",false);
+                        mv.visitVarInsn(Opcodes.ALOAD, 1);
+                        mv.visitVarInsn(Opcodes.ALOAD, 2);
+                        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "alice/injector/SymbolLookup", "lookup", "(Ljava/lang/String;Ljava/lang/String;)J", false);
                         mv.visitInsn(Opcodes.LRETURN);
-                        mv.visitMaxs(2,3);
+                        mv.visitMaxs(2, 3);
                         return null;
                     }
                     case "readBytesFromProcess0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
-                        mv.visitVarInsn(Opcodes.LLOAD,1);
-                        mv.visitVarInsn(Opcodes.LLOAD,3);
-                        mv.visitMethodInsn(Opcodes.INVOKESTATIC,"alice/util/Unsafe","readBytes","(JJ)[B",false);
+                        mv.visitVarInsn(Opcodes.LLOAD, 1);
+                        mv.visitVarInsn(Opcodes.LLOAD, 3);
+                        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "alice/util/Unsafe", "readBytes", "(JJ)[B", false);
                         mv.visitInsn(Opcodes.ARETURN);
-                        mv.visitMaxs(4,5);
+                        mv.visitMaxs(4, 5);
                         return null;
                     }
                     case "initIDs": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.RETURN);
-                        mv.visitMaxs(0,1);
+                        mv.visitMaxs(0, 1);
                         return null;
                     }
                     case "consoleExecuteCommand0": {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
                         mv.visitLdcInsn("");
                         mv.visitInsn(Opcodes.ARETURN);
-                        mv.visitMaxs(1,2);
+                        mv.visitMaxs(1, 2);
                         return null;
                     }
                     case "getThreadIdFromSysId0": {//TODO implement this... Maybe we need JNA?
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
                         mv.visitInsn(Opcodes.LCONST_0);
                         mv.visitInsn(Opcodes.LRETURN);
-                        mv.visitMaxs(2,3);
+                        mv.visitMaxs(2, 3);
                         return null;
                     }
                 }
                 return super.visitMethod(access, name, descriptor, signature, exceptions);
             }
-        };
-
-        cr.accept(cv,0);
-        return cw.toByteArray();
+        });
     }
 }

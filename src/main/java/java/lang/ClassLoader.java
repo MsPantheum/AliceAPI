@@ -1,5 +1,7 @@
 package java.lang;
 
+import java.net.URL;
+
 @SuppressWarnings("all")
 public abstract class ClassLoader {
     public static ClassLoader getPlatformClassLoader() {
@@ -17,6 +19,10 @@ public abstract class ClassLoader {
     }
 
     public Class<?> loadClass(String name) throws ClassNotFoundException {
+        return null;
+    }
+
+    public URL getResource(String name) {
         return null;
     }
 }
