@@ -45,19 +45,15 @@ public class Class<T> {
         return null;
     }
 
-    public Class<? extends T> getSuperclass() {
-        return null;
-    }
+    public native Class<? extends T> getSuperclass();
 
-    public boolean isInstance(Object o) {
-        return true;
-    }
+    public native boolean isInstance(Object o);
 
     public Class<?> getDeclaringClass() {
         return null;
     }
 
-    public int getModifiers() {
-        return 0;
-    }
+    public native int getModifiers();
+
+    public native Class<?> getComponentType();
 }

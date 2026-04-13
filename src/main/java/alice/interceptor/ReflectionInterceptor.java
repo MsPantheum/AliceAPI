@@ -3,9 +3,11 @@ package alice.interceptor;
 import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
 import alice.util.Unsafe;
+import org.objectweb.asm.Type;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleInfo;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
@@ -24,64 +26,42 @@ public class ReflectionInterceptor {
 
     }
 
-    private static class InvokeResult {
-        private final Object ret;
-        private final boolean success;
-
-        private InvokeResult(Object ret, boolean success) {
-            this.ret = ret;
-            this.success = success;
-        }
-    }
-
-    private static InvokeResult checkMethodHandle(MethodHandle mh, Object... args) throws Throwable {
-        MethodHandleInfo info = ReflectionUtil.resolve(mh);
-        if (info.getDeclaringClass() == MethodHandle.class) {
-            if (info.getName().equals("invoke")) {
-                assert args.length == 2;
-                mh = (MethodHandle) args[0];
-                args = (Object[]) args[1];
-                return new InvokeResult(invoke(mh, args), true);
-            } else if (info.getName().equals("invokeExact")) {
-                assert args.length == 2;
-                mh = (MethodHandle) args[0];
-                args = (Object[]) args[1];
-                return new InvokeResult(invokeExact(mh, args), true);
+    private static Object generateReturnValue(MethodHandle handle) {
+        MethodHandleInfo info = ReflectionUtil.resolve(handle);
+        Class<?> ret_type_class = info.getMethodType().returnType();
+        Type type = Type.getType(ret_type_class);
+        int sort = type.getSort();
+        switch (sort) {
+            case Type.BOOLEAN:
+            case Type.CHAR:
+            case Type.BYTE:
+            case Type.SHORT:
+            case Type.INT: {
+                return 0;
             }
-        } else if (info.getDeclaringClass() == Method.class) {
-            if (info.getName().equals("invoke")) {
-                assert args.length == 3;
-                Method method = (Method) args[0];
-                Object obj = args[1];
-                args = (Object[]) args[2];
-                return new InvokeResult(invoke(method, obj, args), true);
+            case Type.FLOAT: {
+                return 0F;
             }
-        } else if (info.getDeclaringClass() == Field.class) {
-            assert args.length == 3;
-            Field field = (Field) args[0];
-            Object obj = args[1];
-            Object value = args[2];
-            set(field, obj, value);
-            return new InvokeResult(null, true);
+            case Type.LONG: {
+                return 0L;
+            }
+            case Type.DOUBLE: {
+                return 0D;
+            }
+            case Type.ARRAY: {
+                if (type.getDimensions() == 1) {
+                    return Array.newInstance(ret_type_class.getComponentType(), 0);
+                } else {
+                    return Array.newInstance(ret_type_class.getComponentType(), new int[]{0});
+                }
+            }
+            case Type.OBJECT: {
+                return null;
+            }
+            default: {
+                throw new IllegalArgumentException();
+            }
         }
-
-        return new InvokeResult(null, false);
-    }
-
-    public static Object invoke(MethodHandle mh, Object... args) throws Throwable {
-        InvokeResult ir = checkMethodHandle(mh, args);
-        if (ir.success) {
-            return ir.ret;
-        }
-        return mh.invoke(args);
-    }
-
-    public static Object invokeExact(MethodHandle mh, Object... args) throws Throwable {
-        InvokeResult ir = checkMethodHandle(mh, args);
-        if (ir.success) {
-            return ir.ret;
-        }
-        return mh.invokeExact(args);
     }
 
     public static Object invoke(Method method, Object obj, Object... args) throws Throwable {
@@ -111,12 +91,9 @@ public class ReflectionInterceptor {
                 invoke(method, obj, args);
             }
         } else if (method.getDeclaringClass() == MethodHandle.class) {
-            if (method.getName().equals("invoke")) {
+            if (method.getName().startsWith("invoke")) {
                 MethodHandle mh = (MethodHandle) obj;
-                return invoke(mh, args);
-            } else if (method.getName().equals("invokeExact")) {
-                MethodHandle mh = (MethodHandle) obj;
-                return invokeExact(mh, args);
+                return generateReturnValue(mh);
             }
         }
         return method.invoke(obj, args);

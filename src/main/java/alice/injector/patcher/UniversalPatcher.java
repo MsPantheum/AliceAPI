@@ -1,6 +1,7 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.util.BytecodeUtil;
 import org.objectweb.asm.*;
 
 public class UniversalPatcher implements Opcodes {
@@ -52,10 +53,16 @@ public class UniversalPatcher implements Opcodes {
                             }
                         } else if (owner.equals("java/lang/invoke/MethodHandle")) {
                             if (name.equals("invoke") || name.equals("invokeExact")) {
-                                changed[0] = true;
-                                opcode = INVOKESTATIC;
-                                owner = "alice/interceptor/ReflectionInterceptor";
-                                descriptor = "(Ljava/lang/invoke/MethodHandle;" + descriptor.substring(1);
+                                Type type = Type.getType(descriptor);
+                                Type[] args = type.getArgumentTypes();
+                                Type ret_type = type.getReturnType();
+                                if (descriptor.startsWith("(Ljava/lang/invoke/MethodHandle;") || descriptor.startsWith("(Ljava/lang/reflect/")) {//What are you hiding?
+                                    changed[0] = true;
+                                    BytecodeUtil.popVariables(mv, args);
+                                    super.visitInsn(POP);//The "this" is on top of stack after all the other things cleared.
+                                    BytecodeUtil.generateValue(mv, ret_type);
+                                    return;
+                                }
                             }
                         }
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);

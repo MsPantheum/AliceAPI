@@ -261,7 +261,9 @@ public class ClassPatcher implements Opcodes {
                             public JarFile getJarFile() throws IOException {
                                 if (original != null) {
                                     String s = original.toString().substring(4);
-                                    return new JarFile(s.substring(0, s.indexOf("!")));
+                                    if (FileUtil.exists(s)) {
+                                        return new JarFile(s.substring(0, s.indexOf("!")));
+                                    }
                                 }
                                 return null;
                             }

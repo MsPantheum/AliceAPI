@@ -65,7 +65,12 @@ public class WrappedModuleReader implements ModuleReader {
     public Optional<ByteBuffer> read(String name) throws IOException {
         Optional<ByteBuffer> _try = delegate.read(name);
         if (_try.isPresent()) {
-            byte[] data = ClassPatcher.runTransformers(_try.get().array(), name);
+            ByteBuffer buffer = _try.get();
+            byte[] array = buffer.hasArray() ? buffer.array() : new byte[buffer.remaining()];
+            if (!buffer.hasArray()) {
+                buffer.get(array);
+            }
+            byte[] data = ClassPatcher.runTransformers(buffer.array(), name);
             return Optional.of(ByteBuffer.wrap(data));
         }
         return _try;

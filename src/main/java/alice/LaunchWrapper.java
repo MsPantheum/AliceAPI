@@ -4,6 +4,7 @@ import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 public class LaunchWrapper {
@@ -17,8 +18,9 @@ public class LaunchWrapper {
                 target_name = "net.minecraft.launchwrapper.Launch";
             }
             Class<?> launch_target = Class.forName(target_name);
-            MethodHandle main = ReflectionUtil.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
-            main.invoke((Object[]) args);
+            MethodHandles.Lookup lookup = ReflectionUtil.lookup();
+            MethodHandle main = lookup.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
+            main.invoke((String[]) args);
         } catch (Throwable t){
             DebugUtil.printThrowableFully(t);
         }
