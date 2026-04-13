@@ -1,7 +1,11 @@
 package alice.injector;
 
 import alice.Platform;
-import alice.util.*;
+import alice.log.Logger;
+import alice.util.FileUtil;
+import alice.util.ProcReader;
+import alice.util.ReflectionUtil;
+import alice.util.Unsafe;
 import net.fornwall.jelf.ElfFile;
 
 import java.lang.invoke.MethodHandle;
@@ -149,7 +153,7 @@ public class NativeLibrary {
         final byte[] data = FileUtil.read(filePath);
 
         if (data[0] != 0x7f || data[1] != 0x45 || data[2] != 0x4c || data[3] != 0x46) {
-            System.out.println(filePath + " isn't elf object.");
+            Logger.MAIN.warn(filePath + " isn't elf object.");
             return false;
         }
 

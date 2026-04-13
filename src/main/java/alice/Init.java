@@ -9,6 +9,7 @@ import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
 import alice.exception.ExitNow;
 import alice.injector.ClassPatcher;
+import alice.log.Logger;
 import alice.util.*;
 import com.google.common.base.Objects;
 import org.objectweb.asm.Opcodes;
@@ -38,8 +39,8 @@ public class Init {
         try {
             loader.loadClass("sun.jvm.hotspot.utilities.UnsupportedPlatformException");
         } catch (ClassNotFoundException e) {
-            System.out.println("Append HSDB.");
-            System.out.println("Path: " + FileUtil.getHSDB());
+            Logger.MAIN.info("Append HSDB.");
+            Logger.MAIN.info("Path: " + FileUtil.getHSDB());
             if (!Files.exists(FileUtil.getHSDB())) {
                 throw new RuntimeException("THE FUCK?");
             }
@@ -56,14 +57,19 @@ public class Init {
     private static void init() {
         Thread.UncaughtExceptionHandler handle = (t, e) -> {
             if (!(e instanceof ExitNow)) {
-                System.err.println("Uncaught exception in thread " + t.getName());
+                Logger.MAIN.fatal("Uncaught exception in thread " + t.getName());
                 DebugUtil.printThrowableFully(e);
-                System.out.println(ProcessUtil.getPID());
+                Logger.MAIN.debug(String.valueOf(ProcessUtil.getPID()));
                 ProcessUtil.guiPause();
             } else {
                 Runtime.getRuntime().exit(-1);
             }
         };
+        Runtime.getRuntime().addShutdownHook(new Thread(Logger::stopAll));
+        if ("true".equals(System.getProperty("alice.debug"))) {
+            Logger.enable(Logger.LogLevel.DEBUG);
+            Logger.enable(Logger.LogLevel.TRACE);
+        }
         Thread.setDefaultUncaughtExceptionHandler(handle);
         Thread.currentThread().setUncaughtExceptionHandler(handle);
         Unsafe.ensureClassInitialized(ReflectionUtil.class);
@@ -74,9 +80,9 @@ public class Init {
         String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class), ClassUtil.getJarPath(Objects.class)};
         ClassUtil.ensureClassesInJarLoaded(jars);
         ClassPatcher.load();
-        System.out.println("ClassPatcher loaded.");
+        Logger.MAIN.info("ClassPatcher loaded.");
         checkHSDB();
-        System.out.println("HSDB is ok.");
+        Logger.MAIN.info("HSDB is ok.");
 
         Unsafe.ensureClassInitialized(sun.jvm.hotspot.HSDB.class);
 
@@ -100,7 +106,7 @@ public class Init {
      */
     public static synchronized void ensureInit() {
         if (!init) {
-            System.out.println("AliceAPI init.");
+            Logger.MAIN.info("AliceAPI init.");
             init();
         }
     }

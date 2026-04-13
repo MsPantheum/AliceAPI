@@ -7,6 +7,7 @@ import alice.injector.classloading.*;
 import alice.injector.patcher.DebuggerLocalPatcher;
 import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
 import alice.injector.patcher.UniversalPatcher;
+import alice.log.Logger;
 import alice.util.*;
 import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.Opcodes;
@@ -87,7 +88,7 @@ public class ClassPatcher implements Opcodes {
             return _try;
         }
         if (LOG_CLASS) {
-            System.out.println("Transforming class:" + name);
+            Logger.MAIN.trace("Transforming class:" + name);
         }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
@@ -104,7 +105,7 @@ public class ClassPatcher implements Opcodes {
             return;
         }
         Object wrapper = new UCPWrapper.LegacyURLClassPathWrapper((URLClassPath) ucp);
-        System.out.println("Replacing URLClassPath of " + loader.getClass().getName() + ".");
+        Logger.MAIN.info("Replacing URLClassPath of " + loader.getClass().getName() + ".");
         ClassLoaderUtil.setUCP(loader, wrapper);
     }
 
@@ -115,7 +116,7 @@ public class ClassPatcher implements Opcodes {
 
     private static void replaceModule2Reader(ClassLoader loader) {
         Map<ModuleReference, ModuleReader> old = ClassLoaderUtil.getModule2Reader(loader);
-        System.out.println("Replacing moduleToReader of " + loader.getClass().getName() + ".");
+        Logger.MAIN.info("Replacing moduleToReader of " + loader.getClass().getName() + ".");
         ClassLoaderUtil.setModule2Reader(loader, new Module2Reader(old));
     }
 
@@ -124,10 +125,10 @@ public class ClassPatcher implements Opcodes {
         public WrappedLoaders(Collection<Object> orig) {
             for (Object t : orig) {
                 if (UCPUtil.isJarLoader(t)) {
-                    System.out.println("Wrap JarLoader:" + t);
+                    Logger.MAIN.trace("Wrap JarLoader:" + t);
                     t = wrapJarLoader(t);
                 } else {
-                    System.out.println("Ignore Loader:" + t);
+                    Logger.MAIN.trace("Ignore Loader:" + t);
                 }
                 super.add(t);
             }
@@ -136,7 +137,7 @@ public class ClassPatcher implements Opcodes {
         @Override
         public boolean add(Object t) {
             if (UCPUtil.isJarLoader(t)) {
-                System.out.println("Wrap JarLoader:" + t);
+                Logger.MAIN.trace("Wrap JarLoader:" + t);
                 t = wrapJarLoader(t);
             }
             return super.add(t);
@@ -209,7 +210,7 @@ public class ClassPatcher implements Opcodes {
                 }
             }
         });
-        System.out.println("Necessary processors registered.");
+        Logger.MAIN.info("Necessary processors registered.");
     }
 
     private static void replaceLoaders(Object ucp) {
@@ -219,9 +220,8 @@ public class ClassPatcher implements Opcodes {
     }
 
     public static void registerProcessor(ClassByteProcessor processor) {
-        System.out.println("Registering processor: " + processor.getClass().getName());
-        System.out.println("Loaded by class: " + processor.getClass().getClassLoader().getClass().getName());
-        System.out.println("CP loaded by: " + ClassPatcher.class.getClassLoader().getClass().getName());
+        Logger.MAIN.info("Registering processor: " + processor.getClass().getName());
+        Logger.MAIN.info("Loaded by class: " + processor.getClass().getClassLoader().getClass().getName());
         synchronized (PROCESSORS) {
             PROCESSORS.add(processor);
         }
@@ -306,11 +306,8 @@ public class ClassPatcher implements Opcodes {
 
         @Override
         protected URLConnection openConnection(URL u) throws IOException {
-            System.out.println("MEOWWWWWWWWW");
             sun.net.www.protocol.jar.JarURLConnection juc = new JarURLConnection(u, delegate);
             byte[] data = juc.getInputStream().readAllBytes();
-            System.out.println(u.getProtocol());
-            System.out.println(u.getPath());
             return new URLConnection(u) {
                 @Override
                 public void connect() {

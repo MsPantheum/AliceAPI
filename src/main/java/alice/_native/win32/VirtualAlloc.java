@@ -5,7 +5,6 @@ package alice._native.win32;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
-import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
 public class VirtualAlloc {
@@ -111,7 +110,6 @@ public class VirtualAlloc {
         Unsafe.putLong(code_base + 12,dwSize);
         Unsafe.putInt(code_base + 32,flAllocationType);
         Unsafe.putInt(code_base + 38,flProtect);
-        AddressUtil.println(Shellcode.getCompiledEntry(VirtualAlloc.class,"holder","()J"));
         return holder();
     }
 }

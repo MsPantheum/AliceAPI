@@ -1,6 +1,7 @@
 package alice;
 
 import alice.injector.ClassPatcher;
+import alice.log.Logger;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
 import alice.util.ReflectionUtil;
@@ -27,7 +28,7 @@ public class ExtensionLoader {
         if(!FileUtil.isDirectory(extension_dir)){
             FileUtil.createDirectory(extension_dir);
         }
-        System.out.println("Scanning extensions.");
+        Logger.MAIN.info("Scanning extensions.");
         for (Path path : FileUtil.list(extension_dir)) {
             if(path.toString().endsWith(".jar")){
                 ClassUtil.append(path, ClassLoader.getSystemClassLoader());

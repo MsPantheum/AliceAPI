@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.jar.JarEntry;
@@ -26,6 +27,9 @@ public class FileUtil {
 
     public static void createFile(Path path) {
         try {
+            if (path.getParent() != null) {
+                createDirectory(path.getParent());
+            }
             Files.createFile(path);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -209,6 +213,14 @@ public class FileUtil {
     public static void delete(Path path) {
         try {
             Files.delete(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void append(Path path, String string) {
+        try {
+            Files.write(path, string.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

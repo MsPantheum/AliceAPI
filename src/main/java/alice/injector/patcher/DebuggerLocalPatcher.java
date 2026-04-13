@@ -1,6 +1,7 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.log.Logger;
 import alice.util.BytecodeUtil;
 import alice.util.Unsafe;
 import org.objectweb.asm.ClassVisitor;
@@ -9,7 +10,7 @@ import org.objectweb.asm.Opcodes;
 
 public class DebuggerLocalPatcher {
     public static byte[] patch(byte[] data, String name) {
-        System.out.println("Patching " + name + ".");
+        Logger.MAIN.info("Patching " + name + ".");
         return BytecodeUtil.patchClass(data, cw -> new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {

@@ -1,6 +1,7 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.log.Logger;
 import alice.util.BytecodeUtil;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -11,7 +12,7 @@ public class LinuxDebuggerLocalWorkerThreadPatcher {
     //No need to do things on an attach thread as we are not really attached but in the same process.
 
     public static byte[] patch(byte[] data, String name) {
-        System.out.println("Patching " + name + ".");
+        Logger.MAIN.info("Patching " + name + ".");
         return BytecodeUtil.patchClass(data, cw -> new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {

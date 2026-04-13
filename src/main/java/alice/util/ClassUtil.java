@@ -2,6 +2,7 @@ package alice.util;
 
 import alice.Meow;
 import alice.Platform;
+import alice.log.Logger;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Klass;
 import sun.jvm.hotspot.oops.Metadata;
@@ -127,7 +128,7 @@ public class ClassUtil {
             if (path.equals(ALICE_PATH)) {
                 continue;
             }
-            System.out.println("Ensure classes in " + path + " is loaded...");
+            Logger.MAIN.debug("Ensure classes in " + path + " is loaded...");
             try (JarFile jar = new JarFile(path)) {
                 Enumeration<JarEntry> entries = jar.entries();
                 while (entries.hasMoreElements()) {
@@ -137,6 +138,7 @@ public class ClassUtil {
                         name = name.substring(0, name.length() - 6).replace('/', '.');
                         try {
                             Unsafe.ensureClassInitialized(Class.forName(name));
+                            Logger.MAIN.trace(name);
                         } catch (Throwable ignored) {
                         }
                     }

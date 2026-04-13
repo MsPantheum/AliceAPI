@@ -16,6 +16,5 @@ public class Nya {
 //        String s = url.toString().substring(4);
 //        s = s.substring(0,s.indexOf("!"));
 //        System.out.println(s);
-        Test.test(url);
     }
 }

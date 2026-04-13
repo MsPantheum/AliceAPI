@@ -7,7 +7,6 @@ import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
 import sun.jvm.hotspot.utilities.MethodArray;
 
-import java.io.PrintStream;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,40 +50,6 @@ public class AddressUtil {
         }
     }
 
-    public static void print(String message, long address, PrintStream out) {
-        out.print(message);
-        print(address, out);
-    }
-
-    public static void println(String message, long address, PrintStream out) {
-        out.print(message);
-        println(address, out);
-    }
-
-    public static void print(long address, PrintStream out){
-        out.print("0x" + Long.toHexString(address));
-    }
-
-    public static void print(long address){
-        print(address,System.out);
-    }
-
-    public static void print(String message, long address) {
-        print(message, address, System.out);
-    }
-
-    public static void println(String message, long address) {
-        println(message, address, System.out);
-    }
-
-    public static void println(long address, PrintStream out){
-        out.println("0x" + Long.toHexString(address));
-    }
-
-    public static void println(long address){
-        println(address,System.out);
-    }
-
     public static long align(long address) {
         return address & -Unsafe.PAGE_SIZE;
     }
@@ -98,16 +63,14 @@ public class AddressUtil {
     }
 
     public static long getKlassAddress(Class<?> cls) {
-        return oopSize == 8
-                ? Unsafe.getLong(cls, klass_offset)
-                : Unsafe.getInt(cls, klass_offset) & 0xffffffffL;
+        return oopSize == 8 ? Unsafe.getLong(cls, klass_offset) : Unsafe.getInt(cls, klass_offset) & 0xffffffffL;
     }
 
     public static long getMethod(MethodInfo methodInfo) {
         InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
-            if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
+            if (method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)) {
                 return Converter.getAddressValue(method.getAddress());
             }
         }
@@ -125,11 +88,11 @@ public class AddressUtil {
         MethodArray methods = klass.getMethods();
         long start = Converter.getAddressValue(methods.getAddress());
         long offset = methods.getElemType().getSize();
-        for(int i = 0; i < methods.length(); i++) {
+        for (int i = 0; i < methods.length(); i++) {
             long p = start + method_dataFieldOffset + i * offset;
             long m = Unsafe.getAddress(start + method_dataFieldOffset + i * offset);
             Method method = (Method) Metadata.instantiateWrapperFor(Converter.toAddress(m));
-            if(method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)){
+            if (method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)) {
                 return p;
             }
         }

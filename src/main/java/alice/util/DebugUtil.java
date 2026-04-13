@@ -1,6 +1,7 @@
 package alice.util;
 
 import alice.Platform;
+import alice.log.Logger;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,8 +13,6 @@ public class DebugUtil {
 
     public static boolean DEBUG = false;
 
-    public static final boolean LOG_KLASS_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_klass"));
-    public static final boolean LOG_UCP_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_ucp"));
     private static volatile PrintStream out;
     private static volatile PrintStream err;
 
@@ -28,14 +27,14 @@ public class DebugUtil {
         }
     }
 
-    public static void disableOutput() {
+    public static void disableSystemOutput() {
         out = System.out;
         err = System.err;
         System.setOut(NULL);
         System.setErr(NULL);
     }
 
-    public static void restoreOutput() {
+    public static void restoreSystemOutput() {
         if (out == null || err == null) {
             throw new IllegalStateException();
         }
@@ -75,32 +74,18 @@ public class DebugUtil {
     public static void printThrowableFully(Throwable t, PrintStream out) {
         int depth = 0;
         while (t != null) {
-            for (int i = 0; i < depth; i++) {
-                out.print('\t');
-            }
-            out.println("Exception depth " + depth + ":" + t.getClass().getName() + " Message:" + t.getMessage());
+            Logger.MAIN.debug("Exception depth " + depth + ":" + t.getClass().getName() + " Message:" + t.getMessage());
             for (StackTraceElement ste : t.getStackTrace()) {
-                for (int i = 0; i < depth; i++) {
-                    out.print('\t');
-                }
-                out.println(ste);
+                Logger.MAIN.debug(ste.toString());
             }
             t = t.getCause();
             depth++;
         }
     }
 
-    public static void println(String str) {
-        System.out.println(str);
-    }
-
-    public static void println(Object o) {
-        System.out.println(o.getClass().getName());
-    }
-
     public static void printStackTrace() {
         for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-            System.out.println(ste.toString());
+            Logger.MAIN.debug(ste.toString());
         }
     }
 }

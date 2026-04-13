@@ -1,6 +1,7 @@
 package alice.injector;
 
 import alice.Platform;
+import alice.log.Logger;
 import alice.util.FileUtil;
 import alice.util.ProcReader;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -114,7 +115,7 @@ public class SymbolLookup {
                             }
                         }
                     } else {
-                        System.err.println("Error:Failed to get base of " + path);
+                        Logger.MAIN.error("Failed to get base of " + path + '.');
                     }
                 }
             }
@@ -185,7 +186,7 @@ public class SymbolLookup {
             }
         }
         if (base[0] == Long.MAX_VALUE) {
-            System.err.println("Cannot find base of " + lib + "!");
+            Logger.MAIN.error("Cannot find base of " + lib + "!");
             return 0;
         }
         if (!Platform.win32) {

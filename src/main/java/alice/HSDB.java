@@ -17,7 +17,6 @@ public class HSDB {
 
     static {
         System.setProperty("sun.jvm.hotspot.runtime.VM.disableVersionCheck", "true");
-        System.out.println(alice.HSDB.class.getClassLoader().getClass().getName());
         try {
             HSDB = Unsafe.allocateInstance(sun.jvm.hotspot.HSDB.class);
             Field f = sun.jvm.hotspot.HSDB.class.getDeclaredField("agent");

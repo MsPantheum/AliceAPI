@@ -1,6 +1,7 @@
 package alice;
 
 import alice.exception.BadEnvironment;
+import alice.log.Logger;
 import org.objectweb.asm.Opcodes;
 
 /**
@@ -36,7 +37,7 @@ public class Platform {
         switch (os) {
             case "Windows":
                 _win32 = true;
-                System.out.println("Running on windows!");
+                Logger.MAIN.info("Running on windows!");
                 _abi = ABI.WINDOWS_X64;
                 break;
             case "Linux":
@@ -46,7 +47,7 @@ public class Platform {
             case "Darwin":
                 _darwin = true;
                 _abi = ABI.SYSTEM_V;
-                System.err.println("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
+                Logger.MAIN.warn("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
                 break;
             case "OpenBSD":
             case "NetBSD":
@@ -54,9 +55,9 @@ public class Platform {
             case "SunOS":
                 _bsd = true;
                 _abi = ABI.SYSTEM_V;
-                System.err.println("Bsd should be supported but it's not guaranteed.");
+                Logger.MAIN.warn("Bsd should be supported but it's not guaranteed.");
                 if (os.equals("SunOS")) {
-                    System.err.println("???? We are running on solaris!");
+                    Logger.MAIN.warn("???? We are running on solaris!");
                 }
                 break;
             default:
@@ -92,7 +93,7 @@ public class Platform {
         }
         jigsaw = _module;
         if (jigsaw) {
-            ASM_LEVEL = Opcodes.ASM7;
+            ASM_LEVEL = Opcodes.ASM9;
         } else {
             ASM_LEVEL = Opcodes.ASM5;
         }

@@ -26,7 +26,9 @@ public class WrappedModuleReader implements ModuleReader {
     }
 
     private static URI processURI(URI uri, String name) {
-        System.out.println("Processing:" + name);
+        if (name.startsWith("META-INF/services/") && !name.endsWith(".class")) {
+            return uri;
+        }
         byte[] data;
         try {
             if (uri.getScheme().equals("jar")) {
@@ -70,7 +72,7 @@ public class WrappedModuleReader implements ModuleReader {
             if (!buffer.hasArray()) {
                 buffer.get(array);
             }
-            byte[] data = ClassPatcher.runTransformers(buffer.array(), name);
+            byte[] data = ClassPatcher.runTransformers(array, name);
             return Optional.of(ByteBuffer.wrap(data));
         }
         return _try;

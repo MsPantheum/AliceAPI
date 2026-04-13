@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.log.Logger;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 
@@ -80,9 +81,8 @@ public class CString {
     @Override
     protected void finalize() throws Throwable {
         if(!dead){
-            System.err.println("Memory leak detected! Someone allocated this c string but didn't release it when it was no longer referenced to!");
-            System.err.print("Address:");
-            AddressUtil.println(address,System.err);
+            Logger.MAIN.error("Memory leak detected! Someone allocated this c string but didn't release it when it was no longer referenced to!");
+            Logger.MAIN.error("Address:0x" + Long.toHexString(address));
             Unsafe.freeMemory(address);
         }
         super.finalize();

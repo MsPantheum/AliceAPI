@@ -4,7 +4,6 @@ import alice.Platform;
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
-import alice.util.AddressUtil;
 import alice.util.CString;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
@@ -48,7 +47,6 @@ public class system {
         payload[34] = (byte) 0xc9;
         payload[35] = (byte) 0xc3;
         code_base = MemoryUtil.allocate(23);
-        AddressUtil.println(code_base);
         assert code_base != 0;
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 24, SymbolLookup.lookup("system"));

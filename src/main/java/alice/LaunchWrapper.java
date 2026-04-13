@@ -7,6 +7,9 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
+/**
+ * The launch wrapper to launch your application.
+ */
 public class LaunchWrapper {
 
     public static void main(String[] args) {
@@ -21,7 +24,7 @@ public class LaunchWrapper {
             MethodHandles.Lookup lookup = ReflectionUtil.lookup();
             MethodHandle main = lookup.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
             main.invoke((String[]) args);
-        } catch (Throwable t){
+        } catch (Throwable t) {
             DebugUtil.printThrowableFully(t);
         }
     }

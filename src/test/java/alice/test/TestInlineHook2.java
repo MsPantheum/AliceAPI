@@ -79,11 +79,11 @@ public class TestInlineHook2 {
         for (int i = 0; i < 20000; i++) {
             func();
         }
-        DebugUtil.disableOutput();
+        DebugUtil.disableSystemOutput();
         for (int i = 0; i < 20000; i++) {
             hello();
         }
-        DebugUtil.restoreOutput();
+        DebugUtil.restoreSystemOutput();
     }
 
     @Test

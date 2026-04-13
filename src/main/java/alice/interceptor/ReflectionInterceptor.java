@@ -1,6 +1,6 @@
 package alice.interceptor;
 
-import alice.util.DebugUtil;
+import alice.log.Logger;
 import alice.util.ReflectionUtil;
 import alice.util.Unsafe;
 import org.objectweb.asm.Type;
@@ -101,8 +101,8 @@ public class ReflectionInterceptor {
 
     public static void set(Field field, Object obj, Object value) throws IllegalAccessException {
         if (field.getDeclaringClass() == URLClassLoader.class && field.getName().equals("ucp")) {
-            if (DebugUtil.LOG_UCP_REPLACE) {
-                System.out.println("Warning: ucp replace detected!");
+            if (UnsafeInterceptor.LOG_UCP_REPLACE) {
+                Logger.MAIN.warn("Warning: ucp replace detected!");
                 return;
             }
         }

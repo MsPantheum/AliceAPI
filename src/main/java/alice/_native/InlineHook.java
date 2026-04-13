@@ -7,6 +7,7 @@ import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualProtect;
 import alice.injector.Shellcode;
+import alice.log.Logger;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
 import alice.util.MemoryUtil;
@@ -66,8 +67,8 @@ public class InlineHook {
                 trampoline = Platform.win32 ? VirtualAlloc.invoke(0,128,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(0,128,PROT_READ | PROT_WRITE | PROT_EXEC,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             }
-            System.out.print("Trampoline=");
-            AddressUtil.println(trampoline);
+            Logger.MAIN.trace("Trampoline=");
+            Logger.MAIN.trace(Long.toHexString(trampoline));
             long offset = prepare != null ? prepare.process(trampoline) : 0;
             int current = 0;
             while (current < 14) {
@@ -132,8 +133,6 @@ public class InlineHook {
 
                 current += tmp;
             }
-
-            System.out.println("Current=" + current);
 
             createJump(trampoline, current + offset, ori + current);
             if (p2trampoline != 0) {
