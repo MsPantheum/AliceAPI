@@ -59,7 +59,8 @@ public class Init {
             if (!(e instanceof ExitNow)) {
                 Logger.MAIN.fatal("Uncaught exception in thread " + t.getName());
                 DebugUtil.printThrowableFully(e);
-                Logger.MAIN.debug(String.valueOf(ProcessUtil.getPID()));
+                Logger.MAIN.fatal(String.valueOf(ProcessUtil.getPID()));
+                e.printStackTrace(System.out);
                 ProcessUtil.guiPause();
             } else {
                 Runtime.getRuntime().exit(-1);

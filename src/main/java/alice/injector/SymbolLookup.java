@@ -54,7 +54,7 @@ public class SymbolLookup {
         bases.keySet().forEach(lib -> {
             long base = bases.getLong(lib);
             if (!Platform.win32) {
-                if(isElf(lib)){
+                if (isElf(lib)) {
                     Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
                     if (symbols.containsKey(symbol)) {
                         ret[0] = base + symbols.get(symbol).offset;
@@ -79,19 +79,19 @@ public class SymbolLookup {
             return ret[0];
         }
 
-        ProcReader.parseProcMaps().forEach((path,mappings) -> {
+        ProcReader.parseProcMaps().forEach((path, mappings) -> {
             if (FileUtil.exists(path) && !FileUtil.isDirectory(path)) {
                 if (!bases.containsKey(path)) {//We already checked the cache,so skip things exist in the cache.
                     long base = Long.MAX_VALUE;
 
                     for (ProcReader.MemoryMapping mapping : mappings) {
-                        base = Math.min(Long.parseLong(Platform.win32 ? mapping.addressRangeStart.substring(2) : mapping.addressRangeStart, 16),base);
+                        base = Math.min(Long.parseLong(Platform.win32 ? mapping.addressRangeStart.substring(2) : mapping.addressRangeStart, 16), base);
                     }
 
-                    if(base != Long.MAX_VALUE) {
+                    if (base != Long.MAX_VALUE) {
                         bases.put(path, base);
                         if (!Platform.win32) {
-                            if(isElf(path)){
+                            if (isElf(path)) {
 
                                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
                                 if (symbols.containsKey(symbol)) {
@@ -128,6 +128,7 @@ public class SymbolLookup {
 
     /**
      * Convert the path of a dynamic library to an absolute path.
+     *
      * @param lib the path of the dynamic library.
      * @return the absolute path of the dynamic library.
      */
@@ -149,20 +150,25 @@ public class SymbolLookup {
     }
 
     /**
-     * Lookup up a symbol from a specific dynamic library.
-     * @param lib the dynamic library to use.
-     * @param symbol the symbol to lookup.
-     * @return the symbol value in current process.
+     * Lookup up a symbol from a specific dynamic library.<br>
+     * If param lib is null, it will search in all libraries.
+     *
+     * @param lib    the dynamic library to use
+     * @param symbol the symbol to lookup
+     * @return the symbol value in current process
      */
     public static long lookup(String lib, String symbol) {
+        if (lib == null) {
+            return lookup(symbol);
+        }
         if (!Paths.get(lib).isAbsolute()) {
             lib = toAbsoluteLibPath(lib);
         }
         if (cache.containsKey(symbol)) {
             return cache.getLong(symbol);
         }
-        if(!Platform.win32 && !isElf(lib)){
-            System.err.println("Not an elf file:"+lib);
+        if (!Platform.win32 && !isElf(lib)) {
+            System.err.println("Not an elf file:" + lib);
             return 0;
         }
         final long[] base = {Long.MAX_VALUE};
@@ -173,7 +179,7 @@ public class SymbolLookup {
                 Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
                 LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
                 for (ProcReader.MemoryMapping mapping : mappings) {
-                    base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16),base[0]);
+                    base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16), base[0]);
                 }
                 bases.put(lib, base[0]);
             } else {

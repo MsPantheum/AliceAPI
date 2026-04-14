@@ -71,14 +71,7 @@ public class ProcReader {
 
         @Override
         public String toString() {
-            return "MemoryMapping{" +
-                    "addressRange='" + addressRangeStart + "-" + addressRangeEnd + '\'' +
-                    ", permissions='" + permissions + '\'' +
-                    ", offset='" + Long.toHexString(offset) + '\'' +
-                    ", device='" + device + '\'' +
-                    ", inode='" + inode + '\'' +
-                    ", pathname='" + pathname + '\'' +
-                    '}';
+            return "MemoryMapping{" + "addressRange='" + addressRangeStart + "-" + addressRangeEnd + '\'' + ", permissions='" + permissions + '\'' + ", offset='" + Long.toHexString(offset) + '\'' + ", device='" + device + '\'' + ", inode='" + inode + '\'' + ", pathname='" + pathname + '\'' + '}';
         }
     }
 
@@ -87,12 +80,14 @@ public class ProcReader {
         try {
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             ObjectName name = new ObjectName("com.sun.management:type=DiagnosticCommand");
-            String result = (String) server.invoke(name, "vmDynlibs",
-                    new Object[]{null}, new String[]{"[Ljava.lang.String;"});
+            String result = (String) server.invoke(name, "vmDynlibs", new Object[]{null}, new String[]{"[Ljava.lang.String;"});
             String[] lines = result.split("\n");
             int i = Platform.win32 ? 1 : 0;
             for (; i < lines.length; i++) {
                 String line = lines[i];
+                if (line.startsWith("Total number of mappings:")) {
+                    continue;
+                }
                 MemoryMapping mapping = parseMapping(line);
                 if (mapping != null) {
                     LinkedList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new LinkedList<>());
@@ -119,6 +114,9 @@ public class ProcReader {
     }
 
     private static MemoryMapping parseMapping(String line) {
+        if (line.startsWith("Total number of mappings:")) {
+            return null;
+        }
         MemoryMapping map = new MemoryMapping();
         if (Platform.win32) {
             map.addressRangeStart = line.substring(2, line.indexOf(" - "));
@@ -173,9 +171,10 @@ public class ProcReader {
             while ((line = reader.readLine()) != null) {
                 if (line.startsWith("0x")) {
                     MemoryMapping map = parseMapping(line);
-                    assert map != null;
-                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
-                    list.add(map);
+                    if (map != null) {
+                        LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
+                        list.add(map);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -189,11 +188,7 @@ public class ProcReader {
         Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
         String filePath = "/proc/" + pid + "/maps";
 
-        try (
-                FileInputStream fis = new FileInputStream(filePath);
-                InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
-                BufferedReader br = new BufferedReader(isr)
-        ) {
+        try (FileInputStream fis = new FileInputStream(filePath); InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(isr)) {
             String line;
             while ((line = br.readLine()) != null) {
                 MemoryMapping map = parseMapping(line);

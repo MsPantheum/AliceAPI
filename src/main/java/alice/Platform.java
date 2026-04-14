@@ -25,9 +25,10 @@ public class Platform {
 
     public static final ABI abi;
 
+    public static final int JAVA_VERSION;
+
     public enum ABI {
-        SYSTEM_V,
-        WINDOWS_X64
+        SYSTEM_V, WINDOWS_X64
     }
 
     static {
@@ -97,5 +98,7 @@ public class Platform {
         } else {
             ASM_LEVEL = Opcodes.ASM5;
         }
+        String version = System.getProperty("java.specification.version");
+        JAVA_VERSION = version.startsWith("1.") ? Integer.parseInt(version.substring(2)) : Integer.parseInt(version);
     }
 }

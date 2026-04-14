@@ -109,7 +109,7 @@ public class ClassPatcher implements Opcodes {
         ClassLoaderUtil.setUCP(loader, wrapper);
     }
 
-    private static void replaceJarHandler(Object ucp) {
+    public static void replaceJarHandler(Object ucp) {
         Handler old = (Handler) UCPUtil.getJarHandler(ucp);
         UCPUtil.setJarHandler(ucp, new StreamPatcher(old == null ? new Handler() : old));
     }
@@ -122,7 +122,7 @@ public class ClassPatcher implements Opcodes {
 
     private static class WrappedLoaders extends ArrayList<Object> {
 
-        public WrappedLoaders(Collection<Object> orig) {
+        private WrappedLoaders(Collection<Object> orig) {
             for (Object t : orig) {
                 if (UCPUtil.isJarLoader(t)) {
                     Logger.MAIN.trace("Wrap JarLoader:" + t);
@@ -132,6 +132,9 @@ public class ClassPatcher implements Opcodes {
                 }
                 super.add(t);
             }
+        }
+
+        private WrappedLoaders() {
         }
 
         @Override
@@ -213,9 +216,10 @@ public class ClassPatcher implements Opcodes {
         Logger.MAIN.info("Necessary processors registered.");
     }
 
-    private static void replaceLoaders(Object ucp) {
+    @SuppressWarnings("unchecked")
+    public static void replaceLoaders(Object ucp) {
         ArrayList<?> loaders = UCPUtil.getLoaders(ucp);
-        WrappedLoaders neo = new WrappedLoaders((Collection<Object>) loaders);
+        WrappedLoaders neo = loaders != null ? new WrappedLoaders((Collection<Object>) loaders) : new WrappedLoaders();
         UCPUtil.setLoaders(ucp, neo);
     }
 

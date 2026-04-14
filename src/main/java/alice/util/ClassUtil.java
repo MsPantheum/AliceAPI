@@ -123,6 +123,8 @@ public class ClassUtil {
 
     private static final String ALICE_PATH = getJarPath(Meow.class);
 
+    private static final boolean DEBUG_CLASS_ENSURER = "true".equals(System.getProperty("alice.debug.class_init"));
+
     public static void ensureClassesInJarLoaded(String... jars) {
         for (String path : jars) {
             if (path.equals(ALICE_PATH)) {
@@ -138,7 +140,9 @@ public class ClassUtil {
                         name = name.substring(0, name.length() - 6).replace('/', '.');
                         try {
                             Unsafe.ensureClassInitialized(Class.forName(name));
-                            Logger.MAIN.trace(name);
+                            if (DEBUG_CLASS_ENSURER) {
+                                Logger.MAIN.trace(name);
+                            }
                         } catch (Throwable ignored) {
                         }
                     }

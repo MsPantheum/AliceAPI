@@ -1,5 +1,6 @@
 package alice;
 
+import alice.log.Logger;
 import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
 
@@ -24,7 +25,9 @@ public class LaunchWrapper {
             MethodHandles.Lookup lookup = ReflectionUtil.lookup();
             MethodHandle main = lookup.findStatic(launch_target, "main", MethodType.methodType(void.class, String[].class));
             main.invoke((String[]) args);
+            Logger.MAIN.info("Main thread exiting...");
         } catch (Throwable t) {
+            t.printStackTrace(System.out);
             DebugUtil.printThrowableFully(t);
         }
     }

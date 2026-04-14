@@ -1,5 +1,6 @@
 package alice.interceptor;
 
+import alice.Platform;
 import alice.log.Logger;
 import alice.util.ReflectionUtil;
 import alice.util.Unsafe;
@@ -18,7 +19,7 @@ public class ReflectionInterceptor {
 
     static {
         try {
-            Field field = ReflectionUtil.getField(Class.forName("sun.reflect.NativeMethodAccessorImpl"), "method");
+            Field field = ReflectionUtil.getField(Class.forName(Platform.jigsaw ? "jdk.internal.reflect.NativeMethodAccessorImpl" : "sun.reflect.NativeMethodAccessorImpl"), "method");
             sun_reflect_NativeMethodAccessorImpl_method_offset = Unsafe.objectFieldOffset(field);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);

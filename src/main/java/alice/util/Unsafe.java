@@ -1,5 +1,7 @@
 package alice.util;
 
+import alice.Platform;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +11,8 @@ import java.security.ProtectionDomain;
  * Wrapper of Unsafe class. No longer necessary to obtain an Unsafe instance next time!
  */
 public class Unsafe {
+
+
     private static final sun.misc.Unsafe UNSAFE;
 
     static {
@@ -35,7 +39,11 @@ public class Unsafe {
     }
 
     public static void ensureClassInitialized(Class<?> cls) {
-        UNSAFE.ensureClassInitialized(cls);
+        if (Platform.jigsaw) {
+
+        } else {
+            UNSAFE.ensureClassInitialized(cls);
+        }
     }
 
     public static boolean shouldBeInitialized(Class<?> cls) {

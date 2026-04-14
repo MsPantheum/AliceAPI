@@ -15,7 +15,14 @@ import java.util.List;
  */
 public class Logger extends Thread {
 
-    public static final Logger MAIN = new Logger("Alice");
+    public static final Logger MAIN;
+
+    private static final List<Logger> ALL_LOGGERS;
+
+    static {
+        ALL_LOGGERS = new ArrayList<>();
+        MAIN = new Logger("Alice");
+    }
 
     private static boolean running = true;
 
@@ -36,6 +43,7 @@ public class Logger extends Thread {
         setDaemon(true);
         setName(name + "Logger");
         start();
+        ALL_LOGGERS.add(this);
     }
 
     @Override
@@ -45,15 +53,20 @@ public class Logger extends Thread {
                 if (lines.isEmpty()) {
                     continue;
                 }
-                while (!lines.isEmpty()) {
-                    String line = lines.remove(0);
-                    FileUtil.append(path, line);
-                }
+                flush();
             }
         }
     }
 
+    private void flush() {
+        while (!lines.isEmpty()) {
+            String line = lines.remove(0);
+            FileUtil.append(path, line);
+        }
+    }
+
     public static void stopAll() {
+        ALL_LOGGERS.forEach(Logger::flush);
         running = false;
     }
 
