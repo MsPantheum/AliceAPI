@@ -16,13 +16,14 @@ import java.net.URLClassLoader;
 public class ReflectionInterceptor {
 
     private static final Class<?> NativeMethodAccessorClass;
+    private static final Field sun_reflect_NativeMethodAccessorImpl_method_field;
     private static final long sun_reflect_NativeMethodAccessorImpl_method_offset;
 
     static {
         try {
             NativeMethodAccessorClass = Class.forName(Platform.jigsaw ? Platform.JAVA_VERSION >= 26 ? "jdk.internal.reflect.DirectMethodHandleAccessor$NativeAccessor" : "jdk.internal.reflect.NativeMethodAccessorImpl" : "sun.reflect.NativeMethodAccessorImpl");
-            Field field = ReflectionUtil.getField(NativeMethodAccessorClass, "method");
-            sun_reflect_NativeMethodAccessorImpl_method_offset = Unsafe.objectFieldOffset(field);
+            sun_reflect_NativeMethodAccessorImpl_method_field = ReflectionUtil.getField(NativeMethodAccessorClass, "method");
+            sun_reflect_NativeMethodAccessorImpl_method_offset = Unsafe.objectFieldOffset(sun_reflect_NativeMethodAccessorImpl_method_field);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -81,7 +82,8 @@ public class ReflectionInterceptor {
             return null;
         } else if (method.getDeclaringClass() == NativeMethodAccessorClass) {
             if (method.getName().equals("invoke")) {
-                method = Unsafe.getObject(obj, sun_reflect_NativeMethodAccessorImpl_method_offset);
+                //The offset is no longer persistent.
+                method = Platform.JAVA_VERSION < 12 ? Unsafe.getObject(obj, sun_reflect_NativeMethodAccessorImpl_method_offset) : Unsafe.getObject(obj, Unsafe.objectFieldOffset(sun_reflect_NativeMethodAccessorImpl_method_field));
                 assert args.length == 2;
                 obj = args[0];
                 args = (Object[]) args[1];

@@ -1,5 +1,5 @@
 package jdk.internal.loader;
 
-public class BuiltinClassLoader {
+public class BuiltinClassLoader extends ClassLoader {
     private URLClassPath ucp;
 }

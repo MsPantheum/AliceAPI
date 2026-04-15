@@ -47,6 +47,9 @@ public class BytecodeUtil implements Opcodes {
         mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", false);
     }
 
+    public static void logInfo(MethodVisitor mv, String message) {
+
+    }
 
     /**
      * Automatically push an integer into stack using the best operation.

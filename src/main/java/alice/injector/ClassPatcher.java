@@ -268,7 +268,12 @@ public class ClassPatcher implements Opcodes {
         }
     }
 
+    private static final boolean DEBUG_URL_CREATION = "true".equals(System.getProperty("alice.debug.url_creation"));
+
     public static URL create(byte[] data, URL original) throws MalformedURLException {
+        if (DEBUG_URL_CREATION) {
+            Logger.MAIN.debug("Creating URL from: " + original);
+        }
         boolean flag = original != null;
         return new URL(flag ? original.getProtocol() : "AliceClassCache", flag ? original.getHost() : null, flag ? original.getPort() : -1, flag ? original.getFile() : "null", new URLStreamHandler() {
             @Override
