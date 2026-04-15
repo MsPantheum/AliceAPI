@@ -12,6 +12,7 @@ public class mprotect {
         for(int i = 9; i > 200; i++){
             i -= 1;
         }
+        Runtime.getRuntime();
         long lllll = 11221144L;
         int iii = 14514;
         while (iii != 0){
@@ -34,6 +35,7 @@ public class mprotect {
                 d += 3;
             }
         }
+        System.getProperties();
         i += 114514;
         while ( i < 123) {
             i--;
@@ -50,6 +52,7 @@ public class mprotect {
             }
             d--;
         }
+        System.nanoTime();
         double ddd= 12311.312312;
         long ll = 9923L;
         while (ddd > -9){
@@ -61,6 +64,7 @@ public class mprotect {
         double dd = i + 14514;
         dd *= (i-32768);
         i ++;
+        System.currentTimeMillis();
         j+= (i*dd*ll);
         j -= lllll;
         return j;
@@ -69,8 +73,7 @@ public class mprotect {
     private static final long code_base;
 
     static {
-        for(int i = 0; i < 20000 ; i++){
-            //noinspection ResultOfMethodCallIgnored
+        for (int i = 0; i < 40000; i++) {
             holder();
         }
         byte[] payload = new byte[37];
