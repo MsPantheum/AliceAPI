@@ -17,6 +17,7 @@ public class Platform {
     public static final boolean linux;
     public static final boolean bsd;
     public static final boolean darwin;
+    public static final boolean solaris;
 
     public static final boolean amd64;
     public static final boolean x86;
@@ -32,43 +33,37 @@ public class Platform {
     }
 
     static {
-        boolean _win32 = false, _linux = false, _bsd = false, _darwin = false;
+        boolean _win32 = false, _linux = false, _bsd = false, _darwin = false, _solaris = false;
         String os = System.getProperty("os.name");
         ABI _abi;
-        switch (os) {
-            case "Windows":
-                _win32 = true;
-                Logger.MAIN.info("Running on windows!");
-                _abi = ABI.WINDOWS_X64;
-                break;
-            case "Linux":
-                _linux = true;
-                _abi = ABI.SYSTEM_V;
-                break;
-            case "Darwin":
-                _darwin = true;
-                _abi = ABI.SYSTEM_V;
-                Logger.MAIN.warn("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
-                break;
-            case "OpenBSD":
-            case "NetBSD":
-            case "FreeBSD":
-            case "SunOS":
-                _bsd = true;
-                _abi = ABI.SYSTEM_V;
-                Logger.MAIN.warn("Bsd should be supported but it's not guaranteed.");
-                if (os.equals("SunOS")) {
-                    Logger.MAIN.warn("???? We are running on solaris!");
-                }
-                break;
-            default:
-                throw new BadEnvironment(os);
+        if (os.startsWith("Windows")) {
+            _win32 = true;
+            Logger.MAIN.info("Running on windows!");
+            _abi = ABI.WINDOWS_X64;
+        } else if (os.equals("Linux")) {
+            _linux = true;
+            _abi = ABI.SYSTEM_V;
+        } else if (os.equals("FreeBSD") || os.equals("NetBSD") || os.equals("OpenBSD")) {
+            _bsd = true;
+            _abi = ABI.SYSTEM_V;
+            Logger.MAIN.warn("Bsd should be supported but it's not guaranteed.");
+        } else if (os.equals("SunOS")) {
+            _solaris = true;
+            _abi = ABI.SYSTEM_V;
+            Logger.MAIN.warn("Wait what solaris?");
+        } else if (os.contains("Darwin") || os.contains("OS X")) {
+            _darwin = true;
+            _abi = ABI.SYSTEM_V;
+            Logger.MAIN.warn("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
+        } else {
+            throw new BadEnvironment(os);
         }
 
         win32 = _win32;
         linux = _linux;
         bsd = _bsd;
         darwin = _darwin;
+        solaris = _solaris;
 
         boolean _amd64 = false, _x86 = false;
 

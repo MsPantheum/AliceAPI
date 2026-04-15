@@ -1,6 +1,7 @@
 package alice.test;
 
 import alice.Init;
+import alice.Platform;
 import alice.injector.NativeLibrary;
 import alice.util.FileUtil;
 import alice.util.ProcessUtil;
@@ -9,6 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+@Deprecated
 public class TestNativeLibrary {
 
     static {
@@ -17,6 +21,7 @@ public class TestNativeLibrary {
 
     @Test
     public void test(){
+        assumeTrue(Platform.JAVA_VERSION <= 8);
         String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();
         NativeLibrary lib = NativeLibrary.load(libjvm,false);
         System.out.println(ProcessUtil.getPID());

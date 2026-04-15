@@ -16,6 +16,12 @@ import java.util.*;
 
 import static alice.util.ProcReader.parseProcMaps;
 
+/**
+ * Wrapper of a ClassLoader$NativeLibrary instance.
+ *
+ * @deprecated We have better and cleaner ways to lookup symbols, so no longer using this. <br> However we'll keep this class for verification.
+ */
+@Deprecated
 public class NativeLibrary {
 
     private static final LinkedHashMap<String, NativeLibrary> libraries = new LinkedHashMap<>();

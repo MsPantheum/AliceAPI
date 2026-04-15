@@ -45,13 +45,16 @@ public class ClassPatcher implements Opcodes {
             Class<?> target = Platform.jigsaw ? Class.forName("jdk.internal.loader.URLClassPath$JarLoader") : Class.forName("sun.misc.URLClassPath$JarLoader");
             String res = Platform.jigsaw ? "jdk/internal/loader/Resource" : "sun/misc/Resource";
             String res_type = 'L' + res + ';';
-            final boolean[] injected = {false};
+            String tmp;
+            try {
+                ReflectionUtil.findVirtual(target, "getResource", MethodType.methodType(Class.forName(res.replace('/', '.')), String.class, boolean.class));
+                tmp = "(Ljava/lang/String;Z)" + res_type;
+            } catch (NoSuchMethodError e) {
+                tmp = "(Ljava/lang/String;)" + res_type;
+            }
+            final String target_desc = tmp;
             overrideJarLoader = Overrider.override(target, (method, desc) -> {
-                if (method.equals("getResource")) {
-                    if (injected[0]) {
-                        throw new IllegalAccessError("Strange things happened! There should be only one getResource method!");
-                    }
-                    injected[0] = true;
+                if (method.equals("getResource") && desc.equals(target_desc)) {
                     Logger.MAIN.debug("Overriding " + method + desc + ".");
                     return mv -> {
                         mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "resourceProcessor", "Ljava/util/function/BiFunction;");

@@ -175,21 +175,12 @@ public class SymbolLookup {
         if (bases.containsKey(lib)) {
             base[0] = bases.getLong(lib);
         } else {
-            if (!Platform.win32) {
-                Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
-                LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
-                for (ProcReader.MemoryMapping mapping : mappings) {
-                    base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16), base[0]);
-                }
-                bases.put(lib, base[0]);
-            } else {
-                NativeLibrary Nlib = NativeLibrary.load(lib, false);
-                if (Nlib == null) {
-                    throw new RuntimeException("Can't load Native library for " + lib);
-                }
-                base[0] = Nlib.getBase();
-                bases.put(lib, base[0]);
+            Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+            LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
+            for (ProcReader.MemoryMapping mapping : mappings) {
+                base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16), base[0]);
             }
+            bases.put(lib, base[0]);
         }
         if (base[0] == Long.MAX_VALUE) {
             Logger.MAIN.error("Cannot find base of " + lib + "!");

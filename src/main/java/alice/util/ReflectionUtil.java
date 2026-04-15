@@ -65,8 +65,10 @@ public class ReflectionUtil {
     public static MethodHandle findVirtual(Class<?> owner, String name, MethodType methodType) {
         try {
             return IMPL_LOOKUP.findVirtual(owner, name, methodType);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(name + methodType.toString());
         }
     }
 
