@@ -73,7 +73,7 @@ public class Init {
         }
         Thread.setDefaultUncaughtExceptionHandler(handle);
         Thread.currentThread().setUncaughtExceptionHandler(handle);
-        Unsafe.ensureClassInitialized(ReflectionUtil.class);
+        ReflectionUtil.load();
         if (Platform.jigsaw) {
             ModuleUtil.openAll();
         }
@@ -84,8 +84,6 @@ public class Init {
         Logger.MAIN.info("ClassPatcher loaded.");
         checkHSDB();
         Logger.MAIN.info("HSDB is ok.");
-
-        Unsafe.ensureClassInitialized(sun.jvm.hotspot.HSDB.class);
 
         Unsafe.ensureClassInitialized(HSDB.class);
         if (!Platform.win32) {

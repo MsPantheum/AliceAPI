@@ -18,7 +18,11 @@ public class Test {
         System.out.println("Start!");
         Init.ensureInit();
         System.out.println("Pid:" + ProcessUtil.getPID());
-        long target = SymbolLookup.lookup(Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString(), "JVM_Sleep");
+        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();
+        long target = SymbolLookup.lookup(libjvm, "JVM_Sleep");
+        if (target == 0) {
+            target = SymbolLookup.lookup(libjvm, "JVM_SleepNanos");
+        }
         System.out.println("Target:0x" + Long.toHexString(target));
         if (!Platform.win32) {
             int success = mprotect.invoke(AddressUtil.align(target), 1, PROT_READ | PROT_WRITE | PROT_EXEC);

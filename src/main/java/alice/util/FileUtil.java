@@ -1,6 +1,7 @@
 package alice.util;
 
 import alice.Platform;
+import jdk.internal.jimage.ImageReader;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -144,6 +145,7 @@ public class FileUtil {
 
     public static final Path JAVA_HOME = Paths.get(System.getProperty("java.home").endsWith("jre") ? System.getProperty("java.home").substring(0, System.getProperty("java.home").length() - 3) : System.getProperty("java.home"));
     public static final Path TEMP_DIR = Paths.get(System.getProperty("java.io.tmpdir"));
+    public static final Path SYSTEM_IMAGE = JAVA_HOME.resolve("lib").resolve("modules");
 
     public static Path getHSDB() {
         if (!Platform.jigsaw) {
@@ -155,19 +157,65 @@ public class FileUtil {
             }
             Manifest manifest = new Manifest();
             try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(path), manifest)) {
-                try (ZipFile zip = new ZipFile(FileUtil.JAVA_HOME.resolve("jmods").resolve("jdk.hotspot.agent.jmod").toFile())) {
-                    Enumeration<? extends ZipEntry> entries = zip.entries();
-                    while (entries.hasMoreElements()) {
-                        ZipEntry entry = entries.nextElement();
-                        String name = entry.getName();
-                        if (name.startsWith("classes/") && name.endsWith(".class")) {
-                            name = name.substring(8);
-                            JarEntry je = new JarEntry(name);
-                            jos.putNextEntry(je);
-                            jos.write(zip.getInputStream(entry).readAllBytes());
-                            jos.closeEntry();
+                Path jmod = FileUtil.JAVA_HOME.resolve("jmods").resolve("jdk.hotspot.agent.jmod");
+                if (exists(jmod)) {
+                    try (ZipFile zip = new ZipFile(jmod.toFile())) {
+                        Enumeration<? extends ZipEntry> entries = zip.entries();
+                        while (entries.hasMoreElements()) {
+                            ZipEntry entry = entries.nextElement();
+                            String name = entry.getName();
+                            if (name.startsWith("classes/") && name.endsWith(".class")) {
+                                name = name.substring(8);
+                                JarEntry je = new JarEntry(name);
+                                jos.putNextEntry(je);
+                                jos.write(zip.getInputStream(entry).readAllBytes());
+                                jos.closeEntry();
+                            }
                         }
                     }
+                } else if (exists(SYSTEM_IMAGE)) {
+                    try (ImageReader reader = ImageReader.open(SYSTEM_IMAGE)) {
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                ImageReader.Node node;
+                                try {
+                                    assert reader != null;
+                                    node = reader.findNode("/modules/jdk.hotspot.agent");
+                                    if (node.isDirectory()) {
+                                        read(reader, node);
+                                    } else {
+                                        throw new IllegalStateException();
+                                    }
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+
+                            //I don't want to declare this method in FileUtil, so I just put it into an anonymous class.
+                            private void read(ImageReader reader, ImageReader.Node node) throws IOException {
+                                if (node.isDirectory()) {
+                                    node.getChildNames().forEach(name -> {
+                                        try {
+                                            read(reader, reader.findNode(name));
+                                        } catch (IOException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    });
+                                } else {
+                                    String name = node.getName().substring(27);
+                                    byte[] data = reader.getResource(node);
+                                    JarEntry je = new JarEntry(name);
+                                    jos.putNextEntry(je);
+                                    jos.write(data);
+                                    jos.closeEntry();
+                                }
+                            }
+                        }.run();
+                    }
+
+                } else {
+                    throw new IllegalStateException("Cannot read system classes!");
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

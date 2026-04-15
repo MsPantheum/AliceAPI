@@ -167,4 +167,9 @@ public class ReflectionUtil {
         }
     }
 
+    /**
+     * Empty method only to ensure this class is loaded.
+     */
+    public static void load() {
+    }
 }

@@ -10,6 +10,7 @@ import alice.injector.patcher.UniversalPatcher;
 import alice.log.Logger;
 import alice.util.*;
 import org.apache.commons.io.IOUtils;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Opcodes;
 import sun.misc.URLClassPath;
 import sun.net.www.protocol.jar.Handler;
@@ -44,8 +45,14 @@ public class ClassPatcher implements Opcodes {
             Class<?> target = Platform.jigsaw ? Class.forName("jdk.internal.loader.URLClassPath$JarLoader") : Class.forName("sun.misc.URLClassPath$JarLoader");
             String res = Platform.jigsaw ? "jdk/internal/loader/Resource" : "sun/misc/Resource";
             String res_type = 'L' + res + ';';
+            final boolean[] injected = {false};
             overrideJarLoader = Overrider.override(target, (method, desc) -> {
-                if (method.equals("getResource") && desc.equals("(Ljava/lang/String;Z)" + res_type)) {
+                if (method.equals("getResource")) {
+                    if (injected[0]) {
+                        throw new IllegalAccessError("Strange things happened! There should be only one getResource method!");
+                    }
+                    injected[0] = true;
+                    Logger.MAIN.debug("Overriding " + method + desc + ".");
                     return mv -> {
                         mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "resourceProcessor", "Ljava/util/function/BiFunction;");
                         mv.visitInsn(SWAP);
@@ -55,7 +62,12 @@ public class ClassPatcher implements Opcodes {
                     };
                 }
                 return null;
-            }, cw -> cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", "Ljava/util/function/BiFunction<" + res_type + "Ljava/lang/String;>;", null));
+            }, cw -> {
+                FieldVisitor fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", "Ljava/util/function/BiFunction<" + res_type + "Ljava/lang/String;>;", null);
+                if (Platform.jigsaw) {
+                    fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
+                }
+            });
             if (Platform.jigsaw) {
                 ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.resourceFunction);
             } else {
@@ -182,7 +194,9 @@ public class ClassPatcher implements Opcodes {
         if (Platform.jigsaw) {
             ClassLoader platform = ClassLoader.getPlatformClassLoader();
             Object ucp = ClassLoaderUtil.getUCP(app);
+            Logger.MAIN.info("Replacing resource loaders.");
             replaceLoaders(ucp);
+            Logger.MAIN.info("Replacing jar handlers.");
             replaceJarHandler(ucp);
             ucp = ClassLoaderUtil.getUCP(platform);
             if (ucp != null) {
@@ -220,6 +234,7 @@ public class ClassPatcher implements Opcodes {
     public static void replaceLoaders(Object ucp) {
         ArrayList<?> loaders = UCPUtil.getLoaders(ucp);
         WrappedLoaders neo = loaders != null ? new WrappedLoaders((Collection<Object>) loaders) : new WrappedLoaders();
+        Logger.MAIN.info("Replacing resource loaders of " + ucp + ".");
         UCPUtil.setLoaders(ucp, neo);
     }
 

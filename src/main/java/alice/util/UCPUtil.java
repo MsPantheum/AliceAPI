@@ -20,6 +20,7 @@ public class UCPUtil {
     private static final Class<?> JarLoader;
 
     static {
+        long tmp;
         Class<?> ucp = Platform.jigsaw ? jdk.internal.loader.URLClassPath.class : URLClassPath.class;
         try {
             JarLoader = Platform.jigsaw ? Class.forName("jdk.internal.loader.URLClassPath$JarLoader") : Class.forName("sun.misc.URLClassPath$JarLoader");
@@ -30,7 +31,12 @@ public class UCPUtil {
         loaders_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "loaders"));
         lmap_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "lmap"));
         jarHandler_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "jarHandler"));
-        JarLoader_handler_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(JarLoader, "handler"));
+        try {
+            tmp = Unsafe.objectFieldOffset(ReflectionUtil.getField(JarLoader, "handler"));
+        } catch (NoSuchFieldError e) {
+            tmp = -1;
+        }
+        JarLoader_handler_offset = tmp;
         if (Platform.jigsaw) {
             unopenedUrls_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "unopenedUrls"));
         } else {
@@ -79,10 +85,16 @@ public class UCPUtil {
     }
 
     public static URLStreamHandler getHandler(Object loader) {
+        if (JarLoader_handler_offset == -1) {
+            return null;
+        }
         return Unsafe.getObject(loader, JarLoader_handler_offset);
     }
 
     public static void setHandler(Object loader, URLStreamHandler handler) {
+        if (JarLoader_handler_offset == -1) {
+            return;
+        }
         Unsafe.putObject(loader, JarLoader_handler_offset, handler);
     }
 

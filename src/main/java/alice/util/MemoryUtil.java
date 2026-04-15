@@ -35,7 +35,8 @@ public class MemoryUtil {
 
     @SuppressWarnings("unchecked")
     public static <T> T getObject(Address address) {
-        return (T) Ptr2Obj.getFromPtr(Converter.getAddressValue(address));
+        long value = Converter.getAddressValue(address);
+        return Platform.jigsaw ? Unsafe.getUncompressedObject(value) : (T) Ptr2Obj.getFromPtr(value);
     }
 
     private static final long _narrow_klass_base = Platform.jigsaw ? CompressedKlassPointers.getBase() : Universe.getNarrowKlassBase();
@@ -99,6 +100,9 @@ public class MemoryUtil {
         private static final long objFieldOffset;
 
         static {
+            if (Platform.jigsaw) {
+                throw new IllegalStateException();
+            }
             try {
                 objFieldOffset = Unsafe.objectFieldOffset(Ptr2Obj.class.getDeclaredField("obj"));
             } catch (NoSuchFieldException e) {

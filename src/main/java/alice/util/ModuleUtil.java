@@ -107,6 +107,7 @@ public class ModuleUtil {
         for (ModuleReference reference : ModuleFinder.ofSystem().findAll()) {
             open(reference.descriptor());
         }
+        Unsafe.enableInternalUnsafe();
     }
 
     private static class LetMeAccessYouIdiot extends AbstractMap<String, Set<Module>> {
