@@ -12,7 +12,7 @@ import static alice.util.constants.Constants.*;
 
 //JNI_GetCreatedJavaVMs(JavaVM **, jsize, jsize *);
 
-public class JNI_GetCreatedJavaVMs {
+public final class JNI_GetCreatedJavaVMs {
 
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static int holder() {

@@ -13,7 +13,7 @@ import java.security.ProtectionDomain;
 /**
  * Wrapper of Unsafe class. No longer necessary to obtain an Unsafe instance next time!
  */
-public class Unsafe {
+public final class Unsafe {
 
     private static boolean INTERNAL_UNSAFE_AVAILABLE = false;
 
@@ -22,7 +22,7 @@ public class Unsafe {
         Logger.MAIN.info("Switching to InternalUnsafe.");
     }
 
-    private static class LegacyUnsafe {
+    private static final class LegacyUnsafe {
         private static final sun.misc.Unsafe UNSAFE;
 
         static {
@@ -285,7 +285,7 @@ public class Unsafe {
         }
     }
 
-    private static class InternalUnsafe {
+    private static final class InternalUnsafe {
         private static final jdk.internal.misc.Unsafe UNSAFE;
 
         static {

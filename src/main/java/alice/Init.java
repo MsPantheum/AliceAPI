@@ -20,7 +20,7 @@ import org.objectweb.asm.util.Printer;
 
 import java.nio.file.Files;
 
-public class Init {
+public final class Init {
 
     /*
      * Check whether hotspot debugger database is in the classpath, if not, append it into classpath.
@@ -66,13 +66,9 @@ public class Init {
                 Runtime.getRuntime().exit(-1);
             }
         };
-        Runtime.getRuntime().addShutdownHook(new Thread(Logger::stopAll));
-        if ("true".equals(System.getProperty("alice.debug"))) {
-            Logger.enable(Logger.LogLevel.DEBUG);
-            Logger.enable(Logger.LogLevel.TRACE);
-        }
         Thread.setDefaultUncaughtExceptionHandler(handle);
         Thread.currentThread().setUncaughtExceptionHandler(handle);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> LaunchWrapper.running = false));
         ReflectionUtil.load();
         if (Platform.jigsaw) {
             ModuleUtil.openAll();

@@ -18,7 +18,6 @@ import static alice.util.ProcReader.parseProcMaps;
 
 /**
  * Wrapper of a ClassLoader$NativeLibrary instance.
- *
  * @deprecated We have better and cleaner ways to lookup symbols, so no longer using this. <br> However we'll keep this class for verification.
  */
 @Deprecated

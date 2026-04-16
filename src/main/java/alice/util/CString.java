@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 
-public class CString {
+public final class CString {
 
     private static final Object2ObjectMap<String, WeakReference<CString>> cache = new Object2ObjectLinkedOpenHashMap<>();
 

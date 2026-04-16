@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class FileUtil {
+public final class FileUtil {
 
     public static void createFile(String path) {
         createFile(Paths.get(path));

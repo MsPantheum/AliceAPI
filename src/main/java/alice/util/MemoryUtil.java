@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 import static alice.HSDB.typeDataBase;
 import static alice.util.constants.Constants.*;
 
-public class MemoryUtil {
+public final class MemoryUtil {
     public static String readSymbol(long symbolAddress) {
         Type symbolType = typeDataBase.lookupType("Symbol");
         long symbol = Unsafe.getAddress(symbolAddress);

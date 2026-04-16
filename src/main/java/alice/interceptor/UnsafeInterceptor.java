@@ -16,7 +16,7 @@ import sun.misc.Unsafe;
 import java.net.URLClassLoader;
 
 @SuppressWarnings("unused")
-public class UnsafeInterceptor {
+public final class UnsafeInterceptor {
 
     private static final boolean LOG_KLASS_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_klass"));
     static final boolean LOG_UCP_REPLACE = "true".equals(System.getProperty("alice.debug.log.replace_ucp"));

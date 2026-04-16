@@ -1,7 +1,11 @@
 package java.lang.module;
 
-public class ModuleReference {
-    public ModuleDescriptor descriptor() {
+import java.io.IOException;
+
+public abstract class ModuleReference {
+    public final ModuleDescriptor descriptor() {
         return null;
     }
+
+    public abstract ModuleReader open() throws IOException;
 }

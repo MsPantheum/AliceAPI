@@ -7,7 +7,7 @@ import org.objectweb.asm.Opcodes;
 /**
  * Provides platform info.
  */
-public class Platform {
+public final class Platform {
 
     public static final int ASM_LEVEL;
 

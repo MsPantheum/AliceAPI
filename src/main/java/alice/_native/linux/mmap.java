@@ -10,7 +10,7 @@ import static alice.util.constants.Constants.*;
 
 //void *mmap (void *__addr, size_t __len, int __prot,int __flags, int __fd, __off_t __offset)
 
-public class mmap {
+public final class mmap {
 
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static long holder() {

@@ -1,6 +1,6 @@
 package alice.util;
 
-public class MethodInfo {
+public final class MethodInfo {
     public final Class<?> holder;
     public final String methodName;
     public final String methodDesc;

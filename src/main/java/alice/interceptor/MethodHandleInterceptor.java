@@ -12,7 +12,7 @@ import org.objectweb.asm.Opcodes;
 //import java.lang.reflect.Field;
 //import java.lang.reflect.Method;
 
-public class MethodHandleInterceptor implements Opcodes {
+public final class MethodHandleInterceptor implements Opcodes {
 
 //    private static Type getBestArrayType(Type[] args) {
 //        Type last = null;

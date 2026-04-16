@@ -7,7 +7,7 @@ import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
-public class VirtualFree {
+public final class VirtualFree {
 
     private static int holder() {
         System.getenv().keySet();

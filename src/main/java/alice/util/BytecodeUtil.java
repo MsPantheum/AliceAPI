@@ -4,7 +4,7 @@ import org.objectweb.asm.*;
 
 import java.util.function.Function;
 
-public class BytecodeUtil implements Opcodes {
+public final class BytecodeUtil implements Opcodes {
 
     public static final Type OBJECT_TYPE = Type.getType("Ljava/lang/Object;");
 

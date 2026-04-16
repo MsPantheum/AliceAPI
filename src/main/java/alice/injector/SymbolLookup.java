@@ -21,7 +21,7 @@ import static alice.util.ProcReader.parseProcMaps;
 /**
  * Lookup symbols in dynamic libraries.
  */
-public class SymbolLookup {
+public final class SymbolLookup {
     private static final Object2LongOpenHashMap<String> bases = new Object2LongOpenHashMap<>();
     private static final Object2LongOpenHashMap<String> cache = new Object2LongOpenHashMap<>();
     private static final Object2ObjectOpenHashMap<String, ExportDirectoryTable> exports = new Object2ObjectOpenHashMap<>();

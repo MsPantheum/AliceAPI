@@ -11,7 +11,7 @@ import java.net.URLClassLoader;
 import static alice.injector.ClassPatcher.replaceJarHandler;
 import static alice.injector.ClassPatcher.replaceLoaders;
 
-public class URLClassLoaderInterceptor {
+public final class URLClassLoaderInterceptor {
     public static URLClassLoader creation(URLClassLoader loader) {
         Logger.MAIN.info("Processing classloader:" + loader.getClass().getName() + " from " + Thread.currentThread().getStackTrace()[2]);
         if (!Platform.jigsaw) {

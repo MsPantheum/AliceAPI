@@ -14,12 +14,12 @@ import java.util.jar.JarFile;
 
 /**
  * Simple extension loader.<br>
- * Extension should specify an extension class through manifest attribute Alice-Extension.<br>
+ * Extension should specify an extension class through the manifest attribute Alice-Extension.<br>
  * Extension class should have a static method load()V.<br>
- * By default, loader will look up extensions from directory alice in working directory.<br>
- * Or you can specify extension directory by setting property alice.extension.directory.
+ * By default, loader will look up extensions from directory alice in the working directory.<br>
+ * Or you can specify an extension directory by setting property alice.extension.directory.
  */
-public class ExtensionLoader {
+public final class ExtensionLoader {
     public static void load(){
         String extension_dir = System.getProperty("alice.extension.directory");
         if(extension_dir == null) {

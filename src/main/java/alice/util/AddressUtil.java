@@ -13,7 +13,7 @@ import java.util.List;
 
 import static alice.HSDB.typeDataBase;
 
-public class AddressUtil {
+public final class AddressUtil {
 
     public static void checkNull(long address) {
         if (address == 0) {

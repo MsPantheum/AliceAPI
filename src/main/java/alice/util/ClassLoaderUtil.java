@@ -13,7 +13,7 @@ import java.net.URLClassLoader;
 import java.util.Map;
 import java.util.Objects;
 
-public class ClassLoaderUtil {
+public final class ClassLoaderUtil {
     public static final Object bcp;
     public static final Object ucp;
     private static final VarHandle URLClassLoader_ucp_handle;

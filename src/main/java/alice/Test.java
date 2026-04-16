@@ -1,43 +1,30 @@
 package alice;
 
-import alice._native.linux.mprotect;
-import alice._native.win32.VirtualProtect;
-import alice.injector.SymbolLookup;
-import alice.util.AddressUtil;
-import alice.util.FileUtil;
-import alice.util.ProcessUtil;
-import alice.util.Unsafe;
+import alice.log.Logger;
 
-import java.util.Objects;
-
-import static alice.util.constants.Constants.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 public class Test {
 
-    public static void main(String[] args) throws Throwable {
-        System.out.println("Start!");
-        Init.ensureInit();
-        System.out.println("Pid:" + ProcessUtil.getPID());
-        String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();
-        long target = SymbolLookup.lookup(libjvm, "JVM_Sleep");
-        if (target == 0) {
-            target = SymbolLookup.lookup(libjvm, "JVM_SleepNanos");
-        }
-        System.out.println("Target:0x" + Long.toHexString(target));
-        if (!Platform.win32) {
-            int success = mprotect.invoke(AddressUtil.align(target), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-            assert success == 0;
-        } else {
-            VirtualProtect.invoke(target, 1, 0x40, 0);
-        }
-        Unsafe.putByte(target, (byte) 0xc3);
-        System.out.println("Try to sleep. Current time:" + System.nanoTime());
+    public static void test(URL url) {
         try {
-            Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            Logger.MAIN.debug("-------------------------------------------------");
+            Logger.MAIN.debug("url: " + url);
+            Logger.MAIN.debug("url path: " + url.getPath());
+            Logger.MAIN.debug("url file: " + url.getFile());
+            String s = url.toString();
+            Logger.MAIN.debug("???: " + s.substring(s.indexOf("!/") + 2));
+
+            URI uri = url.toURI();
+            Logger.MAIN.debug("uri: " + uri);
+            String path = uri.getPath();
+            Logger.MAIN.debug("uri path: " + path);
+            Logger.MAIN.debug("-------------------------------------------------");
+        } catch (URISyntaxException e) {
+            Logger.MAIN.debug("Failed to get uri!");
         }
-        System.out.println("Done. Current time:" + System.nanoTime());
-        Runtime.getRuntime().exit(0);
+
     }
 }

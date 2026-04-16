@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
 /*
  * Util for dynamic method invoking.
  */
-public class ReflectionUtil {
+public final class ReflectionUtil {
 
     /* A trusted lookup. */
     private static final MethodHandles.Lookup IMPL_LOOKUP;

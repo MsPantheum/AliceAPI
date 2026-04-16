@@ -11,7 +11,9 @@ import java.lang.invoke.MethodType;
 /**
  * The launch wrapper to launch your application.
  */
-public class LaunchWrapper {
+public final class LaunchWrapper {
+
+    public static boolean running = true;
 
     public static void main(String[] args) {
         Init.ensureInit();

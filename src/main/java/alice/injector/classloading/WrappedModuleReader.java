@@ -1,8 +1,11 @@
 package alice.injector.classloading;
 
 import alice.injector.ClassPatcher;
+import alice.log.Logger;
+import alice.util.ClassUtil;
 import alice.util.FileUtil;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.module.ModuleReader;
@@ -23,12 +26,14 @@ public class WrappedModuleReader implements ModuleReader {
 
     public WrappedModuleReader(ModuleReader delegate) {
         this.delegate = delegate;
+        Logger.MAIN.debug("Wrap module reader: ".concat(delegate.toString()));
     }
 
     private static URI processURI(URI uri, String name) {
         if (name.startsWith("META-INF/services/") && !name.endsWith(".class")) {
             return uri;
         }
+        System.out.println(name);
         byte[] data;
         try {
             if (uri.getScheme().equals("jar")) {
@@ -44,6 +49,12 @@ public class WrappedModuleReader implements ModuleReader {
                 data = uri.toURL().openConnection().getInputStream().readAllBytes();
             }
             assert data != null;
+            if (data.length < 4 || !ClassUtil.isClassFile(data, 0)) {
+                if (data.length < 4 && name.endsWith(".class")) {
+                    Logger.MAIN.warn("Suspicious resource: ".concat(name));
+                }
+                return uri;
+            }
             data = ClassPatcher.runTransformers(data, name);
             URL url = ClassPatcher.create(data, uri.toURL());
             return url.toURI();
@@ -60,7 +71,15 @@ public class WrappedModuleReader implements ModuleReader {
 
     @Override
     public Optional<InputStream> open(String name) throws IOException {
-        return delegate.open(name);
+        Optional<InputStream> _try = delegate.open(name);
+        if (_try.isPresent()) {
+            byte[] data = _try.get().readAllBytes();
+            if (ClassUtil.isClassFile(data, 0)) {
+                data = ClassPatcher.runTransformers(data, name);
+                return Optional.of(new ByteArrayInputStream(data));
+            }
+        }
+        return _try;
     }
 
     @Override

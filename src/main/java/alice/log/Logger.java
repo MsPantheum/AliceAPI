@@ -1,5 +1,6 @@
 package alice.log;
 
+import alice.LaunchWrapper;
 import alice.util.FileUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * A simple logger.
@@ -22,14 +24,17 @@ public class Logger extends Thread {
     static {
         ALL_LOGGERS = new ArrayList<>();
         MAIN = new Logger("Alice");
+        if ("true".equals(System.getProperty("alice.debug"))) {
+            Logger.enable(Logger.LogLevel.DEBUG);
+            Logger.enable(Logger.LogLevel.TRACE);
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> ALL_LOGGERS.forEach(Logger::flush)));
     }
-
-    private static boolean running = true;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Path path;
-    private final List<String> lines = new ArrayList<>();
+    private final ArrayBlockingQueue<String> lines = new ArrayBlockingQueue<>(1024);
 
     public Logger(String name) {
         path = Paths.get("alice_logs").resolve(name + ".log");
@@ -42,32 +47,28 @@ public class Logger extends Thread {
         }
         setDaemon(true);
         setName(name + "Logger");
+        if (!"true".equals(System.getProperty("alice.debug.prioritize_logger"))) {
+            setPriority(Thread.MIN_PRIORITY);
+        }
         start();
         ALL_LOGGERS.add(this);
     }
 
     @Override
     public void run() {
-        while (running) {
-            synchronized (lines) {
-                if (lines.isEmpty()) {
-                    continue;
-                }
-                flush();
+        while (LaunchWrapper.running) {
+            if (lines.isEmpty()) {
+                continue;
             }
+            flush();
         }
     }
 
     private void flush() {
         while (!lines.isEmpty()) {
-            String line = lines.remove(0);
+            String line = lines.poll();
             FileUtil.append(path, line);
         }
-    }
-
-    public static void stopAll() {
-        ALL_LOGGERS.forEach(Logger::flush);
-        running = false;
     }
 
     /**
@@ -130,6 +131,12 @@ public class Logger extends Thread {
         log(LogLevel.DEBUG, message);
     }
 
+    public void printStackTrace() {
+        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+            trace(ste.toString());
+        }
+    }
+
     public void log(LogLevel level, String message) {
         if (!level.enabled) {
             return;
@@ -164,8 +171,6 @@ public class Logger extends Thread {
 
         }
         sb.append(message).append('\n');
-        synchronized (lines) {
-            lines.add(sb.toString());
-        }
+        lines.offer(sb.toString());
     }
 }

@@ -10,7 +10,7 @@ import static alice.util.constants.Constants.*;
 
 //int munmap (void *__addr, size_t __len)
 
-public class munmap {
+public final class munmap {
     private static int holder() {
         long lllll = 11221144L;
         int iii = 14514;

@@ -6,7 +6,7 @@ import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
-public class mprotect {
+public final class mprotect {
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static int holder() {
         for(int i = 9; i > 200; i++){

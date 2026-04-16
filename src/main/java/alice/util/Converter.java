@@ -13,7 +13,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 
-public class Converter {
+public final class Converter {
     public static MethodHandle convert(sun.jvm.hotspot.oops.Method method) {
         try {
             Class<?> holder = MemoryUtil.getObject(method.getMethodHolder().getJavaMirror().getHandle());

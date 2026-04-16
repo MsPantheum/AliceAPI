@@ -8,12 +8,8 @@
 
 package alice.util;
 
-import alice.injector.Shellcode;
-
-import java.util.zip.ZipFile;
-
 @SuppressWarnings("unused")
-public class HDE64 {
+public final class HDE64 {
 
     // --- hde64.h Constants ---
     public static final int F_MODRM = 0x00000001;
@@ -541,17 +537,4 @@ public class HDE64 {
         return hs.len;
     }
 
-    public static void main(String[] args){
-        System.out.println("Start.");
-        long target = Shellcode.getCompiledEntry(ZipFile.class,"getInputStream","(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;");
-        Hde64s hs = new Hde64s();
-        long need = hde64_disasm(target,12,hs);
-        need += 12;
-        System.out.println("Meow? " + need);
-        for(long i = 0; i < need ;i ++){
-            System.out.printf("%x ",Unsafe.getByte(target + i));
-        }
-        System.out.println();
-        Runtime.getRuntime().exit(0);
-    }
 }

@@ -4,6 +4,8 @@ import alice.Platform;
 import alice.util.BytecodeUtil;
 import org.objectweb.asm.*;
 
+import java.lang.reflect.Modifier;
+
 public class UniversalPatcher implements Opcodes {
 
     public static byte[] patch(byte[] data, String name) {
@@ -19,6 +21,25 @@ public class UniversalPatcher implements Opcodes {
             @Override
             public MethodVisitor visitMethod(int _access, String _name, String _descriptor, String _signature, String[] _exceptions) {
                 return new MethodVisitor(Platform.ASM_LEVEL, cv.visitMethod(_access, _name, _descriptor, _signature, _exceptions)) {
+
+                    @Override
+                    public void visitCode() {
+                        super.visitCode();
+                        if ((_name.equals("findClass") || _name.equals("loadClass")) && (_descriptor.startsWith("(Ljava/lang/String;") && _descriptor.endsWith(")Ljava/lang/Class;"))) {
+                            int slot = Modifier.isStatic(_access) ? 0 : 1;
+                            super.visitVarInsn(ALOAD, slot);
+                            super.visitLdcInsn("alice");
+                            super.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "startsWith", "(Ljava/lang/String;)Z", false);
+                            Label alice = new Label();
+                            super.visitJumpInsn(IFEQ, alice);
+                            super.visitVarInsn(ALOAD, slot);
+                            super.visitMethodInsn(INVOKESTATIC, "alice/interceptor/ClassLoaderInterceptor", "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", false);
+                            super.visitInsn(ARETURN);
+                            super.visitLabel(alice);
+                            super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+                        }
+                    }
+
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
                         if (owner.equals("sun/misc/Unsafe")) {
@@ -64,6 +85,23 @@ public class UniversalPatcher implements Opcodes {
                                     return;
                                 }
                             }
+                        } else if (owner.equals("java/lang/module/ModuleReference") && name.equals("open") && descriptor.equals("()Ljava/lang/module/ModuleReader;")) {
+                            opcode = INVOKESTATIC;
+                            owner = "alice/interceptor/ModuleReferenceInterceptor";
+                            descriptor = "(Ljava/lang/module/ModuleReference;)Ljava/lang/module/ModuleReader;";
+                            changed[0] = true;
+                        } else if (owner.equals("java/lang/ModuleLayer") && name.startsWith("defineModules")) {
+                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                            boolean flag;
+                            if (descriptor.endsWith("Ljava/lang/ModuleLayer;")) {
+                                flag = true;
+                            } else if (descriptor.endsWith("Ljava/lang/ModuleLayer$Controller;")) {
+                                flag = false;
+                            } else {
+                                throw new IllegalStateException();
+                            }
+                            super.visitMethodInsn(INVOKESTATIC, "alice/interceptor/ModuleLayerInterceptor", flag ? "processModuleLayer" : "processController", flag ? "(Ljava/lang/ModuleLayer;)Ljava/lang/ModuleLayer;" : "(Ljava/lang/ModuleLayer$Controller;)Ljava/lang/ModuleLayer$Controller;", false);
+                            return;
                         }
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
                     }

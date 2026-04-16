@@ -9,7 +9,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class DebugUtil {
+public final class DebugUtil {
 
     public static boolean DEBUG = false;
 

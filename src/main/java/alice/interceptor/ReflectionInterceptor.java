@@ -13,7 +13,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 
-public class ReflectionInterceptor {
+public final class ReflectionInterceptor {
 
     private static final Class<?> NativeMethodAccessorClass;
     private static final Field sun_reflect_NativeMethodAccessorImpl_method_field;

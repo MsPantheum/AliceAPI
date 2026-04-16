@@ -14,7 +14,7 @@ import static alice.util.AddressUtil.checkNull;
 import static alice.util.Converter.getAddressValue;
 import static alice.util.constants.AccessFlags.*;
 
-public class Shellcode {
+public final class Shellcode {
     private static final long _from_compiled_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_compiled_entry").getOffset();
     private static final long _from_interpreted_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_interpreted_entry").getOffset();
 

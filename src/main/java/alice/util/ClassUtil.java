@@ -23,10 +23,10 @@ import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class ClassUtil {
+public final class ClassUtil {
 
     public static boolean isClassFile(byte[] data, int offset) {
-        return data[offset] == (byte) 0xca && data[offset + 1] == (byte) 0xfe && data[offset + 2] == (byte) 0xba && data[offset + 3] == (byte) 0xbe;
+        return data.length > 4 && data[offset] == (byte) 0xca && data[offset + 1] == (byte) 0xfe && data[offset + 2] == (byte) 0xba && data[offset + 3] == (byte) 0xbe;
     }
 
     private static final MethodHandle addURL;

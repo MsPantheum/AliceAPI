@@ -11,7 +11,7 @@ import java.lang.module.ModuleReference;
 import java.util.*;
 
 @SuppressWarnings("unchecked")
-public class ModuleUtil {
+public final class ModuleUtil {
 
     private static final VarHandle ModuleDescriptor_open;
     private static final VarHandle ModuleDescriptor_automatic;
@@ -29,6 +29,7 @@ public class ModuleUtil {
 
     private static final Module EVERYONE_MODULE;
     private static final Set<Module> EVERYONE_SET;
+    private static final Module unnamed = ModuleUtil.class.getModule();
 
     static {
         if (!Platform.jigsaw) {
@@ -89,24 +90,33 @@ public class ModuleUtil {
             addExportsToAll(module, p);
             addExportsToAllUnnamed(module, p);
         }
+        addReads(module, unnamed);
     }
 
     public static void open(ModuleDescriptor md) {
-        ModuleDescriptor_open.set(md, true);
-        ModuleDescriptor_automatic.set(md, true);
-        Set<ModuleDescriptor.Modifier> modifiers = new HashSet<>();
-        modifiers.add(ModuleDescriptor.Modifier.AUTOMATIC);
-        modifiers.add(ModuleDescriptor.Modifier.OPEN);
-        ModuleDescriptor_modifiers.set(md, modifiers);
+        if (md != null) {
+            ModuleDescriptor_open.set(md, true);
+            ModuleDescriptor_automatic.set(md, true);
+            Set<ModuleDescriptor.Modifier> modifiers = new HashSet<>();
+            modifiers.add(ModuleDescriptor.Modifier.AUTOMATIC);
+            modifiers.add(ModuleDescriptor.Modifier.OPEN);
+            ModuleDescriptor_modifiers.set(md, modifiers);
+        }
     }
 
     public static void openAll() {
+        if (unnamed == null) {
+            throw new IllegalStateException("????");
+        }
+        open(unnamed);//Should be its unnamed module.
         for (Module module : ModuleLayer.boot().modules()) {
             open(module);
+
         }
         for (ModuleReference reference : ModuleFinder.ofSystem().findAll()) {
             open(reference.descriptor());
         }
+
         Unsafe.enableInternalUnsafe();
     }
 

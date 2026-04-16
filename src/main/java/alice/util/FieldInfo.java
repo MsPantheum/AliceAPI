@@ -1,6 +1,6 @@
 package alice.util;
 
-public class FieldInfo {
+public final class FieldInfo {
     private final Class<?> holder;
     private final String fieldName;
     private final String fieldDesc;

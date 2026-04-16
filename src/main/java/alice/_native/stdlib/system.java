@@ -8,7 +8,7 @@ import alice.util.CString;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 
-public class system {
+public final class system {
 
     private static int holder() {
         //noinspection ResultOfMethodCallIgnored

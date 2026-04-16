@@ -7,7 +7,7 @@ import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
-public class VirtualAlloc {
+public final class VirtualAlloc {
 
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static long holder(){

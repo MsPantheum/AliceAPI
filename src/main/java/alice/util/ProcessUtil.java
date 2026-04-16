@@ -6,7 +6,7 @@ import java.lang.invoke.MethodType;
 import java.lang.management.ManagementFactory;
 import java.util.Scanner;
 
-public class ProcessUtil {
+public final class ProcessUtil {
     public static void pause(){
         Scanner scanner = new Scanner(System.in);
         System.out.println("pause");

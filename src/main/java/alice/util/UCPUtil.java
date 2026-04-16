@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class UCPUtil {
+public final class UCPUtil {
     private static final long path_offset;
     private static final VarHandle path_handle;
     private static final VarHandle unopenedUrls_handle;

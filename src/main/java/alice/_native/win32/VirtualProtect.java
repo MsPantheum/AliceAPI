@@ -6,7 +6,7 @@ import alice.util.Unsafe;
 
 //WINBASEAPI WINBOOL WINAPI VirtualProtect (LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
 
-public class VirtualProtect {
+public final class VirtualProtect {
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static int holder(){
         for(int i = 9; i > 200; i++){

@@ -10,4 +10,13 @@ public class ModuleLayer {
     public Set<Module> modules() {
         return null;
     }
+
+    public static final class Controller {
+        private ModuleLayer layer;
+
+        public ModuleLayer layer() {
+            return layer;
+        }
+
+    }
 }

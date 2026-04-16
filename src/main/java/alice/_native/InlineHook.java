@@ -19,7 +19,7 @@ import static alice.util.HDE64.hde64_disasm;
 import static alice.util.constants.Constants.*;
 
 @SuppressWarnings("UnusedReturnValue")
-public class InlineHook {
+public final class InlineHook {
 
     private static final Long2ObjectOpenHashMap<Hook> HOOKS = new Long2ObjectOpenHashMap<>();
 

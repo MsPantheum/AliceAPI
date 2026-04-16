@@ -6,7 +6,7 @@ import alice.util.Unsafe;
 
 //jint (JNICALL *GetEnv)(JavaVM *vm, void **penv, jint version);
 
-public class GetEnv {
+public final class GetEnv {
 
     @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
     private static int holder() {

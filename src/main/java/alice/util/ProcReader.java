@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class ProcReader {
+public final class ProcReader {
 
     private static final Map<Object, Map<String, SymbolInfo>> cache = new HashMap<>();
 

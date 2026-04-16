@@ -27,11 +27,60 @@ import java.lang.module.ModuleReference;
 import java.lang.reflect.Field;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class ClassPatcher implements Opcodes {
+public final class ClassPatcher implements Opcodes {
+
+    private static final Map<String, byte[]> cachedClasses = new ConcurrentHashMap<>();
+
+    private static final class DumpThread extends Thread {
+
+        private static final class DumpInfo {
+            private final String path;
+            private final byte[] classBytes;
+
+            private DumpInfo(String path, byte[] classBytes) {
+                this.path = path;
+                this.classBytes = classBytes;
+            }
+        }
+
+        private static final ArrayBlockingQueue<DumpInfo> classes = new ArrayBlockingQueue<>(1024);
+
+        private DumpThread() {
+        }
+
+        {
+            setName("AliceClassDumpThread");
+            setDaemon(true);
+            setPriority(Thread.MIN_PRIORITY);
+            start();
+            Runtime.getRuntime().addShutdownHook(new Thread(this::flush));
+        }
+
+        @Override
+        public void run() {
+            while (LaunchWrapper.running) {
+                flush();
+            }
+        }
+
+        private void flush() {
+            while (!classes.isEmpty()) {
+                DumpInfo classData = classes.poll();
+                FileUtil.write(classData.path, classData.classBytes);
+            }
+        }
+
+        private static void startThread() {
+            Logger.MAIN.debug("Start class dump thread.");
+            new DumpThread();
+        }
+    }
 
     private static final boolean LOG_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.log_class"));
 
@@ -81,6 +130,9 @@ public class ClassPatcher implements Opcodes {
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
+        if (DUMP_CLASS) {
+            DumpThread.startThread();
+        }
     }
 
     private static Object wrapJarLoader(Object o) {
@@ -102,13 +154,23 @@ public class ClassPatcher implements Opcodes {
         if (_try != null) {
             return _try;
         }
+        if (data != null && !ClassUtil.isClassFile(data, 0)) {
+            Logger.MAIN.warn("ClassPatcher recieved a non class file: ".concat(name).concat(" ,this is not expected!"));
+            return data;
+        }
+        _try = cachedClasses.get(name);
+        if (_try != null) {
+            return _try;
+        }
         if (LOG_CLASS) {
             Logger.MAIN.trace("Transforming class:" + name);
         }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
         }
+        cachedClasses.put(name, data);
         if (DUMP_CLASS && data != null) {
+            DumpThread.classes.offer(new DumpThread.DumpInfo("AliceClassDump".concat(File.separator).concat(name), data));
             FileUtil.write("AliceClassDump" + File.separator + name, data);
         }
         return data;
@@ -333,18 +395,33 @@ public class ClassPatcher implements Opcodes {
 
         @Override
         protected URLConnection openConnection(URL u) throws IOException {
-            sun.net.www.protocol.jar.JarURLConnection juc = new JarURLConnection(u, delegate);
-            byte[] data = juc.getInputStream().readAllBytes();
-            return new URLConnection(u) {
-                @Override
-                public void connect() {
-                }
+            try {
+                sun.net.www.protocol.jar.JarURLConnection juc = new JarURLConnection(u, delegate);
+                String s = u.toString();
+                byte[] data = juc.getInputStream().readAllBytes();
+                byte[] finalBytes = ClassUtil.isClassFile(data, 0) ? runTransformers(data, s.substring(s.indexOf("!/") + 2)) : data;
+                return new java.net.JarURLConnection(u) {
+                    @Override
+                    public JarFile getJarFile() throws IOException {
+                        String s = u.toString().substring(4);
+                        if (FileUtil.exists(s)) {
+                            return new JarFile(s.substring(0, s.indexOf("!")));
+                        }
+                        return null;
+                    }
 
-                @Override
-                public InputStream getInputStream() {
-                    return new ByteArrayInputStream(data);
-                }
-            };
+                    @Override
+                    public void connect() {
+                    }
+
+                    @Override
+                    public InputStream getInputStream() {
+                        return new ByteArrayInputStream(finalBytes);
+                    }
+                };
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
