@@ -66,10 +66,9 @@ public final class ClassUtil {
     public static byte[] dumpFromMemory(Class<?> clazz) {
         InstanceKlass klass = ClassUtil.getKlass(clazz);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ClassWriter cw = new ClassWriter(klass, bos);
         try {
-            cw.write();
-        } catch (IOException e) {
+            new ClassWriter(klass, bos).write();
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         return bos.toByteArray();
