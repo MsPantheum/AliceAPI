@@ -105,6 +105,26 @@ public class Logger extends Thread {
             this.enabled = enabled;
         }
 
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case INFO:
+                    return "info";
+                case FATAL:
+                    return "fatal";
+                case TRACE:
+                    return "trace";
+                case WARN:
+                    return "warn";
+                case ERROR:
+                    return "error";
+                case DEBUG:
+                    return "debug";
+                default:
+                    throw new IllegalStateException();
+            }
+        }
     }
 
     public void info(String message) {

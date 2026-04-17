@@ -9,7 +9,6 @@ import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
 import alice.injector.patcher.UniversalPatcher;
 import alice.log.Logger;
 import alice.util.*;
-import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Opcodes;
 import sun.misc.URLClassPath;
@@ -165,8 +164,12 @@ public final class ClassPatcher implements Opcodes {
         if (LOG_CLASS) {
             Logger.MAIN.trace("Transforming class:" + name);
         }
-        for (ClassByteProcessor processor : PROCESSORS) {
+        for (Iterator<ClassByteProcessor> iterator = PROCESSORS.iterator(); iterator.hasNext(); ) {
+            ClassByteProcessor processor = iterator.next();
             data = processor.process(data, name);
+            if (processor.endOfLife()) {
+                iterator.remove();
+            }
         }
         cachedClasses.put(name, data);
         if (DUMP_CLASS && data != null) {
@@ -275,22 +278,47 @@ public final class ClassPatcher implements Opcodes {
         registerProcessor(new ClassByteProcessor() {
             @Override
             public byte[] process(byte[] classBytes, String name) {
-                switch (name) {
-                    case "sun/jvm/hotspot/debugger/bsd/BsdDebuggerLocal.class":
-                    case "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class":
-                    case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal.class": {
-                        return DebuggerLocalPatcher.patch(classBytes, name);
-                    }
-                    case "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class": {
-                        return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes, name);
-                    }
-                    default: {
-                        return UniversalPatcher.patch(classBytes, name);
-                    }
-
-                }
+                return UniversalPatcher.patch(classBytes, name);
             }
         });
+        registerProcessor(new ClassByteProcessor() {
+
+            boolean eol = false;
+
+            @Override
+            public byte[] process(byte[] classBytes, String name) {
+                if ("sun/jvm/hotspot/debugger/bsd/BsdDebuggerLocal.class".equals(name) || "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class".equals(name) || "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal.class".equals(name)) {
+                    eol = true;
+                    return DebuggerLocalPatcher.patch(classBytes, name);
+                }
+                return classBytes;
+            }
+
+            @Override
+            public boolean endOfLife() {
+                return eol;
+            }
+        });
+        if (Platform.linux) {
+            registerProcessor(new ClassByteProcessor() {
+
+                boolean eol = false;
+
+                @Override
+                public byte[] process(byte[] classBytes, String name) {
+                    if ("sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class".equals(name)) {
+                        eol = true;
+                        return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes, name);
+                    }
+                    return classBytes;
+                }
+
+                @Override
+                public boolean endOfLife() {
+                    return eol;
+                }
+            });
+        }
         Logger.MAIN.info("Necessary processors registered.");
     }
 
@@ -318,7 +346,7 @@ public final class ClassPatcher implements Opcodes {
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 if (entry.getName().endsWith(".class") && !entry.getName().startsWith("java/")) {
-                    _protected.put(entry.getName(), IOUtils.toByteArray(jar.getInputStream(entry)));
+                    _protected.put(entry.getName(), IOUtil.getByteArray(jar.getInputStream(entry)));
                 }
             }
         } catch (IOException e) {
@@ -396,28 +424,31 @@ public final class ClassPatcher implements Opcodes {
         protected URLConnection openConnection(URL u) throws IOException {
             try {
                 sun.net.www.protocol.jar.JarURLConnection juc = new JarURLConnection(u, delegate);
-                String s = u.toString();
-                byte[] data = juc.getInputStream().readAllBytes();
-                byte[] finalBytes = ClassUtil.isClassFile(data, 0) ? runTransformers(data, s.substring(s.indexOf("!/") + 2)) : data;
-                return new java.net.JarURLConnection(u) {
-                    @Override
-                    public JarFile getJarFile() throws IOException {
-                        String s = u.toString().substring(4);
-                        if (FileUtil.exists(s)) {
-                            return new JarFile(s.substring(0, s.indexOf("!")));
+                if (shouldRunTransformers()) {
+                    String s = u.toString();
+                    byte[] data = IOUtil.getByteArray(juc.getInputStream());
+                    byte[] finalBytes = ClassUtil.isClassFile(data, 0) ? runTransformers(data, s.substring(s.indexOf("!/") + 2)) : data;
+                    return new java.net.JarURLConnection(u) {
+                        @Override
+                        public JarFile getJarFile() throws IOException {
+                            String s = u.toString().substring(4);
+                            if (FileUtil.exists(s)) {
+                                return new JarFile(s.substring(0, s.indexOf("!")));
+                            }
+                            return null;
                         }
-                        return null;
-                    }
 
-                    @Override
-                    public void connect() {
-                    }
+                        @Override
+                        public void connect() {
+                        }
 
-                    @Override
-                    public InputStream getInputStream() {
-                        return new ByteArrayInputStream(finalBytes);
-                    }
-                };
+                        @Override
+                        public InputStream getInputStream() {
+                            return new ByteArrayInputStream(finalBytes);
+                        }
+                    };
+                }
+                return juc;
             } catch (MalformedURLException e) {
                 throw new RuntimeException(e);
             }

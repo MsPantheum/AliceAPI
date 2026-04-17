@@ -4,6 +4,7 @@ import alice.injector.ClassPatcher;
 import alice.log.Logger;
 import alice.util.ClassUtil;
 import alice.util.FileUtil;
+import alice.util.IOUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,6 +31,9 @@ public class WrappedModuleReader implements ModuleReader {
     }
 
     private static URI processURI(URI uri, String name) {
+        if (!ClassPatcher.shouldRunTransformers()) {
+            return uri;
+        }
         if (name.startsWith("META-INF/services/") && !name.endsWith(".class")) {
             return uri;
         }
@@ -46,7 +50,7 @@ public class WrappedModuleReader implements ModuleReader {
             } else if (uri.getScheme().equals("file")) {
                 data = FileUtil.read(Paths.get(uri));
             } else {
-                data = uri.toURL().openConnection().getInputStream().readAllBytes();
+                data = IOUtil.getByteArray(uri.toURL().openConnection().getInputStream());
             }
             assert data != null;
             if (data.length < 4 || !ClassUtil.isClassFile(data, 0)) {
@@ -72,8 +76,8 @@ public class WrappedModuleReader implements ModuleReader {
     @Override
     public Optional<InputStream> open(String name) throws IOException {
         Optional<InputStream> _try = delegate.open(name);
-        if (_try.isPresent()) {
-            byte[] data = _try.get().readAllBytes();
+        if (ClassPatcher.shouldRunTransformers() && _try.isPresent()) {
+            byte[] data = IOUtil.getByteArray(_try.get());
             if (ClassUtil.isClassFile(data, 0)) {
                 data = ClassPatcher.runTransformers(data, name);
                 return Optional.of(new ByteArrayInputStream(data));
@@ -85,7 +89,7 @@ public class WrappedModuleReader implements ModuleReader {
     @Override
     public Optional<ByteBuffer> read(String name) throws IOException {
         Optional<ByteBuffer> _try = delegate.read(name);
-        if (_try.isPresent()) {
+        if (ClassPatcher.shouldRunTransformers() && _try.isPresent()) {
             ByteBuffer buffer = _try.get();
             byte[] array = buffer.hasArray() ? buffer.array() : new byte[buffer.remaining()];
             if (!buffer.hasArray()) {

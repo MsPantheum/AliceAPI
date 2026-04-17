@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.log.Logger;
 import org.objectweb.asm.*;
 
 import java.util.function.Function;
@@ -24,6 +25,38 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
+     * Generate a toString invoke. Note that we won't do null check.
+     *
+     * @param mv the method to inject
+     */
+    public static void toString(MethodVisitor mv) {
+        mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false);
+    }
+
+    /**
+     * Generate a println invoke which prints the string on top of stack.<br>You should ensure that there's a Ljava/lang/String; on top of stack yourself.
+     *
+     * @param mv the method to inject
+     */
+    public static void println(MethodVisitor mv) {
+        mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+        mv.visitInsn(SWAP);
+        mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+    }
+
+    /**
+     * Generate an invoke to log the string on top of the stack.<br>You should ensure that there's a Ljava/lang/String; on top of stack yourself.
+     *
+     * @param mv    the method to inject
+     * @param level the log level
+     */
+    public static void log(MethodVisitor mv, Logger.LogLevel level) {
+        mv.visitFieldInsn(GETSTATIC, "alice/log/Logger", "MAIN", "Lalice/log/Logger;");
+        mv.visitInsn(SWAP);
+        mv.visitMethodInsn(INVOKEVIRTUAL, "alice/log/Logger", level.toString(), "(Ljava/lang/String;)V", false);
+    }
+
+    /**
      * Generate a println invoke which prints a given string.
      *
      * @param mv      the method to inject
@@ -36,7 +69,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate a println invoke which prints a object read from local variables.
+     * Generate a println invoke which prints an object read from local variables.
      *
      * @param mv    the method to inject
      * @param index the index of the local variable
@@ -47,8 +80,17 @@ public final class BytecodeUtil implements Opcodes {
         mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", false);
     }
 
-    public static void logInfo(MethodVisitor mv, String message) {
-
+    /**
+     * Generate an invoke to log a message.
+     *
+     * @param mv      the method to inject
+     * @param level   the log level
+     * @param message the log message
+     */
+    public static void log(MethodVisitor mv, Logger.LogLevel level, String message) {
+        mv.visitFieldInsn(GETSTATIC, "alice/log/Logger", "MAIN", "Lalice/log/Logger;");
+        mv.visitLdcInsn(message);
+        mv.visitMethodInsn(INVOKEVIRTUAL, "alice/log/Logger", level.toString(), "(Ljava/lang/String;)V", false);
     }
 
     /**

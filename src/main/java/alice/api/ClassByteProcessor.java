@@ -18,9 +18,19 @@ public interface ClassByteProcessor {
 
     /**
      * The priority of this processor.
+     *
      * @return the priority, lower priority means the processor will be invoked earlier.
      */
     default int priority() {
         return 0;
+    }
+
+    /**
+     * Indicates whether this processor shall be removed.
+     *
+     * @return whether this processor shall be removed
+     */
+    default boolean endOfLife() {
+        return false;
     }
 }

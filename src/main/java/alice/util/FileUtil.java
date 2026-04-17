@@ -168,7 +168,7 @@ public final class FileUtil {
                                 name = name.substring(8);
                                 JarEntry je = new JarEntry(name);
                                 jos.putNextEntry(je);
-                                jos.write(zip.getInputStream(entry).readAllBytes());
+                                jos.write(IOUtil.getByteArray(zip.getInputStream(entry)));
                                 jos.closeEntry();
                             }
                         }
