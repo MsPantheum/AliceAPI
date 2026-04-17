@@ -91,6 +91,7 @@ public class UniversalPatcher implements Opcodes {
                             descriptor = "(Ljava/lang/module/ModuleReference;)Ljava/lang/module/ModuleReader;";
                             changed[0] = true;
                         } else if (owner.equals("java/lang/ModuleLayer") && name.startsWith("defineModules")) {
+                            changed[0] = true;
                             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
                             boolean flag;
                             if (descriptor.endsWith("Ljava/lang/ModuleLayer;")) {

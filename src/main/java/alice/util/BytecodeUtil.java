@@ -187,6 +187,9 @@ public final class BytecodeUtil implements Opcodes {
     public static void generateValue(MethodVisitor mv, Type type) {
         int sort = type.getSort();
         switch (sort) {
+            case Type.VOID: {
+                return;
+            }
             case Type.BOOLEAN:
             case Type.CHAR:
             case Type.BYTE:

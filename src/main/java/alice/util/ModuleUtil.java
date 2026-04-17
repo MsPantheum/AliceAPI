@@ -1,14 +1,16 @@
 package alice.util;
 
 import alice.Platform;
+import alice.log.Logger;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.module.ModuleDescriptor;
-import java.lang.module.ModuleFinder;
-import java.lang.module.ModuleReference;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("unchecked")
 public final class ModuleUtil {
@@ -84,24 +86,13 @@ public final class ModuleUtil {
     }
 
     public static void open(Module module) {
-        open(module.getDescriptor());
+        Logger.MAIN.debug("Open module: ".concat(module.toString()));
         ModuleDescriptor_openPackages.set(module, LetMeAccessYouIdiot.INSTANCE);
         for (String p : module.getPackages()) {
             addExportsToAll(module, p);
             addExportsToAllUnnamed(module, p);
         }
         addReads(module, unnamed);
-    }
-
-    public static void open(ModuleDescriptor md) {
-        if (md != null) {
-            ModuleDescriptor_open.set(md, true);
-            ModuleDescriptor_automatic.set(md, true);
-            Set<ModuleDescriptor.Modifier> modifiers = new HashSet<>();
-            modifiers.add(ModuleDescriptor.Modifier.AUTOMATIC);
-            modifiers.add(ModuleDescriptor.Modifier.OPEN);
-            ModuleDescriptor_modifiers.set(md, modifiers);
-        }
     }
 
     public static void openAll() {
@@ -112,9 +103,6 @@ public final class ModuleUtil {
         for (Module module : ModuleLayer.boot().modules()) {
             open(module);
 
-        }
-        for (ModuleReference reference : ModuleFinder.ofSystem().findAll()) {
-            open(reference.descriptor());
         }
 
         Unsafe.enableInternalUnsafe();

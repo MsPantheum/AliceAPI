@@ -171,7 +171,6 @@ public final class ClassPatcher implements Opcodes {
         cachedClasses.put(name, data);
         if (DUMP_CLASS && data != null) {
             DumpThread.classes.offer(new DumpThread.DumpInfo("AliceClassDump".concat(File.separator).concat(name), data));
-            FileUtil.write("AliceClassDump" + File.separator + name, data);
         }
         return data;
     }
