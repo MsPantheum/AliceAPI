@@ -57,7 +57,7 @@ public final class Shellcode {
     }
 
     public static long getCompiledEntry(Class<?> target, String name, String desc) {
-        return getCompiledEntry(ClassUtil.<InstanceKlass>getKlass(target).findMethod(name, desc));
+        return getCompiledEntry(((InstanceKlass) ClassUtil.getKlass(target)).findMethod(name, desc));
     }
 
     public static boolean setCompiledEntry(Method method, long neo) {

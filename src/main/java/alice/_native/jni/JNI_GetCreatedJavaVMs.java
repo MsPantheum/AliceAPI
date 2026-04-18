@@ -6,6 +6,7 @@ import alice._native.linux.mmap;
 import alice._native.win32.VirtualAlloc;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.AddressUtil;
 import alice.util.Unsafe;
 
 import static alice.util.constants.Constants.*;
@@ -102,7 +103,7 @@ public final class JNI_GetCreatedJavaVMs {
         assert function != 0;
         Unsafe.putLong(code_base + 22, function);
         long address = Shellcode.getCompiledEntry(JNI_GetCreatedJavaVMs.class, "holder", "()I");
-        assert address != 0;
+        AddressUtil.checkNull(address);
         InlineHook.simpleHook(address, code_base);
     }
 

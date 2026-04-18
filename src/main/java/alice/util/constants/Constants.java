@@ -89,4 +89,8 @@ public interface Constants {
     int JVMTI_VERSION_1_2 = 0x30010200;
 
     int JVMTI_VERSION = 0x30000000 + (0x10000) + (2 * 0x100) + 1;
+
+    int JNI_VERSION_1_8 = 0x00010008;
+
+    int JNI_OK = 0;
 }

@@ -4,6 +4,7 @@ import alice.LaunchWrapper;
 import alice.Platform;
 import alice.api.ClassByteProcessor;
 import alice.injector.classloading.*;
+import alice.injector.patcher.DebuggerBasePatcher;
 import alice.injector.patcher.DebuggerLocalPatcher;
 import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
 import alice.injector.patcher.UniversalPatcher;
@@ -278,6 +279,24 @@ public final class ClassPatcher implements Opcodes {
             @Override
             public byte[] process(byte[] classBytes, String name) {
                 return UniversalPatcher.patch(classBytes, name);
+            }
+        });
+        registerProcessor(new ClassByteProcessor() {
+
+            boolean eol = false;
+
+            @Override
+            public byte[] process(byte[] classBytes, String name) {
+                if ("sun/jvm/hotspot/debugger/DebuggerBase.class".equals(name)) {
+                    eol = true;
+                    return DebuggerBasePatcher.transform(classBytes);
+                }
+                return classBytes;
+            }
+
+            @Override
+            public boolean endOfLife() {
+                return eol;
             }
         });
         registerProcessor(new ClassByteProcessor() {

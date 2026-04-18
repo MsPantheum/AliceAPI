@@ -1,5 +1,7 @@
 package alice;
 
+import alice._native.jni.JNI_GetCreatedJavaVMs;
+import alice._native.jni.JavaVM.GetEnv;
 import alice._native.linux.mmap;
 import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
@@ -91,6 +93,8 @@ public final class Init {
             Unsafe.ensureClassInitialized(VirtualAlloc.class);
             Unsafe.ensureClassInitialized(VirtualFree.class);
         }
+        Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
+        Unsafe.ensureClassInitialized(GetEnv.class);
         init = true;
     }
 

@@ -1,6 +1,9 @@
 package alice._native.jni.JavaVM;
 
-import alice._native.jni.JNI_GetCreatedJavaVMs;
+import alice._native.InlineHook;
+import alice.injector.Shellcode;
+import alice.util.AddressUtil;
+import alice.util.JNIUtil;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 
@@ -77,14 +80,8 @@ public final class GetEnv {
 
         code_base = MemoryUtil.allocate(37);
 
-        long vmBuf = Unsafe.allocateMemory(Unsafe.ADDRESS_SIZE);
-        int bufLen = Math.toIntExact(Unsafe.ADDRESS_SIZE);
-        long nVMs = Unsafe.allocateMemory(Integer.BYTES);
-        JNI_GetCreatedJavaVMs.invoke(vmBuf, bufLen, nVMs);
-        long JavaVM = Unsafe.getLong(vmBuf);
+        long JavaVM = JNIUtil.getJavaVM();
         long GetEnv = Unsafe.getLong(Unsafe.getLong(JavaVM) + Unsafe.ADDRESS_SIZE * 6L);
-        Unsafe.freeMemory(vmBuf);
-        Unsafe.freeMemory(nVMs);//Ah! I nearly forget this.
         byte[] payload = new byte[37];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -102,12 +99,16 @@ public final class GetEnv {
 
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, GetEnv);
+        long address = Shellcode.getCompiledEntry(GetEnv.class, "holder", "()I");
+        AddressUtil.checkNull(address);
+        InlineHook.simpleHook(address, code_base);
     }
 
     public static int invoke(long vm, long penv, int version) {
         Unsafe.putLong(code_base + 2, vm);
         Unsafe.putLong(code_base + 12, penv);
         Unsafe.putInt(code_base + 31, version);
+        Shellcode.dump(code_base, 37, System.out);
         return holder();
     }
 }

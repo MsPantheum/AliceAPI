@@ -165,14 +165,7 @@ public final class ClassUtil {
         }
     }
 
-    public static Class<?> defineClass0(ClassLoader loader,
-                                        Class<?> lookup,
-                                        String name,
-                                        byte[] b, int off, int len,
-                                        ProtectionDomain pd,
-                                        boolean initialize,
-                                        int flags,
-                                        Object classData) {
+    public static Class<?> defineClass0(ClassLoader loader, Class<?> lookup, String name, byte[] b, int off, int len, ProtectionDomain pd, boolean initialize, int flags, Object classData) {
         if (!Platform.jigsaw) {
             throw new IllegalStateException();
         }
@@ -183,8 +176,7 @@ public final class ClassUtil {
         }
     }
 
-    public static Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len,
-                                        ProtectionDomain pd, String source) {
+    public static Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain pd, String source) {
         try {
             return (Class<?>) defineClass1.invoke(loader, name, b, off, len, pd, source);
         } catch (Throwable e) {
