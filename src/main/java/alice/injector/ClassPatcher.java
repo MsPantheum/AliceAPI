@@ -164,12 +164,9 @@ public final class ClassPatcher implements Opcodes {
         if (LOG_CLASS) {
             Logger.MAIN.trace("Transforming class:" + name);
         }
-        for (Iterator<ClassByteProcessor> iterator = PROCESSORS.iterator(); iterator.hasNext(); ) {
-            ClassByteProcessor processor = iterator.next();
+        PROCESSORS.removeIf(ClassByteProcessor::endOfLife);
+        for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
-            if (processor.endOfLife()) {
-                iterator.remove();
-            }
         }
         if (name != null && data != null) {
             cachedClasses.put(name, data);
