@@ -6,11 +6,10 @@ import alice.injector.SymbolLookup;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 
-import static alice.util.constants.Constants.*;
-
 //int munmap (void *__addr, size_t __len)
 
 public final class munmap {
+
     private static int holder() {
         long lllll = 11221144L;
         int iii = 14514;
@@ -46,16 +45,10 @@ public final class munmap {
         InlineHook.simpleHook(holder, code_base);
     }
 
-    public static int invoke(long __addr, long __len) {
+    public synchronized static int invoke(long __addr, long __len) {
         Unsafe.putLong(code_base + 2, __addr);
         Unsafe.putLong(code_base + 12, __len);
         return holder();
     }
 
-    public static void main(String[] args){
-        long test = mmap.invoke(0, 8, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        Unsafe.putLong(test,0x114514191980L);
-        munmap.invoke(test,8);
-        Runtime.getRuntime().exit(0);
-    }
 }

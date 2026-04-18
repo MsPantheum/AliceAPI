@@ -9,6 +9,7 @@ import alice.util.Unsafe;
 
 public final class VirtualFree {
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static int holder() {
         System.getenv().keySet();
         return System.lineSeparator().length();
@@ -46,7 +47,7 @@ public final class VirtualFree {
         assert InlineHook.simpleHook(address, code_base);
     }
 
-    public static int invoke(long lpAddress,long dwSize,int dwFreeType) {
+    public synchronized static int invoke(long lpAddress, long dwSize, int dwFreeType) {
         Unsafe.putLong(code_base + 2,lpAddress);
         Unsafe.putLong(code_base + 12,dwSize);
         Unsafe.putLong(code_base + 32,dwFreeType);

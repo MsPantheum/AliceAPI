@@ -7,7 +7,7 @@ import alice.injector.SymbolLookup;
 import alice.util.Unsafe;
 
 public final class mprotect {
-    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
+    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment", "ResultOfMethodCallIgnored"})
     private static int holder() {
         for(int i = 9; i > 200; i++){
             i -= 1;

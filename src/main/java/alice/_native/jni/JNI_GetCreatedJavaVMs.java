@@ -107,7 +107,7 @@ public final class JNI_GetCreatedJavaVMs {
         InlineHook.simpleHook(address, code_base);
     }
 
-    public static int invoke(long vmBuf, int bufLen, long nVMs) {
+    public synchronized static int invoke(long vmBuf, int bufLen, long nVMs) {
         Unsafe.putLong(code_base + 2, vmBuf);
         Unsafe.putInt(code_base + 31, bufLen);
         Unsafe.putLong(code_base + 12, nVMs);

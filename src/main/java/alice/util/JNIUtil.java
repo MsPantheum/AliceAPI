@@ -1,16 +1,23 @@
 package alice.util;
 
+import alice._native.jni.JNIInvokeInterface_.GetEnv;
 import alice._native.jni.JNI_GetCreatedJavaVMs;
-import alice._native.jni.JavaVM.GetEnv;
 import alice.exception.JNIException;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 import static alice.util.constants.Constants.JNI_OK;
 import static alice.util.constants.Constants.JNI_VERSION_1_8;
 
 public class JNIUtil {
 
+    private static long JavaVM = -1;
+
     public static long getJavaVM() {
-        return getJavaVMs()[0];
+        if (JavaVM == -1) {
+            JavaVM = getJavaVMs()[0];
+        }
+        return JavaVM;
     }
 
     public static long[] getJavaVMs() {
@@ -31,13 +38,20 @@ public class JNIUtil {
         return VMs;
     }
 
-    public static long getJNIEnv(long JavaVM) {
+    private static final Object2LongMap<Thread> JNIEnvs = new Object2LongOpenHashMap<>();
+
+    public static long getJNIEnv() {
+        Thread currentThread = Thread.currentThread();
+        if (JNIEnvs.containsKey(currentThread)) {
+            return JNIEnvs.getLong(currentThread);
+        }
         long penv = Unsafe.allocateMemory(Unsafe.ADDRESS_SIZE);
         int ret = GetEnv.invoke(JavaVM, penv, JNI_VERSION_1_8);//JNI_VERSION_1_8
         if (ret != JNI_OK) {
             throw new JNIException("Failed to get JNIEnv!", ret);
         }
         long JNIEnv = Unsafe.getLong(penv);
+        JNIEnvs.put(currentThread, JNIEnv);
         Unsafe.freeMemory(penv);
         return JNIEnv;
     }

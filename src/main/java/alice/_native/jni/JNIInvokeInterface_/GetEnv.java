@@ -1,4 +1,4 @@
-package alice._native.jni.JavaVM;
+package alice._native.jni.JNIInvokeInterface_;
 
 import alice._native.InlineHook;
 import alice.injector.Shellcode;
@@ -78,11 +78,13 @@ public final class GetEnv {
             holder();
         }
 
-        code_base = MemoryUtil.allocate(37);
+        byte[] payload = new byte[37];
+
+        code_base = MemoryUtil.allocate(payload.length);
 
         long JavaVM = JNIUtil.getJavaVM();
         long GetEnv = Unsafe.getLong(Unsafe.getLong(JavaVM) + Unsafe.ADDRESS_SIZE * 6L);
-        byte[] payload = new byte[37];
+
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
         //vm here
@@ -104,7 +106,7 @@ public final class GetEnv {
         InlineHook.simpleHook(address, code_base);
     }
 
-    public static int invoke(long vm, long penv, int version) {
+    public synchronized static int invoke(long vm, long penv, int version) {
         Unsafe.putLong(code_base + 2, vm);
         Unsafe.putLong(code_base + 12, penv);
         Unsafe.putInt(code_base + 31, version);
