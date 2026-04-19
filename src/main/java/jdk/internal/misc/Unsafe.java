@@ -22,7 +22,7 @@ public class Unsafe {
         return null;
     }
 
-    public long arrayBaseOffset(Class<?> arrayClass) {
+    public int arrayBaseOffset(Class<?> arrayClass) {
         return 0;
     }
 

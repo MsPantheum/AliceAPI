@@ -314,7 +314,7 @@ public final class Unsafe {
             return UNSAFE.staticFieldBase(f);
         }
 
-        public static long arrayBaseOffset(Class<?> arrayClass) {
+        public static int arrayBaseOffset(Class<?> arrayClass) {
             return UNSAFE.arrayBaseOffset(arrayClass);
         }
 

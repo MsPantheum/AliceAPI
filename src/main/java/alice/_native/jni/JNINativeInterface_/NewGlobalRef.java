@@ -1,11 +1,12 @@
 package alice._native.jni.JNINativeInterface_;
 
-import alice._native.InlineHook;
 import alice.injector.Shellcode;
-import alice.util.AddressUtil;
+import alice.util.ClassUtil;
 import alice.util.JNIUtil;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Method;
 
 //    jobject (JNICALL *NewGlobalRef) (JNIEnv *env, jobject lobj);
 public class NewGlobalRef {
@@ -13,19 +14,11 @@ public class NewGlobalRef {
     private static final long code_base;
 
     private static long holder() {
-        long lllll = 11221144L;
-        int iii = 14514;
-        while (iii != 0 && lllll > 0) {
-            iii--;
-            lllll -= iii;
-        }
         return System.in.hashCode();
     }
 
     static {
-        for (int i = 0; i < 20000; i++) {
-            holder();
-        }
+        holder();
         byte[] payload = new byte[32];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -43,9 +36,10 @@ public class NewGlobalRef {
         long JNIEnv = JNIUtil.getJNIEnv();
         long function = Unsafe.getLong(Unsafe.getLong(JNIEnv) + (long) Unsafe.ADDRESS_SIZE * 21);
         Unsafe.putLong(code_base + 22, function);
-        long address = Shellcode.getCompiledEntry(NewGlobalRef.class, "holder", "()J");
-        AddressUtil.checkNull(address);
-        InlineHook.simpleHook(address, code_base);
+        InstanceKlass klass = ClassUtil.getKlass(NewGlobalRef.class);
+        Method method = klass.findMethod("holder", "()J");
+        Shellcode.antiOptimization(method);
+        Shellcode.setInterpretedEntry(method, code_base);
     }
 
     public synchronized static long invoke(long JNIEnv, long lobj) {

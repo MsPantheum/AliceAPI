@@ -1,82 +1,26 @@
 package alice._native.jni.JNIInvokeInterface_;
 
-import alice._native.InlineHook;
 import alice.injector.Shellcode;
-import alice.util.AddressUtil;
+import alice.util.ClassUtil;
 import alice.util.JNIUtil;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Method;
 
 //jint (JNICALL *GetEnv)(JavaVM *vm, void **penv, jint version);
 
 public final class GetEnv {
 
-    @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
+    @SuppressWarnings({"DuplicatedCode"})
     private static int holder() {
-        for (int i = 9; i > 200; i++) {
-            i -= 1;
-        }
-        long lllll = 11221144L;
-        int iii = 14514;
-        while (iii != 0) {
-            iii--;
-            lllll -= iii;
-        }
-        lllll++;
-        int i = 0;
-        int j = 123;
-        while (i < 1000) {
-            i++;
-            j--;
-            if (j < 20) {
-                j += 40;
-            }
-
-            double d = 114514.114514;
-            d -= 0.1234;
-            if (d < i) {
-                d += 3;
-            }
-        }
-        i += 114514;
-        while (i < 123) {
-            i--;
-            j = 123;
-            j++;
-            if (j < 20) {
-                j += 40;
-            }
-
-            double d = 114514.114514;
-            d -= 0.1234;
-            if (d < i) {
-                d += 1221;
-            }
-            d--;
-        }
-        double ddd = 12311.312312;
-        long ll = 9923L;
-        while (ddd > -9) {
-            ddd -= 1.223;
-            i %= ddd;
-            ll += j;
-            j %= 12;
-        }
-        double dd = i + 14514;
-        dd *= (i - 32768);
-        i++;
-        j += (i * dd * ll);
-        j -= lllll;
-        return j % i;
+        return System.out.hashCode();
     }
 
     private static final long code_base;
 
     static {
-        for (int i = 0; i < 20000; i++) {
-            //noinspection ResultOfMethodCallIgnored
-            holder();
-        }
+        holder();
 
         byte[] payload = new byte[37];
 
@@ -101,9 +45,10 @@ public final class GetEnv {
 
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, GetEnv);
-        long address = Shellcode.getCompiledEntry(GetEnv.class, "holder", "()I");
-        AddressUtil.checkNull(address);
-        InlineHook.simpleHook(address, code_base);
+        InstanceKlass klass = ClassUtil.getKlass(GetEnv.class);
+        Method method = klass.findMethod("holder", "()I");
+        Shellcode.antiOptimization(method);
+        Shellcode.setInterpretedEntry(method, code_base);
     }
 
     public synchronized static int invoke(long vm, long penv, int version) {

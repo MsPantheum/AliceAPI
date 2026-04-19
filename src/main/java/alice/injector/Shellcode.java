@@ -3,7 +3,6 @@ package alice.injector;
 import alice.util.ClassUtil;
 import alice.util.MethodInfo;
 import alice.util.Unsafe;
-import alice.util.constants.AccessFlags;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
@@ -137,7 +136,7 @@ public final class Shellcode {
 
     public static void antiOptimization(Method method) {
         int access = (int) (method.getAccessFlags() & JVM_ACC_WRITTEN_FLAGS);
-        access = access | JVM_ACC_NOT_C1_COMPILABLE | JVM_ACC_NOT_C2_COMPILABLE | AccessFlags.JVM_ACC_NOT_C2_OSR_COMPILABLE;
+        access = access | JVM_ACC_NOT_C1_COMPILABLE | JVM_ACC_NOT_C2_COMPILABLE | JVM_ACC_NOT_C2_OSR_COMPILABLE;
 
         Unsafe.putInt(getAddressValue(method) + _access_flags_offset, access);
     }

@@ -1,10 +1,12 @@
 package alice._native.linux;
 
-import alice._native.InlineHook;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
+import alice.util.ClassUtil;
 import alice.util.MemoryUtil;
 import alice.util.Unsafe;
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Method;
 
 //int munmap (void *__addr, size_t __len)
 
@@ -23,9 +25,6 @@ public final class munmap {
     private static final long code_base;
 
     static {
-        for (int i = 0; i < 20000; i++) {
-            holder();
-        }
         byte[] payload = new byte[32];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -41,8 +40,10 @@ public final class munmap {
         code_base = MemoryUtil.allocate(32);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("munmap"));
-        long holder = Shellcode.getCompiledEntry(munmap.class, "holder", "()I");
-        InlineHook.simpleHook(holder, code_base);
+        InstanceKlass klass = ClassUtil.getKlass(munmap.class);
+        Method method = klass.findMethod("holder", "()I");
+        Shellcode.antiOptimization(method);
+        Shellcode.setInterpretedEntry(method, code_base);
     }
 
     public synchronized static int invoke(long __addr, long __len) {
