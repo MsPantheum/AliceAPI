@@ -1,5 +1,6 @@
 package alice._native.jni;
 
+import alice.Platform;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
@@ -23,16 +24,17 @@ public final class JNI_GetCreatedJavaVMs {
     static {
         holder();
         byte[] payload = new byte[37];
+        boolean flag = Platform.abi == Platform.ABI.SYSTEM_V;
         payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0xbf;
+        payload[1] = (byte) (flag ? 0xbf : 0xb9);
         //vmBuf here
-        payload[10] = (byte) 0x48;
-        payload[11] = (byte) 0xba;
+        payload[10] = (byte) (flag ? 0x48 : 0x49);
+        payload[11] = (byte) (flag ? 0xba : 0xb8);
         //nVMs here
         payload[20] = (byte) 0x48;
         payload[21] = (byte) 0xb8;
         //function
-        payload[30] = (byte) 0xbe;
+        payload[30] = (byte) (flag ? 0xbe : 0xba);
         //bufLen here
         payload[35] = (byte) 0xff;
         payload[36] = (byte) 0xe0;
