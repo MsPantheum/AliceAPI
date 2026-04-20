@@ -2,32 +2,18 @@ package alice.util;
 
 import alice.Platform;
 import alice._native.linux.mmap;
+import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
+import alice._native.win32.VirtualProtect;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.memory.Universe;
 import sun.jvm.hotspot.oops.CompressedKlassPointers;
 import sun.jvm.hotspot.oops.CompressedOops;
-import sun.jvm.hotspot.types.Type;
 
-import java.nio.charset.StandardCharsets;
-
-import static alice.HSDB.typeDataBase;
 import static alice.util.constants.Constants.*;
 
 public final class MemoryUtil {
-    public static String readSymbol(long symbolAddress) {
-        Type symbolType = typeDataBase.lookupType("Symbol");
-        long symbol = Unsafe.getAddress(symbolAddress);
-        long body = symbol + symbolType.getField("_body").getOffset();
-        int length = Unsafe.getShort(symbol + symbolType.getField("_length").getOffset()) & 0xffff;
-
-        byte[] b = new byte[length];
-        for (int i = 0; i < length; i++) {
-            b[i] = Unsafe.getByte(body + i);
-        }
-        return new String(b, StandardCharsets.UTF_8);
-    }
 
     public static long allocate(long size) {
         return Platform.win32 ? VirtualAlloc.invoke(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(0, size, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -61,25 +47,17 @@ public final class MemoryUtil {
         @SuppressWarnings("PointlessBitwiseExpression") long page_mask = ~(page_size - 1);
         long try_addr;
 
-        for (try_addr = (target & page_mask) - page_size;
-             try_addr >= lo; try_addr -= page_size) {
-            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (p == MAP_FAILED)
-                continue;
-            if (inRel32Range(target, p))
-                return p;
+        for (try_addr = (target & page_mask) - page_size; try_addr >= lo; try_addr -= page_size) {
+            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            if (p == MAP_FAILED) continue;
+            if (inRel32Range(target, p)) return p;
             munmap.invoke(p, size);
         }
 
-        for (try_addr = (target & page_mask) + page_size;
-             try_addr <= hi; try_addr += page_size) {
-            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (p == MAP_FAILED)
-                continue;
-            if (inRel32Range(target, p))
-                return p;
+        for (try_addr = (target & page_mask) + page_size; try_addr <= hi; try_addr += page_size) {
+            long p = Platform.win32 ? VirtualAlloc.invoke(try_addr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(try_addr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            if (p == MAP_FAILED) continue;
+            if (inRel32Range(target, p)) return p;
             munmap.invoke(p, size);
         }
 
@@ -92,6 +70,7 @@ public final class MemoryUtil {
     }
 
     /*
+     * From helfy.
      * This class was tested under permanent System.gc calls and doesn't seem to crash JVM due to object relocations
      */
     public static class Ptr2Obj {
@@ -151,6 +130,14 @@ public final class MemoryUtil {
             Ptr2Obj ptr2Obj = new Ptr2Obj();
             Unsafe.compareAndSwapInt(ptr2Obj, objFieldOffset, 0, (int) address);
             return ptr2Obj.obj;
+        }
+    }
+
+    public static void setMemoryRWX(long address, long size) {
+        if (!Platform.win32) {
+            mprotect.invoke(AddressUtil.align(address), size, PROT_EXEC | PROT_WRITE | PROT_READ);
+        } else {
+            VirtualProtect.invoke(address, size, PAGE_EXECUTE_READWRITE, 0);
         }
     }
 }
