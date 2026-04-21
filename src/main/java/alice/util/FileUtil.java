@@ -146,6 +146,7 @@ public final class FileUtil {
     public static final Path JAVA_HOME = Paths.get(System.getProperty("java.home").endsWith("jre") ? System.getProperty("java.home").substring(0, System.getProperty("java.home").length() - 3) : System.getProperty("java.home"));
     public static final Path TEMP_DIR = Paths.get(System.getProperty("java.io.tmpdir"));
     public static final Path SYSTEM_IMAGE = JAVA_HOME.resolve("lib").resolve("modules");
+    public static final Path WORKING_DIR = Paths.get(System.getProperty("user.dir"));
 
     public static Path getHSDB() {
         if (!Platform.jigsaw) {
