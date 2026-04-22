@@ -16,6 +16,7 @@ public final class LaunchWrapper {
     public static boolean running = true;
 
     public static void main(String[] args) {
+        System.out.println("Working directory: ".concat(System.getProperty("user.dir")).concat("."));
         Init.ensureInit();
         ExtensionLoader.load();
         try {

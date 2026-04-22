@@ -29,6 +29,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.function.BiFunction;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -85,6 +86,8 @@ public final class ClassPatcher implements Opcodes {
     private static final boolean LOG_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.log_class"));
 
     private static final boolean DUMP_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.dump"));
+
+    private static final boolean IMMEDIATELY_DUMP_CLASS = "true".equals(System.getProperty("alice.debug.class_patcher.dump_immediately"));
 
     private static final Class<?> overrideJarLoader;
     private static final MethodHandle overrideJarLoaderConstructor;
@@ -143,7 +146,7 @@ public final class ClassPatcher implements Opcodes {
         }
     }
 
-    private static final PriorityQueue<ClassByteProcessor> PROCESSORS = new PriorityQueue<>(Comparator.comparingInt(ClassByteProcessor::priority));
+    private static final PriorityBlockingQueue<ClassByteProcessor> PROCESSORS = new PriorityBlockingQueue<>(64, Comparator.comparingInt(ClassByteProcessor::priority));
 
     public static boolean shouldRunTransformers() {
         return !PROCESSORS.isEmpty();
@@ -173,7 +176,12 @@ public final class ClassPatcher implements Opcodes {
             cachedClasses.put(name, data);
         }
         if (DUMP_CLASS && data != null) {
-            DumpThread.classes.offer(new DumpThread.DumpInfo("AliceClassDump".concat(File.separator).concat(name), data));
+            String path = "AliceClassDump".concat(File.separator).concat(Objects.toString(name));
+            if (IMMEDIATELY_DUMP_CLASS) {
+                FileUtil.write(path, data);
+            } else {
+                DumpThread.classes.offer(new DumpThread.DumpInfo(path, data));
+            }
         }
         return data;
     }
