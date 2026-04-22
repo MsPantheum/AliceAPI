@@ -1,7 +1,8 @@
 package alice.injector.classloading;
 
 import alice.injector.ClassPatcher;
-import org.apache.commons.io.IOUtils;
+import alice.util.ClassUtil;
+import alice.util.IOUtil;
 import sun.misc.Resource;
 import sun.misc.URLClassPath;
 
@@ -11,14 +12,25 @@ import java.security.AccessController;
 import java.util.Enumeration;
 import java.util.List;
 
+/**
+ * @deprecated Reconstruct a new url or resource causes too much problem. Migrate to override JarLoader as it's much cleaner.
+ */
 @SuppressWarnings("DuplicatedCode")
+@Deprecated
 public class UCPWrapper {
 
     private static URL processURL(URL url, String name) throws IOException {
+        byte[] raw = null;
+        if (url != null) {
+            raw = IOUtil.getByteArray(url.openStream());
+            if (!ClassUtil.isClassFile(raw, 0)) {
+                return url;
+            }
+        }
         if (ClassPatcher.shouldRunTransformers()) {
-            byte[] data = ClassPatcher.runTransformers(url != null ? IOUtils.toByteArray(url) : null, name);
+            byte[] data = ClassPatcher.runTransformers(raw, name);
             if (data == null) {
-                return null;
+                return url;
             }
             return ClassPatcher.create(data, url);
         }
@@ -26,7 +38,7 @@ public class UCPWrapper {
     }
 
     /**
-     * @deprecated The ucp in BuiltinClassLoader is annotated @Stable,which means that replacing ucp field no longer works.<br>However, this class will be kept if someone else may want to use it.
+     * @deprecated The ucp in BuiltinClassLoader is annotated @Stable, which means that replacing ucp field no longer works.<br>However, this class will be kept if someone else may want to use it.
      */
     @Deprecated
     public static class URLClassPathWrapper extends jdk.internal.loader.URLClassPath {
@@ -162,7 +174,7 @@ public class UCPWrapper {
         public URL findResource(String name, boolean check) {
             URL url = delegate.findResource(name, check);
             try {
-                return name.endsWith(".class") ? processURL(url, name) : url;
+                return processURL(url, name);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

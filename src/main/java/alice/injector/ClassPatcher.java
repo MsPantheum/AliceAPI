@@ -3,7 +3,10 @@ package alice.injector;
 import alice.LaunchWrapper;
 import alice.Platform;
 import alice.api.ClassByteProcessor;
-import alice.injector.classloading.*;
+import alice.injector.classloading.CollectionWrapper;
+import alice.injector.classloading.Module2Reader;
+import alice.injector.classloading.ResourceWrapper;
+import alice.injector.classloading.WrappedModuleReader;
 import alice.injector.patcher.DebuggerBasePatcher;
 import alice.injector.patcher.DebuggerLocalPatcher;
 import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
@@ -153,6 +156,11 @@ public final class ClassPatcher implements Opcodes {
     }
 
     public static byte[] runTransformers(byte[] data, String name) {
+        if ("net/fabricmc/loader/impl/util/UrlUtil.class".equals(name)) {
+            Logger.MAIN.debug("Loading UrlUtil.class.");
+            Logger.MAIN.printStackTrace();
+            Logger.MAIN.debug("end of log");
+        }
         byte[] _try = _protected.get(name);
         if (_try != null) {
             return _try;
@@ -184,16 +192,6 @@ public final class ClassPatcher implements Opcodes {
             }
         }
         return data;
-    }
-
-    private static void replaceUCP(ClassLoader loader) {
-        Object ucp = ClassLoaderUtil.getUCP(loader);
-        if (ucp == null) {
-            return;
-        }
-        Object wrapper = new UCPWrapper.LegacyURLClassPathWrapper((URLClassPath) ucp);
-        Logger.MAIN.info("Replacing URLClassPath of " + loader.getClass().getName() + ".");
-        ClassLoaderUtil.setUCP(loader, wrapper);
     }
 
     public static void replaceJarHandler(Object ucp) {
@@ -245,13 +243,11 @@ public final class ClassPatcher implements Opcodes {
         } else {
             Unsafe.ensureClassInitialized(URLClassLoader.class);
             Unsafe.ensureClassInitialized(URLClassPath.class);
-            Unsafe.ensureClassInitialized(UCPWrapper.LegacyURLClassPathWrapper.class);
             Unsafe.ensureClassInitialized(ResourceWrapper.LegacyResource.LegacyStaticResource.class);
             Unsafe.ensureClassInitialized(CollectionWrapper.LegacyStaticResources.class);
         }
 
         Unsafe.ensureClassInitialized(UCPUtil.class);
-        Unsafe.ensureClassInitialized(UCPWrapper.StaticURLs.class);
         Unsafe.ensureClassInitialized(ClassByteProcessor.class);
         Unsafe.ensureClassInitialized(DebuggerLocalPatcher.class);
         Unsafe.ensureClassInitialized(LinuxDebuggerLocalWorkerThreadPatcher.class);
@@ -281,7 +277,11 @@ public final class ClassPatcher implements Opcodes {
             replaceModule2Reader(app);
             replaceModule2Reader(platform);
         } else {
-            replaceUCP(app);
+            Object ucp = ClassLoaderUtil.getUCP(app);
+            Logger.MAIN.info("Replacing resource loaders.");
+            replaceLoaders(ucp);
+            Logger.MAIN.info("Replacing jar handlers.");
+            replaceJarHandler(ucp);
         }
         registerProcessor(new ClassByteProcessor() {
             @Override
