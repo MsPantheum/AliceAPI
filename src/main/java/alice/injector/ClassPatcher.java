@@ -127,7 +127,7 @@ public final class ClassPatcher implements Opcodes {
                 }
             });
             if (Platform.jigsaw) {
-                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.resourceFunction);
+                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.InternalResource.resourceFunction);
             } else {
                 Field f = ReflectionUtil.getField(overrideJarLoader, "resourceProcessor");
                 Unsafe.putObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f), ResourceWrapper.LegacyResource.legacyResourceFunction);
@@ -156,11 +156,6 @@ public final class ClassPatcher implements Opcodes {
     }
 
     public static byte[] runTransformers(byte[] data, String name) {
-        if ("net/fabricmc/loader/impl/util/UrlUtil.class".equals(name)) {
-            Logger.MAIN.debug("Loading UrlUtil.class.");
-            Logger.MAIN.printStackTrace();
-            Logger.MAIN.debug("end of log");
-        }
         byte[] _try = _protected.get(name);
         if (_try != null) {
             return _try;
@@ -173,14 +168,14 @@ public final class ClassPatcher implements Opcodes {
         if (_try != null) {
             return _try;
         }
-        if (LOG_CLASS) {
-            Logger.MAIN.trace("Transforming class:" + name);
-        }
         PROCESSORS.removeIf(ClassByteProcessor::endOfLife);
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
         }
         if (name != null && data != null) {
+            if (LOG_CLASS) {
+                Logger.MAIN.trace("Transform class:" + name);
+            }
             cachedClasses.put(name, data);
         }
         if (DUMP_CLASS && data != null) {
@@ -238,11 +233,13 @@ public final class ClassPatcher implements Opcodes {
             Unsafe.ensureClassInitialized(jdk.internal.loader.URLClassPath.class);
             Unsafe.ensureClassInitialized(Module2Reader.class);
             Unsafe.ensureClassInitialized(WrappedModuleReader.class);
-            Unsafe.ensureClassInitialized(ResourceWrapper.StaticResource.class);
+            Unsafe.ensureClassInitialized(ResourceWrapper.InternalResource.class);
+            Unsafe.ensureClassInitialized(ResourceWrapper.InternalResource.StaticResource.class);
             Unsafe.ensureClassInitialized(CollectionWrapper.StaticResources.class);
         } else {
             Unsafe.ensureClassInitialized(URLClassLoader.class);
             Unsafe.ensureClassInitialized(URLClassPath.class);
+            Unsafe.ensureClassInitialized(ResourceWrapper.LegacyResource.class);
             Unsafe.ensureClassInitialized(ResourceWrapper.LegacyResource.LegacyStaticResource.class);
             Unsafe.ensureClassInitialized(CollectionWrapper.LegacyStaticResources.class);
         }
@@ -294,7 +291,10 @@ public final class ClassPatcher implements Opcodes {
             boolean eol = false;
 
             @Override
-            public byte[] process(byte[] classBytes, String name) {
+            public byte[] processChecked(byte[] classBytes, String name) {
+                if (classBytes == null) {
+                    return null;
+                }
                 if ("sun/jvm/hotspot/debugger/DebuggerBase.class".equals(name)) {
                     eol = true;
                     return DebuggerBasePatcher.transform(classBytes);
@@ -312,7 +312,7 @@ public final class ClassPatcher implements Opcodes {
             boolean eol = false;
 
             @Override
-            public byte[] process(byte[] classBytes, String name) {
+            public byte[] processChecked(byte[] classBytes, String name) {
                 if ("sun/jvm/hotspot/debugger/bsd/BsdDebuggerLocal.class".equals(name) || "sun/jvm/hotspot/debugger/windbg/WindbgDebuggerLocal.class".equals(name) || "sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal.class".equals(name)) {
                     eol = true;
                     return DebuggerLocalPatcher.patch(classBytes, name);
@@ -331,7 +331,7 @@ public final class ClassPatcher implements Opcodes {
                 boolean eol = false;
 
                 @Override
-                public byte[] process(byte[] classBytes, String name) {
+                public byte[] processChecked(byte[] classBytes, String name) {
                     if ("sun/jvm/hotspot/debugger/linux/LinuxDebuggerLocal$LinuxDebuggerLocalWorkerThread.class".equals(name)) {
                         eol = true;
                         return LinuxDebuggerLocalWorkerThreadPatcher.patch(classBytes, name);

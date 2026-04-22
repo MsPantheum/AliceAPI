@@ -47,7 +47,7 @@ public class CollectionWrapper {
         public jdk.internal.loader.Resource nextElement() {
             jdk.internal.loader.Resource res = delegate.nextElement();
             try {
-                return ResourceWrapper.processResource(res, res.getName());
+                return ResourceWrapper.InternalResource.processResource(res, res.getName());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

@@ -72,7 +72,7 @@ public class UCPWrapper {
         @Override
         public jdk.internal.loader.Resource getResource(String name, boolean check) {
             try {
-                return ResourceWrapper.processResource(delegate.getResource(name, check), name);
+                return ResourceWrapper.InternalResource.processResource(delegate.getResource(name, check), name);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

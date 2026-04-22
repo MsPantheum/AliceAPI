@@ -8,11 +8,25 @@ public interface ClassByteProcessor {
     /**
      * Method to process raw class bytes.
      *
-     * @param classBytes class bytes to be processed.
-     * @param name       class name, will in format like java/lang/Class.class.
-     * @return processed class bytes, do not return null.
+     * @param classBytes class bytes to be processed, which may be null
+     * @param name       class name, which will in format like java/lang/Class.class
+     * @return processed class bytes
      */
     default byte[] process(byte[] classBytes, String name) {
+        if (classBytes == null) {
+            return null;
+        }
+        return processChecked(classBytes, name);
+    }
+
+    /**
+     * Method to process raw class bytes. Input bytes are nonnull.<br>You should always override this method except that your transformer expects null input.
+     *
+     * @param classBytes class bytes to be processed, which is nonnull.
+     * @param name       class name, which will in format like java/lang/Class.class
+     * @return processed class bytes
+     */
+    default byte[] processChecked(byte[] classBytes, String name) {
         return classBytes;
     }
 
