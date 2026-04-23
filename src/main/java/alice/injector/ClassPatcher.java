@@ -14,6 +14,7 @@ import alice.injector.patcher.UniversalPatcher;
 import alice.log.Logger;
 import alice.util.*;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import sun.misc.URLClassPath;
 import sun.net.www.protocol.jar.Handler;
@@ -39,7 +40,33 @@ import java.util.jar.JarFile;
 
 public final class ClassPatcher implements Opcodes {
 
+    private static final BiFunction<URL, String, URL> urlProcessor = (url, s) -> {
+        try {
+            return processURL(url, s);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    };
+
     private static final Map<String, byte[]> cachedClasses = new ConcurrentHashMap<>();
+
+    public static URL processURL(URL url, String name) throws IOException {
+        byte[] raw = null;
+        if (url != null) {
+            raw = IOUtil.getByteArray(url.openStream());
+            if (!ClassUtil.isClassFile(raw, 0)) {
+                return url;
+            }
+        }
+        if (shouldRunTransformers()) {
+            byte[] data = runTransformers(raw, name);
+            if (data == null) {
+                return url;
+            }
+            return create(data, url);
+        }
+        return url;
+    }
 
     private static final class DumpThread extends Thread {
 
@@ -118,19 +145,39 @@ public final class ClassPatcher implements Opcodes {
                         mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/BiFunction", "apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
                         mv.visitTypeInsn(CHECKCAST, res);
                     };
+                } else if (method.equals("findResource") && desc.equals("(Ljava/lang/String;Z)Ljava/net/URL;")) {
+                    return mv -> {
+                        mv.visitInsn(DUP);
+                        Label _if = new Label();
+                        mv.visitJumpInsn(IFNONNULL, _if);
+                        mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "urlProcessor", "Ljava/util/function/BiFunction;");
+                        mv.visitInsn(SWAP);
+                        mv.visitVarInsn(ALOAD, 1);
+                        mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/BiFunction", "apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+                        mv.visitTypeInsn(CHECKCAST, "Ljava/net/URL;");
+                        mv.visitLabel(_if);
+                        mv.visitFrame(F_SAME, 0, null, 0, null);
+                    };
                 }
                 return null;
             }, cw -> {
-                FieldVisitor fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", "Ljava/util/function/BiFunction<" + res_type + "Ljava/lang/String;>;", null);
+                FieldVisitor fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "resourceProcessor", "Ljava/util/function/BiFunction;", null, null);
+                if (Platform.jigsaw) {
+                    fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
+                }
+                fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "urlProcessor", "Ljava/util/function/BiFunction;", null, null);
                 if (Platform.jigsaw) {
                     fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
                 }
             });
             if (Platform.jigsaw) {
                 ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.InternalResource.resourceFunction);
+                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "urlProcessor", BiFunction.class).set(ClassPatcher.urlProcessor);
             } else {
                 Field f = ReflectionUtil.getField(overrideJarLoader, "resourceProcessor");
                 Unsafe.putObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f), ResourceWrapper.LegacyResource.legacyResourceFunction);
+                f = ReflectionUtil.getField(overrideJarLoader, "urlProcessor");
+                Unsafe.putObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f), ClassPatcher.urlProcessor);
             }
             overrideJarLoaderConstructor = ReflectionUtil.findConstructor(overrideJarLoader, MethodType.methodType(void.class, target));
         } catch (ClassNotFoundException e) {

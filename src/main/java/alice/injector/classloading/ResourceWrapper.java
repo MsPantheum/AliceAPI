@@ -27,6 +27,9 @@ public class ResourceWrapper {
         };
 
         public static Resource processLegacyResource(Resource resource, String name) throws IOException {
+            if (name != null && !name.contains("/")) {
+                System.out.println(name);
+            }
             boolean flag = resource != null;
             if (ClassPatcher.shouldRunTransformers()) {
                 byte[] data = ClassPatcher.runTransformers(resource != null ? resource.getBytes() : null, name);

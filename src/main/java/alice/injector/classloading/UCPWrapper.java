@@ -1,8 +1,6 @@
 package alice.injector.classloading;
 
 import alice.injector.ClassPatcher;
-import alice.util.ClassUtil;
-import alice.util.IOUtil;
 import sun.misc.Resource;
 import sun.misc.URLClassPath;
 
@@ -18,24 +16,6 @@ import java.util.List;
 @SuppressWarnings("DuplicatedCode")
 @Deprecated
 public class UCPWrapper {
-
-    private static URL processURL(URL url, String name) throws IOException {
-        byte[] raw = null;
-        if (url != null) {
-            raw = IOUtil.getByteArray(url.openStream());
-            if (!ClassUtil.isClassFile(raw, 0)) {
-                return url;
-            }
-        }
-        if (ClassPatcher.shouldRunTransformers()) {
-            byte[] data = ClassPatcher.runTransformers(raw, name);
-            if (data == null) {
-                return url;
-            }
-            return ClassPatcher.create(data, url);
-        }
-        return url;
-    }
 
     /**
      * @deprecated The ucp in BuiltinClassLoader is annotated @Stable, which means that replacing ucp field no longer works.<br>However, this class will be kept if someone else may want to use it.
@@ -66,7 +46,7 @@ public class UCPWrapper {
 
         @Override
         public URL findResource(String name, boolean check) throws IOException {
-            return processURL(delegate.findResource(name, check), name);
+            return ClassPatcher.processURL(delegate.findResource(name, check), name);
         }
 
         @Override
@@ -151,7 +131,7 @@ public class UCPWrapper {
                 String path = url.getPath();
                 if (path.endsWith(".class")) {
                     try {
-                        ret[i] = processURL(url, path);
+                        ret[i] = ClassPatcher.processURL(url, path);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -174,7 +154,7 @@ public class UCPWrapper {
         public URL findResource(String name, boolean check) {
             URL url = delegate.findResource(name, check);
             try {
-                return processURL(url, name);
+                return ClassPatcher.processURL(url, name);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -210,7 +190,7 @@ public class UCPWrapper {
             String path = url.getPath();
             if (path.endsWith(".class")) {
                 try {
-                    return processURL(url, path);
+                    return ClassPatcher.processURL(url, path);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
