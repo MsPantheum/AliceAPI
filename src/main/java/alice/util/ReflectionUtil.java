@@ -68,31 +68,37 @@ public final class ReflectionUtil {
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         } catch (NoSuchMethodException e) {
-            throw new NoSuchMethodError(name + methodType.toString());
+            throw new NoSuchMethodError(name.concat(methodType.toString()));
         }
     }
 
     public static MethodHandle findStatic(Class<?> owner, String name, MethodType methodType) {
         try {
             return IMPL_LOOKUP.findStatic(owner, name, methodType);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(name.concat(methodType.toString()));
         }
     }
 
     public static MethodHandle findConstructor(Class<?> owner, MethodType methodType) {
         try {
             return IMPL_LOOKUP.findConstructor(owner, methodType);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError("<init>".concat(methodType.toString()));
         }
     }
 
     public static MethodHandle findSpecial(Class<?> owner, String name, MethodType methodType, Class<?> special_caller) {
         try {
             return IMPL_LOOKUP.findSpecial(owner, name, methodType, special_caller);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(owner.getName().concat(".").concat(name.concat(methodType.toString())));
         }
     }
 
