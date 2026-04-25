@@ -20,28 +20,34 @@ import java.util.jar.JarFile;
  * Or you can specify an extension directory by setting property alice.extension.directory.
  */
 public final class ExtensionLoader {
-    public static void load(){
+    public static void load(String[] args) {
         String extension_dir = System.getProperty("alice.extension.directory");
-        if(extension_dir == null) {
+        if (extension_dir == null) {
             extension_dir = "alice";
         }
-        if(!FileUtil.isDirectory(extension_dir)){
+        if (!FileUtil.isDirectory(extension_dir)) {
             FileUtil.createDirectory(extension_dir);
         }
         Logger.MAIN.info("Scanning extensions.");
         for (Path path : FileUtil.list(extension_dir)) {
-            if(path.toString().endsWith(".jar")){
+            if (path.toString().endsWith(".jar")) {
                 ClassUtil.append(path, ClassLoader.getSystemClassLoader());
                 ClassPatcher.addProtectedJar(path.toString());
-                try (JarFile jar = new JarFile(path.toFile())){
+                try (JarFile jar = new JarFile(path.toFile())) {
                     String target = jar.getManifest().getMainAttributes().getValue("Alice-Extension");
-                    if(target == null){
+                    if (target == null) {
                         continue;
                     }
                     try {
                         Class<?> loader_class = Class.forName(target);
-                        MethodHandle load = ReflectionUtil.findStatic(loader_class,"load", MethodType.methodType(void.class));
-                        load.invoke();
+                        MethodHandle load;
+                        try {
+                            load = ReflectionUtil.findStatic(loader_class, "load", MethodType.methodType(void.class, String[].class));
+                            load.invoke((Object) args);
+                        } catch (NoSuchMethodError e) {
+                            load = ReflectionUtil.findStatic(loader_class, "load", MethodType.methodType(void.class));
+                            load.invoke();
+                        }
                     } catch (Throwable e) {
                         throw new RuntimeException(e);
                     }
