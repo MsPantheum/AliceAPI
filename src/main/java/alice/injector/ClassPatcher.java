@@ -3,6 +3,7 @@ package alice.injector;
 import alice.LaunchWrapper;
 import alice.Platform;
 import alice.api.ClassByteProcessor;
+import alice.api.ClassProvider;
 import alice.injector.classloading.CollectionWrapper;
 import alice.injector.classloading.Module2Reader;
 import alice.injector.classloading.ResourceWrapper;
@@ -35,28 +36,37 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public final class ClassPatcher implements Opcodes {
 
-    private static final BiFunction<URL, String, URL> urlProcessor = (url, s) -> {
+    private static final Function<String, URL> urlProcessor = (name) -> {
         try {
-            return processURL(url, s);
+            return mayProvide(name);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     };
 
     private static final Map<String, byte[]> cachedClasses = new ConcurrentHashMap<>();
+    private static final Map<String, byte[]> cachedClasses1 = new ConcurrentHashMap<>();
+
+    public static URL mayProvide(String name) throws IOException {
+        if (shouldRunProviders()) {
+            byte[] data = runProviders(name);
+            if (data != null) {
+                return create(data, null);
+            }
+        }
+        return null;
+    }
 
     public static URL processURL(URL url, String name) throws IOException {
         byte[] raw = null;
         if (url != null) {
             raw = IOUtil.getByteArray(url.openStream());
-            if (!ClassUtil.isClassFile(raw, 0)) {
-                return url;
-            }
         }
         if (shouldRunTransformers()) {
             byte[] data = runTransformers(raw, name);
@@ -150,10 +160,10 @@ public final class ClassPatcher implements Opcodes {
                         mv.visitInsn(DUP);
                         Label _if = new Label();
                         mv.visitJumpInsn(IFNONNULL, _if);
-                        mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "urlProcessor", "Ljava/util/function/BiFunction;");
-                        mv.visitInsn(SWAP);
+                        mv.visitInsn(POP);
+                        mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "urlProcessor", "Ljava/util/function/Function;");
                         mv.visitVarInsn(ALOAD, 1);
-                        mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/BiFunction", "apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+                        mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/Function", "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
                         mv.visitTypeInsn(CHECKCAST, "Ljava/net/URL;");
                         mv.visitLabel(_if);
                         mv.visitFrame(F_SAME, 0, null, 0, null);
@@ -165,14 +175,14 @@ public final class ClassPatcher implements Opcodes {
                 if (Platform.jigsaw) {
                     fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
                 }
-                fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "urlProcessor", "Ljava/util/function/BiFunction;", null, null);
+                fv = cw.visitField(ACC_PRIVATE | ACC_STATIC, "urlProcessor", "Ljava/util/function/Function;", null, null);
                 if (Platform.jigsaw) {
                     fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
                 }
             });
             if (Platform.jigsaw) {
                 ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.InternalResource.resourceFunction);
-                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "urlProcessor", BiFunction.class).set(ClassPatcher.urlProcessor);
+                ReflectionUtil.findStaticVarHandle(overrideJarLoader, "urlProcessor", Function.class).set(ClassPatcher.urlProcessor);
             } else {
                 Field f = ReflectionUtil.getField(overrideJarLoader, "resourceProcessor");
                 Unsafe.putObject(Unsafe.staticFieldBase(f), Unsafe.staticFieldOffset(f), ResourceWrapper.LegacyResource.legacyResourceFunction);
@@ -197,9 +207,37 @@ public final class ClassPatcher implements Opcodes {
     }
 
     private static final PriorityBlockingQueue<ClassByteProcessor> PROCESSORS = new PriorityBlockingQueue<>(64, Comparator.comparingInt(ClassByteProcessor::priority));
+    private static final PriorityBlockingQueue<ClassProvider> PROVIDERS = new PriorityBlockingQueue<>(64, Comparator.comparingInt(ClassProvider::priority));
 
     public static boolean shouldRunTransformers() {
+        PROCESSORS.removeIf(ClassByteProcessor::endOfLife);
         return !PROCESSORS.isEmpty();
+    }
+
+    public static boolean shouldRunProviders() {
+        PROVIDERS.removeIf(ClassProvider::endOfLife);
+        return !PROVIDERS.isEmpty();
+    }
+
+    public static byte[] runProviders(String name) {
+        byte[] _try = cachedClasses1.get(name);
+        if (_try != null) {
+            return _try;
+        }
+        for (ClassProvider provider : PROVIDERS) {
+            _try = provider.provide(name);
+            if (_try != null) {
+                _try = runTransformers(_try, name);
+                cachedClasses1.put(name, _try);
+                return _try;
+            }
+        }
+        return null;
+    }
+
+    public static void registerProvider(ClassProvider provider) {
+        Logger.MAIN.info("Registering provider: ".concat(provider.getClass().getName()));
+        PROVIDERS.add(provider);
     }
 
     public static byte[] runTransformers(byte[] data, String name) {
@@ -215,7 +253,6 @@ public final class ClassPatcher implements Opcodes {
         if (_try != null) {
             return _try;
         }
-        PROCESSORS.removeIf(ClassByteProcessor::endOfLife);
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
         }
@@ -404,8 +441,7 @@ public final class ClassPatcher implements Opcodes {
     }
 
     public static void registerProcessor(ClassByteProcessor processor) {
-        Logger.MAIN.info("Registering processor: " + processor.getClass().getName());
-        Logger.MAIN.info("Loaded by class: " + processor.getClass().getClassLoader().getClass().getName());
+        Logger.MAIN.info("Registering processor: ".concat(processor.getClass().getName()));
         synchronized (PROCESSORS) {
             PROCESSORS.add(processor);
         }

@@ -15,6 +15,7 @@ import java.net.URLClassLoader;
 import java.net.URLStreamHandler;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class VarHandle {
     public native void set(Module a1, Map<?, ?> a2);
@@ -64,5 +65,9 @@ public class VarHandle {
 
     public Object get(URLClassLoader loader) {
         return null;
+    }
+
+    public void set(Function<?, ?> urlProcessor) {
+
     }
 }
