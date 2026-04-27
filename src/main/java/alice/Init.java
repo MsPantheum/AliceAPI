@@ -1,8 +1,5 @@
 package alice;
 
-import alice._native.jni.JNIInvokeInterface_.GetEnv;
-import alice._native.jni.JNINativeInterface_.NewGlobalRef;
-import alice._native.jni.JNI_GetCreatedJavaVMs;
 import alice._native.linux.mmap;
 import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
@@ -77,7 +74,7 @@ public final class Init {
             ModuleUtil.openAll();
         }
         Unsafe.ensureClassInitialized(Platform.class);
-        String[] jars = new String[]{ClassUtil.getJarPath(Opcodes.class), ClassUtil.getJarPath(Analyzer.class), ClassUtil.getJarPath(Method.class), ClassUtil.getJarPath(ClassNode.class), ClassUtil.getJarPath(Printer.class), ClassUtil.getJarPath(Objects.class)};
+        String[] jars = new String[]{FileUtil.getJarPath(Opcodes.class), FileUtil.getJarPath(Analyzer.class), FileUtil.getJarPath(Method.class), FileUtil.getJarPath(ClassNode.class), FileUtil.getJarPath(Printer.class), FileUtil.getJarPath(Objects.class)};
         ClassUtil.ensureClassesInJarLoaded(jars);
         ClassPatcher.load();
         Logger.MAIN.info("ClassPatcher loaded.");
@@ -94,9 +91,9 @@ public final class Init {
             Unsafe.ensureClassInitialized(VirtualAlloc.class);
             Unsafe.ensureClassInitialized(VirtualFree.class);
         }
-        Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
-        Unsafe.ensureClassInitialized(GetEnv.class);
-        Unsafe.ensureClassInitialized(NewGlobalRef.class);
+//        Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
+//        Unsafe.ensureClassInitialized(GetEnv.class);
+//        Unsafe.ensureClassInitialized(NewGlobalRef.class);
         init = true;
     }
 

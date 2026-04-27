@@ -1,6 +1,5 @@
 package alice.util;
 
-import alice.Meow;
 import alice.Platform;
 import alice.log.Logger;
 import sun.jvm.hotspot.oops.InstanceKlass;
@@ -102,10 +101,6 @@ public final class ClassUtil {
         return null;
     }
 
-    public static String getJarPath(Class<?> cls) {
-        return cls.getProtectionDomain().getCodeSource().getLocation().getPath().replace("!/" + cls.getName().replace('.', '/') + ".class", "").replace("file:", "");
-    }
-
     public static <T extends Klass> T getKlass(Class<?> clazz) {
         //noinspection unchecked
         return (T) Metadata.instantiateWrapperFor(Converter.toAddress(AddressUtil.getKlassAddress(clazz)));
@@ -120,13 +115,11 @@ public final class ClassUtil {
         }
     }
 
-    private static final String ALICE_PATH = getJarPath(Meow.class);
-
     private static final boolean DEBUG_CLASS_ENSURER = "true".equals(System.getProperty("alice.debug.class_init"));
 
     public static void ensureClassesInJarLoaded(String... jars) {
         for (String path : jars) {
-            if (path.equals(ALICE_PATH)) {
+            if (path.equals(FileUtil.ALICE_PATH)) {
                 continue;
             }
             Logger.MAIN.debug("Ensure classes in " + path + " is loaded...");
@@ -177,6 +170,10 @@ public final class ClassUtil {
     }
 
     public static Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain pd, String source) {
+        if (!Platform.jigsaw) {
+            throw new IllegalStateException();
+        }
+        System.out.println("Attempt to define class ".concat(name));
         try {
             return (Class<?>) defineClass1.invoke(loader, name, b, off, len, pd, source);
         } catch (Throwable e) {
