@@ -1,6 +1,5 @@
 package alice.injector.classloading;
 
-import alice.Meow;
 import alice.injector.ClassPatcher;
 import alice.util.FileUtil;
 import sun.misc.Resource;
@@ -8,15 +7,25 @@ import sun.misc.Resource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.function.BiFunction;
 
 @SuppressWarnings("DuplicatedCode")
 public class ResourceWrapper {
 
-    private static final String ALICE_JAR = FileUtil.getJarPath(Meow.class);
+    private static final URL ALICE_URL;
+
+    static {
+        try {
+            ALICE_URL = new URL("file:".concat(FileUtil.ALICE_PATH));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static class LegacyResource {
+
 
         public static BiFunction<Resource, String, Resource> legacyResourceFunction = (resource, name) -> {
             try {
@@ -27,21 +36,22 @@ public class ResourceWrapper {
         };
 
         public static Resource processLegacyResource(Resource resource, String name) throws IOException {
-            if (name != null && !name.contains("/")) {
-                System.out.println(name);
-            }
-            boolean flag = resource != null;
-            if (ClassPatcher.shouldRunTransformers()) {
-                byte[] data = ClassPatcher.runTransformers(resource != null ? resource.getBytes() : null, name);
+            if (resource != null && ClassPatcher.shouldRunTransformers()) {
+                byte[] data = ClassPatcher.runTransformers(resource.getBytes(), name);
                 if (data == null) {
                     return resource;
                 }
                 InputStream is = new ByteArrayInputStream(data);
-                String _name = flag ? resource.getName() : name;
-                URL _url = flag ? resource.getURL() : null;
-                URL _cs_url = flag ? resource.getCodeSourceURL() : new URL("file:".concat(ALICE_JAR));
+                String _name = resource.getName();
+                URL _url = resource.getURL();
+                URL _cs_url = resource.getCodeSourceURL();
                 int length = data.length;
                 return new LegacyStaticResource(_name, _url, _cs_url, is, length);
+            } else if (resource == null && ClassPatcher.shouldRunProviders()) {
+                byte[] data = ClassPatcher.runProviders(name);
+                if (data != null) {
+                    return new LegacyStaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length);
+                }
             }
             return resource;
         }
@@ -99,18 +109,22 @@ public class ResourceWrapper {
         };
 
         public static jdk.internal.loader.Resource processResource(jdk.internal.loader.Resource resource, String name) throws IOException {
-            boolean flag = resource != null;
-            if (ClassPatcher.shouldRunTransformers()) {
-                byte[] data = ClassPatcher.runTransformers(flag ? resource.getBytes() : null, name);
+            if (resource != null && ClassPatcher.shouldRunTransformers()) {
+                byte[] data = ClassPatcher.runTransformers(resource.getBytes(), name);
                 if (data == null) {
                     return resource;
                 }
                 InputStream is = new ByteArrayInputStream(data);
-                String _name = flag ? resource.getName() : name;
-                URL _url = flag ? resource.getURL() : null;
-                URL _cs_url = flag ? resource.getCodeSourceURL() : new URL("file:".concat(ALICE_JAR));
+                String _name = resource.getName();
+                URL _url = resource.getURL();
+                URL _cs_url = resource.getCodeSourceURL();
                 int length = data.length;
                 return new StaticResource(_name, _url, _cs_url, is, length);
+            } else if (resource == null && ClassPatcher.shouldRunProviders()) {
+                byte[] data = ClassPatcher.runProviders(name);
+                if (data != null) {
+                    return new StaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length);
+                }
             }
             return resource;
         }
