@@ -17,6 +17,8 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public class Logger extends Thread {
 
+    private static final boolean IMMEDIATELY_LOG = "true".equals(System.getProperty("alice.debug.log.log_immediately"));
+
     public static final Logger MAIN;
 
     private static final List<Logger> ALL_LOGGERS;
@@ -191,6 +193,10 @@ public class Logger extends Thread {
 
         }
         sb.append(message).append('\n');
-        lines.offer(sb.toString());
+        if (!IMMEDIATELY_LOG) {
+            lines.offer(sb.toString());
+        } else {
+            FileUtil.append(path, sb.toString());
+        }
     }
 }
