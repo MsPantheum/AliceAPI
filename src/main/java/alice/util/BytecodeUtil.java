@@ -9,6 +9,11 @@ public final class BytecodeUtil implements Opcodes {
 
     public static final Type OBJECT_TYPE = Type.getType("Ljava/lang/Object;");
 
+
+    public static String adapt(String s) {
+        return s.replace('(', '_').replace(')', '_').replace('/', '_').replace(';', '_');
+    }
+
     /**
      * Patch a class with the given ClassVisitor.
      *
@@ -213,7 +218,7 @@ public final class BytecodeUtil implements Opcodes {
     };
 
     /**
-     * Pop all the contents on stack according to given types. Only for clear the context of a INVOKE* opcode.
+     * Pop all the contents on the stack according to given types. Only for clear the context of a INVOKE* opcode.
      * Note that the order of args will be reversed due to the JVM invocation order.
      *
      * @param mv   the method to inject
@@ -269,5 +274,38 @@ public final class BytecodeUtil implements Opcodes {
                 throw new IllegalArgumentException();
             }
         }
+    }
+
+    /**
+     * Patch methods in a class
+     *
+     * @param classBytes      the class to patch
+     * @param methodProcessor do your patches
+     * @return the patched class
+     */
+    public static byte[] patchMethods(byte[] classBytes, Function<MethodVisitor, MethodVisitor> methodProcessor) {
+        return patchMethod(classBytes, null, methodProcessor);
+    }
+
+    /**
+     * Patch a specific method in a class.
+     *
+     * @param classBytes      the class to patch
+     * @param target          the target method, pass null to apply to all methods
+     * @param methodProcessor do your patches
+     * @return the patched class
+     */
+    public static byte[] patchMethod(byte[] classBytes, String target, Function<MethodVisitor, MethodVisitor> methodProcessor) {
+        ClassReader cr = new ClassReader(classBytes);
+        ClassWriter cw = new ClassWriter(0);
+        ClassVisitor cv = new ClassVisitor(Opcodes.ASM5, cw) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
+                return target == null ? methodProcessor.apply(mv) : target.equals(name.concat(descriptor)) ? methodProcessor.apply(mv) : mv;
+            }
+        };
+        cr.accept(cv, 0);
+        return cw.toByteArray();
     }
 }
