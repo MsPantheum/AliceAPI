@@ -1,6 +1,7 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.interceptor.ReflectionInterceptor;
 import alice.util.BytecodeUtil;
 import org.objectweb.asm.*;
 
@@ -8,7 +9,7 @@ import java.lang.reflect.Modifier;
 
 public class UniversalPatcher implements Opcodes {
 
-    public static byte[] patch(byte[] data, String name) {
+    public static byte[] patch(byte[] data, String class_name) {
         if (data == null) {
             return null;
         }
@@ -21,6 +22,14 @@ public class UniversalPatcher implements Opcodes {
             @Override
             public MethodVisitor visitMethod(int _access, String _name, String _descriptor, String _signature, String[] _exceptions) {
                 return new MethodVisitor(Platform.ASM_LEVEL, cv.visitMethod(_access, _name, _descriptor, _signature, _exceptions)) {
+
+                    int stack_require = -1;
+                    int local_require = -1;
+
+                    @Override
+                    public void visitMaxs(int maxStack, int maxLocals) {
+                        super.visitMaxs(Math.max(stack_require, maxStack), Math.max(local_require, maxLocals));
+                    }
 
                     @Override
                     public void visitCode() {
@@ -37,8 +46,12 @@ public class UniversalPatcher implements Opcodes {
                             super.visitInsn(ARETURN);
                             super.visitLabel(alice);
                             super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+                            stack_require = 2;
+                            changed[0] = true;
                         }
                     }
+
+                    boolean first_special_insn = true;
 
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
@@ -53,9 +66,14 @@ public class UniversalPatcher implements Opcodes {
                             if (owner.equals("java/net/URLClassLoader") || owner.equals("sun/applet/AppletClassLoader")) {
                                 changed[0] = true;
                                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
-                                super.visitVarInsn(ALOAD, 0);
+                                if (first_special_insn) {
+                                    super.visitVarInsn(ALOAD, 0);
+                                }
                                 super.visitMethodInsn(INVOKESTATIC, "alice/interceptor/URLClassLoaderInterceptor", "creation", "(Ljava/net/URLClassLoader;)Ljava/net/URLClassLoader;", false);
-                                super.visitInsn(POP);
+                                if (first_special_insn) {
+                                    super.visitInsn(POP);
+                                }
+                                first_special_insn = false;
                                 return;
                             }
                         } else if (owner.equals("java/lang/reflect/Method")) {
@@ -74,15 +92,12 @@ public class UniversalPatcher implements Opcodes {
                             }
                         } else if (owner.equals("java/lang/invoke/MethodHandle")) {
                             if (name.equals("invoke") || name.equals("invokeExact")) {
-                                Type type = Type.getType(descriptor);
-                                Type[] args = type.getArgumentTypes();
-                                Type ret_type = type.getReturnType();
-                                if (descriptor.startsWith("(Ljava/lang/invoke/MethodHandle;") || descriptor.startsWith("(Ljava/lang/reflect/")) {//What are you hiding?
+                                if (descriptor.startsWith("(Ljava/lang/invoke/MethodHandle;") || descriptor.startsWith("(Ljava/lang/reflect/")) {//Suspicious.
                                     changed[0] = true;
-                                    BytecodeUtil.popVariables(mv, args);
-                                    super.visitInsn(POP);//The "this" is on top of stack after all the other things cleared.
-                                    BytecodeUtil.generateValue(mv, ret_type);
-                                    return;
+                                    opcode = INVOKESTATIC;
+                                    owner = "alice/generated/".concat(BytecodeUtil.adapt(class_name.substring(0, class_name.length() - 6))).concat("_").concat(name).concat(BytecodeUtil.adapt(descriptor));
+                                    descriptor = "(Ljava/lang/invoke/MethodHandle;".concat(descriptor.substring(1));
+                                    ReflectionInterceptor.MethodHandleInterceptorProvider.addTarget(owner.concat(".class"), name, descriptor);
                                 }
                             }
                         } else if (owner.equals("java/lang/module/ModuleReference") && name.equals("open") && descriptor.equals("()Ljava/lang/module/ModuleReader;")) {
@@ -105,6 +120,9 @@ public class UniversalPatcher implements Opcodes {
                             return;
                         }
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                        if (opcode == INVOKESPECIAL) {
+                            first_special_insn = false;
+                        }
                     }
 
                     @Override

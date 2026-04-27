@@ -12,6 +12,7 @@ import alice.injector.patcher.DebuggerBasePatcher;
 import alice.injector.patcher.DebuggerLocalPatcher;
 import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
 import alice.injector.patcher.UniversalPatcher;
+import alice.interceptor.ReflectionInterceptor;
 import alice.log.Logger;
 import alice.util.*;
 import org.objectweb.asm.FieldVisitor;
@@ -155,7 +156,7 @@ public final class ClassPatcher implements Opcodes {
                         mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/BiFunction", "apply", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
                         mv.visitTypeInsn(CHECKCAST, res);
                     };
-                } else if (method.equals("findResource") && desc.equals("(Ljava/lang/String;Z)Ljava/net/URL;")) {
+                } else if (method.equals("findResource") && desc.startsWith("(Ljava/lang/String;") && desc.endsWith(")Ljava/net/URL;")) {
                     return mv -> {
                         mv.visitInsn(DUP);
                         Label _if = new Label();
@@ -220,14 +221,20 @@ public final class ClassPatcher implements Opcodes {
     }
 
     public static byte[] runProviders(String name) {
-        byte[] _try = cachedClasses1.get(name);
+        byte[] _try = _protected.get(name);
+        if (_protected.containsKey(name)) {
+            return _try;
+        }
+        _try = cachedClasses1.get(name);
         if (_try != null) {
             return _try;
         }
         for (ClassProvider provider : PROVIDERS) {
             _try = provider.provide(name);
             if (_try != null) {
-                _try = runTransformers(_try, name);
+                if (!ReflectionInterceptor.MethodHandleInterceptorProvider.isInterceptor(name)) {
+                    _try = runTransformers(_try, name);
+                }
                 cachedClasses1.put(name, _try);
                 return _try;
             }
@@ -334,8 +341,12 @@ public final class ClassPatcher implements Opcodes {
         Unsafe.ensureClassInitialized(LinuxDebuggerLocalWorkerThreadPatcher.class);
         Unsafe.ensureClassInitialized(UniversalPatcher.class);
         Unsafe.ensureClassInitialized(Overrider.class);
+        Unsafe.ensureClassInitialized(ReflectionInterceptor.MethodHandleInterceptorProvider.class);
 
         try {
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.ClassPatcher$2"));
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.ClassPatcher$3"));
+            Unsafe.ensureClassInitialized(Class.forName("alice.injector.ClassPatcher$4"));
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.patcher.UniversalPatcher$1"));
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.patcher.UniversalPatcher$1$1"));
         } catch (ClassNotFoundException e) {
@@ -366,7 +377,7 @@ public final class ClassPatcher implements Opcodes {
         }
         registerProcessor(new ClassByteProcessor() {
             @Override
-            public byte[] process(byte[] classBytes, String name) {
+            public byte[] processChecked(byte[] classBytes, String name) {
                 return UniversalPatcher.patch(classBytes, name);
             }
         });
@@ -429,6 +440,7 @@ public final class ClassPatcher implements Opcodes {
                 }
             });
         }
+        registerProvider(ReflectionInterceptor.MethodHandleInterceptorProvider::provide);
         Logger.MAIN.info("Necessary processors registered.");
     }
 
@@ -465,7 +477,7 @@ public final class ClassPatcher implements Opcodes {
 
     static {
         if (!DebugUtil.isRunningTest()) {
-            addProtectedJar(ClassUtil.getJarPath(LaunchWrapper.class));
+            addProtectedJar(FileUtil.getJarPath(LaunchWrapper.class));
         }
     }
 
