@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.Meow;
 import alice.Platform;
 import jdk.internal.jimage.ImageReader;
 
@@ -21,6 +22,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public final class FileUtil {
+
+    public static final String ALICE_PATH = getJarPath(Meow.class);
 
     public static void createFile(String path) {
         createFile(Paths.get(path));
