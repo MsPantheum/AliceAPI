@@ -14,7 +14,7 @@ public class TestPatcher {
         ClassPatcher.load();
         ClassPatcher.registerProcessor(new ClassByteProcessor() {
             @Override
-            public byte[] process(byte[] classBytes, String name) {
+            public byte[] processChecked(byte[] classBytes, String name) {
                 if (name.equals("alice/Meow.class")) {
                     ClassReader cr = new ClassReader(classBytes);
                     ClassWriter cw = new ClassWriter(cr, 0);
