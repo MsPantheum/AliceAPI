@@ -30,7 +30,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate a toString invoke. Note that we won't do null check.
+     * Generate a toString invocation. Note that we won't do null check.
      *
      * @param mv the method to inject
      */
