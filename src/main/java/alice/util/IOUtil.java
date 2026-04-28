@@ -22,6 +22,6 @@ public class IOUtil {
     }
 
     public static byte[] readURL(URL url) throws IOException {
-        return IOUtils.toByteArray(url.openStream());
+        return getByteArray(url.openStream());
     }
 }
