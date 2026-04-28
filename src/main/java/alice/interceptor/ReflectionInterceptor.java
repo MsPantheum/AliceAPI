@@ -9,6 +9,7 @@ import org.objectweb.asm.*;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleInfo;
+import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -21,6 +22,9 @@ import java.util.Set;
 
 public final class ReflectionInterceptor {
 
+    private static final boolean DEBUG = "true".equals(System.getProperty("alice.interceptor.reflection.debug"));
+
+    private static final MethodHandles.Lookup LOOKUP = ReflectionUtil.lookup();
     private static final Class<?> NativeMethodAccessorClass;
     private static final Field sun_reflect_NativeMethodAccessorImpl_method_field;
     private static final long sun_reflect_NativeMethodAccessorImpl_method_offset;
@@ -77,7 +81,9 @@ public final class ReflectionInterceptor {
     }
 
     public static Object invoke(Method method, Object obj, Object... args) throws Throwable {
-        Logger.MAIN.warn("Checking invoke of:".concat(method.getDeclaringClass().getName().concat(".").concat(method.toString())));
+        if (DEBUG) {
+            Logger.MAIN.debug("Checking invoke of:".concat(method.getDeclaringClass().getName().concat(".").concat(method.toString())));
+        }
         if (method.getDeclaringClass() == Method.class && method.getName().equals("invoke")) {
             method = (Method) obj;
             obj = args[0];
@@ -125,7 +131,22 @@ public final class ReflectionInterceptor {
     }
 
     public static boolean checkMethodHandle(MethodHandle mh) {
-
+        MethodHandleInfo info;
+        try {
+            info = LOOKUP.revealDirect(mh);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+        Class<?> declaringClass = info.getDeclaringClass();
+        if (declaringClass == MethodHandle.class || declaringClass == Method.class || declaringClass == Field.class) {
+            return true;
+        }
+        if (declaringClass == Unsafe.class || declaringClass == jdk.internal.misc.Unsafe.class) {
+            String name = info.getName();
+            if (name.startsWith("putInt") || name.startsWith("putLong")) {
+                return true;
+            }
+        }
         return false;
     }
 
