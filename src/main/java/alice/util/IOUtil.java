@@ -15,13 +15,17 @@ public class IOUtil {
     }
 
     public static byte[] getByteArray(InputStream in) throws IOException {
-        if (Platform.jigsaw) {
-            return in.readAllBytes();
+        try (InputStream is = in) {
+            if (Platform.jigsaw) {
+                return is.readAllBytes();
+            }
+            return IOUtils.toByteArray(is);
         }
-        return IOUtils.toByteArray(in);
     }
 
     public static byte[] readURL(URL url) throws IOException {
-        return getByteArray(url.openStream());
+        try (InputStream is = url.openStream()) {
+            return getByteArray(is);
+        }
     }
 }
