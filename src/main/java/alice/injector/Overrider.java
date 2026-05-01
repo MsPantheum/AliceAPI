@@ -42,7 +42,7 @@ public final class Overrider implements Opcodes {
 
     public static Class<?> override(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider, ClassProcessor cp) {
         if (Modifier.isAbstract(target.getModifiers())) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Target class is abstract!");
         }
         Method[] methods = ReflectionUtil.getMethods(target);
         ClassWriter cw = new ClassWriter(0);

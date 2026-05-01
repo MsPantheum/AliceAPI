@@ -1,16 +1,9 @@
 package alice.exception;
 
-public class JNIException extends Error {
-
-    private final int error;
+public class JNIException extends NativeException {
 
     public JNIException(String message, int error) {
-        super(message);
-        this.error = error;
+        super(message, error);
     }
 
-    @Override
-    public String getMessage() {
-        return super.getMessage() + ", error code is ".concat(Integer.toString(error)).concat(".");
-    }
 }

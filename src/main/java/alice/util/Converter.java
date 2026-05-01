@@ -2,6 +2,7 @@ package alice.util;
 
 import alice.HSDB;
 import alice.Platform;
+import alice.exception.ShouldNotReachHere;
 import org.objectweb.asm.Type;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.debugger.bsd.BsdDebuggerLocal;
@@ -60,6 +61,6 @@ public final class Converter {
         } else if (Platform.bsd || Platform.darwin) {
             return ((BsdDebuggerLocal) HSDB.debugger).newAddress(addr);
         }
-        throw new IllegalStateException("Should not reach here");
+        throw new ShouldNotReachHere();
     }
 }

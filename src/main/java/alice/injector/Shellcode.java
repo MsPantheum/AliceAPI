@@ -88,7 +88,7 @@ public final class Shellcode {
                 if(j + 1 >= payload.length){
                     break;
                 } else {
-                    throw new RuntimeException("Not enough space! Requiring " + payload.length + " but only have " + j +".");
+                    throw new IllegalArgumentException("Not enough space! Requiring " + payload.length + " but only have " + j + ".");
                 }
             }
         }

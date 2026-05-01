@@ -1,6 +1,5 @@
 package alice;
 
-import alice.exception.ExitNow;
 import alice.log.Logger;
 import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
@@ -42,7 +41,7 @@ public final class HSDB {
             typeDataBase = agent.getTypeDataBase();
         } catch (Throwable e) {
             DebugUtil.printThrowableFully(e);
-            throw new ExitNow(e);
+            throw new RuntimeException(e);
         }
     }
 }

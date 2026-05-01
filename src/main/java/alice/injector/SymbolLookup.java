@@ -41,10 +41,10 @@ public final class SymbolLookup {
     }
 
     /**
-     * Lookup up a symbol from all loaded libraries.
+     * Look up a symbol from all loaded libraries.
      *
      * @param symbol the symbol to lookup.
-     * @return the symbol value in current process.
+     * @return the symbol value in the current process.
      */
     public static long lookup(String symbol) {
         if (cache.containsKey(symbol)) {
@@ -150,12 +150,12 @@ public final class SymbolLookup {
     }
 
     /**
-     * Lookup up a symbol from a specific dynamic library.<br>
+     * Look up a symbol from a specific dynamic library.<br>
      * If param lib is null, it will search in all libraries.
      *
      * @param lib    the dynamic library to use
      * @param symbol the symbol to lookup
-     * @return the symbol value in current process
+     * @return the symbol value in the current process
      */
     public static long lookup(String lib, String symbol) {
         if (lib == null) {

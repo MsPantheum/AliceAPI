@@ -2,6 +2,7 @@ package alice._native.win32;
 
 //LPVOID WINAPI VirtualAlloc (LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 
+import alice.exception.NativeException;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
@@ -62,9 +63,9 @@ public final class VirtualAlloc {
         Method method = klass.findMethod("holder", "()J");
         Shellcode.antiOptimization(method);
         Shellcode.setInterpretedEntry(method, code_base);
-        int success = VirtualProtect.invoke(code_base, 1, 0x40, 0);
-        if (success == 0) {
-            throw new IllegalStateException();
+        int ret = VirtualProtect.invoke(code_base, 1, 0x40, 0);
+        if (ret == 0) {
+            throw new NativeException("VirtualAlloc failed!", ret);
         }
     }
 

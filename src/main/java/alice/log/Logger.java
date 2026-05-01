@@ -1,6 +1,7 @@
 package alice.log;
 
 import alice.LaunchWrapper;
+import alice.exception.ShouldNotReachHere;
 import alice.util.FileUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -43,7 +44,7 @@ public class Logger extends Thread {
         if (!FileUtil.exists(path)) {
             FileUtil.createFile(path);
         } else if (FileUtil.isDirectory(path)) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("WTF?");
         } else {
             FileUtil.write(path, "".getBytes(StandardCharsets.UTF_8));
         }
@@ -124,7 +125,7 @@ public class Logger extends Thread {
                 case DEBUG:
                     return "debug";
                 default:
-                    throw new IllegalStateException();
+                    throw new ShouldNotReachHere();
             }
         }
     }

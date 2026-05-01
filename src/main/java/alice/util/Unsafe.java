@@ -2,7 +2,6 @@ package alice.util;
 
 import alice.Platform;
 import alice.exception.BadEnvironment;
-import alice.exception.ExitNow;
 import alice.log.Logger;
 
 import java.lang.reflect.Constructor;
@@ -20,6 +19,14 @@ public final class Unsafe {
     public static void enableInternalUnsafe() {
         INTERNAL_UNSAFE_AVAILABLE = true;
         Logger.MAIN.info("Switching to InternalUnsafe.");
+    }
+
+    public static Object getUnsafeInstance() {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            return InternalUnsafe.UNSAFE;
+        } else {
+            return LegacyUnsafe.UNSAFE;
+        }
     }
 
     private static final class LegacyUnsafe {
@@ -483,9 +490,9 @@ public final class Unsafe {
 
     static {
         if (ADDRESS_SIZE == 4) {
-            throw new ExitNow("32bit isn't supported!");
+            throw new BadEnvironment("32bit isn't supported!");
         } else if (ADDRESS_SIZE != 8) {
-            throw new ExitNow(new BadEnvironment("Unsupported address size: " + ADDRESS_SIZE));
+            throw new BadEnvironment("Unsupported address size: " + ADDRESS_SIZE);
         }
     }
 

@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.exception.ShouldNotReachHere;
 import alice.log.Logger;
 import org.objectweb.asm.*;
 
@@ -18,7 +19,7 @@ public final class BytecodeUtil implements Opcodes {
      * Patch a class with the given ClassVisitor.
      *
      * @param original   the original class bytes
-     * @param cvFunction provide your ClassVisitor, you should pass the ClassWriter into its constructor.
+     * @param cvFunction used to provide your ClassVisitor, you should pass the ClassWriter into its constructor.
      * @return patched class bytes
      */
     public static byte[] patchClass(byte[] original, Function<ClassWriter, ClassVisitor> cvFunction) {
@@ -39,7 +40,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate a println invoke which prints the string on top of stack.<br>You should ensure that there's a Ljava/lang/String; on top of stack yourself.
+     * Generate a println invocation which prints the string on top of the stack.<br>You should ensure that there's a Ljava/lang/String; on top of the stack yourself.
      *
      * @param mv the method to inject
      */
@@ -50,7 +51,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate an invoke to log the string on top of the stack.<br>You should ensure that there's a Ljava/lang/String; on top of stack yourself.
+     * Generate an invocation to log the string on top of the stack.<br>You should ensure that there's a Ljava/lang/String; on top of the stack yourself.
      *
      * @param mv    the method to inject
      * @param level the log level
@@ -62,7 +63,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate a println invoke which prints a given string.
+     * Generate a println invocation which prints a given string.
      *
      * @param mv      the method to inject
      * @param message the str to print
@@ -74,7 +75,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate a println invoke which prints an object read from local variables.
+     * Generate a println invocation which prints an object read from local variables.
      *
      * @param mv    the method to inject
      * @param index the index of the local variable
@@ -86,7 +87,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Generate an invoke to log a message.
+     * Generate an invocation to log a message.
      *
      * @param mv      the method to inject
      * @param level   the log level
@@ -99,7 +100,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Automatically push an integer into stack using the best operation.
+     * Automatically push an integer into the stack using the best operation.
      *
      * @param mv      the method to inject
      * @param integer the integer to push into stack
@@ -117,7 +118,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Create a new array with custom dimension with given type.
+     * Create a new array with the custom dimension and the given type.
      *
      * @param mv        the method to inject
      * @param dimension the dimension of the array
@@ -137,7 +138,7 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     /**
-     * Create a new 1 dimension array with given type.
+     * Create a new 1-dimension array with the given type.
      *
      * @param mv   the method to inject
      * @param size the size of the array
@@ -199,7 +200,7 @@ public final class BytecodeUtil implements Opcodes {
     public static void boxing(MethodVisitor mv, Type type) {
         String internalName = type.getInternalName();
         if (internalName.length() != 1 || internalName.equals("V")) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Please provide a primitive type!");
         }
         String class_name = type.getClassName();
         class_name = "java/lang/" + Character.toUpperCase(class_name.charAt(0)) + class_name.substring(1);
@@ -218,7 +219,7 @@ public final class BytecodeUtil implements Opcodes {
     };
 
     /**
-     * Pop all the contents on the stack according to given types. Only for clear the context of a INVOKE* opcode.
+     * Pop all the contents on the stack according to given types. Only for clear the context of an INVOKE* opcode.
      * Note that the order of args will be reversed due to the JVM invocation order.
      *
      * @param mv   the method to inject
@@ -271,7 +272,7 @@ public final class BytecodeUtil implements Opcodes {
                 break;
             }
             default: {
-                throw new IllegalArgumentException();
+                throw new ShouldNotReachHere();
             }
         }
     }

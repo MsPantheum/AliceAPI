@@ -32,6 +32,8 @@ public final class LaunchWrapper {
         } catch (Throwable t) {
             t.printStackTrace(System.out);
             DebugUtil.printThrowableFully(t);
+            throw new RuntimeException("Your application just crashed.");
         }
     }
+
 }

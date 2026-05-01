@@ -1,6 +1,7 @@
 package alice.injector.patcher;
 
 import alice.Platform;
+import alice.exception.ShouldNotReachHere;
 import alice.interceptor.ReflectionInterceptor;
 import alice.util.BytecodeUtil;
 import org.objectweb.asm.*;
@@ -114,7 +115,7 @@ public class UniversalPatcher implements Opcodes {
                             } else if (descriptor.endsWith("Ljava/lang/ModuleLayer$Controller;")) {
                                 flag = false;
                             } else {
-                                throw new IllegalStateException();
+                                throw new ShouldNotReachHere();
                             }
                             super.visitMethodInsn(INVOKESTATIC, "alice/interceptor/ModuleLayerInterceptor", flag ? "processModuleLayer" : "processController", flag ? "(Ljava/lang/ModuleLayer;)Ljava/lang/ModuleLayer;" : "(Ljava/lang/ModuleLayer$Controller;)Ljava/lang/ModuleLayer$Controller;", false);
                             return;

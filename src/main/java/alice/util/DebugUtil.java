@@ -88,4 +88,8 @@ public final class DebugUtil {
             Logger.MAIN.debug(ste.toString());
         }
     }
+
+    public static StackTraceElement getCaller() {
+        return Thread.currentThread().getStackTrace()[2];
+    }
 }

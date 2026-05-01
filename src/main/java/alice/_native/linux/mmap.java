@@ -1,5 +1,6 @@
 package alice._native.linux;
 
+import alice.exception.NativeException;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
@@ -48,9 +49,9 @@ public final class mmap {
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 32, SymbolLookup.lookup("mmap"));
-        int success = mprotect.invoke(AddressUtil.align(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        if (success != 0) {
-            throw new IllegalStateException();
+        int ret = mprotect.invoke(AddressUtil.align(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        if (ret != 0) {
+            throw new NativeException("mmap failed!", ret);
         }
         InstanceKlass klass = ClassUtil.getKlass(mmap.class);
         Method method = klass.findMethod("holder", "()J");

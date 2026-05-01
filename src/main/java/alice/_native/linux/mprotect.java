@@ -2,6 +2,7 @@ package alice._native.linux;
 
 //int mprotect (void *__addr, size_t __len, int __prot)
 
+import alice.exception.NativeException;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
@@ -137,8 +138,7 @@ public final class mprotect {
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
         int ret = Bootstrap.invoke(AddressUtil.align(code_base), 1, PROT_EXEC | PROT_WRITE | PROT_READ);
         if (ret != 0) {
-            System.out.println(ret);
-            throw new IllegalStateException();
+            throw new NativeException("mprotect failed!", ret);
         }
         InstanceKlass klass = ClassUtil.getKlass(mprotect.class);
         Method method = klass.findMethod("holder", "()I");

@@ -1,5 +1,6 @@
 package alice._native.win32;
 
+import alice.exception.NativeException;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
@@ -198,7 +199,7 @@ public final class VirtualProtect {
         Shellcode.setInterpretedEntry(method, code_base);
         int ret = Bootstrap.invoke(code_base, 1, 0x40, 0);
         if (ret == 0) {
-            throw new IllegalStateException();
+            throw new NativeException("VirtualProtect failed!", ret);
         }
     }
 

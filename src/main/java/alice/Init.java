@@ -1,5 +1,8 @@
 package alice;
 
+import alice._native.jni.JNIInvokeInterface_.GetEnv;
+import alice._native.jni.JNINativeInterface_.NewGlobalRef;
+import alice._native.jni.JNI_GetCreatedJavaVMs;
 import alice._native.linux.mmap;
 import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
@@ -7,7 +10,7 @@ import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualFree;
 import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
-import alice.exception.ExitNow;
+import alice.exception.ShouldNotReachHere;
 import alice.injector.ClassPatcher;
 import alice.log.Logger;
 import alice.util.*;
@@ -42,7 +45,7 @@ public final class Init {
             Logger.MAIN.info("Append HSDB.");
             Logger.MAIN.info("Path: " + FileUtil.getHSDB());
             if (!Files.exists(FileUtil.getHSDB())) {
-                throw new RuntimeException("THE FUCK?");
+                throw new ShouldNotReachHere();
             }
             ClassUtil.append(FileUtil.getHSDB(), loader);
         }
@@ -56,15 +59,11 @@ public final class Init {
      */
     private static void init() {
         Thread.UncaughtExceptionHandler handle = (t, e) -> {
-            if (!(e instanceof ExitNow)) {
-                Logger.MAIN.fatal("Uncaught exception in thread " + t.getName());
-                DebugUtil.printThrowableFully(e);
-                Logger.MAIN.fatal(String.valueOf(ProcessUtil.getPID()));
-                e.printStackTrace(System.out);
-                ProcessUtil.guiPause();
-            } else {
-                Runtime.getRuntime().exit(-1);
-            }
+            Logger.MAIN.fatal("Uncaught exception in thread " + t.getName());
+            DebugUtil.printThrowableFully(e);
+            Logger.MAIN.fatal(String.valueOf(ProcessUtil.getPID()));
+            e.printStackTrace(System.out);
+            ProcessUtil.guiPause();
         };
         Thread.setDefaultUncaughtExceptionHandler(handle);
         Thread.currentThread().setUncaughtExceptionHandler(handle);
@@ -91,9 +90,9 @@ public final class Init {
             Unsafe.ensureClassInitialized(VirtualAlloc.class);
             Unsafe.ensureClassInitialized(VirtualFree.class);
         }
-//        Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
-//        Unsafe.ensureClassInitialized(GetEnv.class);
-//        Unsafe.ensureClassInitialized(NewGlobalRef.class);
+        Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
+        Unsafe.ensureClassInitialized(GetEnv.class);
+        Unsafe.ensureClassInitialized(NewGlobalRef.class);
         init = true;
     }
 

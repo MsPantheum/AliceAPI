@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.exception.BadEnvironment;
 import alice.injector.SymbolLookup;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
@@ -43,7 +44,7 @@ public final class AddressUtil {
                     location = Unsafe.getLong(array, baseOffset);
                     break;
                 default:
-                    throw new Error("unsupported address size: " + addressSize);
+                    throw new BadEnvironment("unsupported address size: " + addressSize);
             }
 
             return location * 8L;
