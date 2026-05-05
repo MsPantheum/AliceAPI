@@ -4,12 +4,17 @@ import alice.exception.ShouldNotReachHere;
 import alice.log.Logger;
 import org.objectweb.asm.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class BytecodeUtil implements Opcodes {
 
+    /**
+     * The Object type.
+     */
     public static final Type OBJECT_TYPE = Type.getType("Ljava/lang/Object;");
-
 
     public static String adapt(String s) {
         return s.replace('(', '_').replace(')', '_').replace('/', '_').replace(';', '_');
@@ -198,13 +203,73 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     public static void boxing(MethodVisitor mv, Type type) {
-        String internalName = type.getInternalName();
-        if (internalName.length() != 1 || internalName.equals("V")) {
-            throw new IllegalArgumentException("Please provide a primitive type!");
-        }
-        String class_name = type.getClassName();
+        String class_name = primitive2Boxed(type);
         class_name = "java/lang/" + Character.toUpperCase(class_name.charAt(0)) + class_name.substring(1);
         mv.visitMethodInsn(INVOKESTATIC, class_name, "valueOf", '(' + type.getInternalName() + ")L" + class_name + ';', false);
+    }
+
+    public static void unboxing(MethodVisitor mv, Type type) {
+        switch (type.getInternalName()) {
+            case "java/lang/Boolean": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+                break;
+            }
+            case "java/lang/Byte": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Byte", "byteValue", "()B", false);
+                break;
+            }
+            case "java/lang/Character": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Character", "charValue", "()C", false);
+                break;
+            }
+            case "java/lang/Short": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Short", "shortValue", "()S", false);
+                break;
+            }
+            case "java/lang/Integer": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+                break;
+            }
+            case "java/lang/Long": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Long", "longValue", "()J", false);
+                break;
+            }
+            case "java/lang/Float": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Float", "floatValue", "()F", false);
+                break;
+            }
+            case "java/lang/Double": {
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                break;
+            }
+            default: {
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    private static String primitive2Boxed(Type type) {
+        String name = type.getInternalName();
+        switch (name) {
+            case "byte":
+                return "java/lang/Byte";
+            case "short":
+                return "java/lang/Short";
+            case "int":
+                return "java/lang/Integer";
+            case "long":
+                return "java/lang/Long";
+            case "float":
+                return "java/lang/Float";
+            case "double":
+                return "java/lang/Double";
+            case "char":
+                return "java/lang/Character";
+            case "boolean":
+                return "java/lang/Boolean";
+            default:
+                throw new IllegalArgumentException(name.concat(" isn't a primitive type!"));
+        }
     }
 
     private static final Type[] SORT_TO_TYPE = {Type.VOID_TYPE,    // 0
@@ -230,6 +295,59 @@ public final class BytecodeUtil implements Opcodes {
             Type arg = args[i];
             mv.visitInsn(arg.getSize() == 1 ? POP : POP2);
         }
+    }
+
+    public static void registerValueProvider(String type, Consumer<MethodVisitor> consumer) {
+        valueProviders.put(type, consumer);
+    }
+
+    private static final Map<String, Consumer<MethodVisitor>> valueProviders = new HashMap<>();
+
+    static {
+        valueProviders.put("java/lang/String", mv -> mv.visitLdcInsn(""));
+        valueProviders.put("java/lang/Integer", mv -> {
+            mv.visitInsn(ICONST_0);
+            boxing(mv, Type.INT_TYPE);
+        });
+        valueProviders.put("java/lang/Boolean", mv -> {
+            mv.visitInsn(ICONST_0);
+            boxing(mv, Type.BOOLEAN_TYPE);
+        });
+        valueProviders.put("java/lang/Byte", mv -> {
+            mv.visitInsn(ICONST_0);
+            boxing(mv, Type.BYTE_TYPE);
+        });
+        valueProviders.put("java/lang/Short", mv -> {
+            mv.visitInsn(ICONST_0);
+            boxing(mv, Type.SHORT_TYPE);
+        });
+        valueProviders.put("java/lang/Long", mv -> {
+            mv.visitInsn(LCONST_0);
+            boxing(mv, Type.LONG_TYPE);
+        });
+        valueProviders.put("java/lang/Float", mv -> {
+            mv.visitInsn(FCONST_0);
+            boxing(mv, Type.FLOAT_TYPE);
+        });
+        valueProviders.put("java/lang/Double", mv -> {
+            mv.visitInsn(DCONST_0);
+            boxing(mv, Type.DOUBLE_TYPE);
+        });
+        valueProviders.put("java/lang/Character", mv -> {
+            mv.visitInsn(ICONST_0);
+            boxing(mv, Type.CHAR_TYPE);
+        });
+        valueProviders.put("java/util/Iterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyIterator", "Ljava/util/Iterator;", false));
+        valueProviders.put("java/util/ListIterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyListIterator", "Ljava/util/ListIterator;", false));
+        valueProviders.put("java/util/NavigableMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyNavigableMap", "Ljava/util/NavigableMap;", false));
+        valueProviders.put("java/util/SortedMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySortedMap", "Ljava/util/SortedMap;", false));
+        valueProviders.put("java/util/Map", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyMap", "Ljava/util/Map;", false));
+        valueProviders.put("java/util/List", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyList", "Ljava/util/List;", false));
+        valueProviders.put("java/util/NavigableSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyNavigableSet", "Ljava/util/NavigableSet;", false));
+        valueProviders.put("java/util/SortedSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySortedSet", "Ljava/util/SortedSet;", false));
+        valueProviders.put("java/util/Set", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySet", "Ljava/util/Set;", false));
+        valueProviders.put("java/util/Enumeration", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyEnumeration", "Ljava/util/Enumeration;", false));
+
     }
 
     public static void generateValue(MethodVisitor mv, Type type) {
@@ -267,8 +385,12 @@ public final class BytecodeUtil implements Opcodes {
                 break;
             }
             case Type.OBJECT: {
-                //TODO generate values for some common type like String,List,etc...
-                mv.visitInsn(ACONST_NULL);
+                Consumer<MethodVisitor> _try = valueProviders.get(type.getInternalName());
+                if (_try != null) {
+                    _try.accept(mv);
+                } else {
+                    mv.visitInsn(ACONST_NULL);
+                }
                 break;
             }
             default: {
