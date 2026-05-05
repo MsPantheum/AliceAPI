@@ -36,11 +36,11 @@ public final class Overrider implements Opcodes {
         void accept(ClassWriter cw);
     }
 
-    public static Class<?> override(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider) {
-        return override(target, mpProvider, null);
+    public static Class<?> overrideWithDelegate(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider) {
+        return overrideWithDelegate(target, mpProvider, null);
     }
 
-    public static Class<?> override(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider, ClassProcessor cp) {
+    public static Class<?> overrideWithDelegate(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider, ClassProcessor cp) {
         if (Modifier.isAbstract(target.getModifiers())) {
             throw new IllegalArgumentException("Target class is abstract!");
         }

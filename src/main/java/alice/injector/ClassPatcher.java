@@ -143,7 +143,7 @@ public final class ClassPatcher implements Opcodes {
                 tmp = "(Ljava/lang/String;)" + res_type;
             }
             final String target_desc = tmp;
-            overrideJarLoader = Overrider.override(target, (method, desc) -> {
+            overrideJarLoader = Overrider.overrideWithDelegate(target, (method, desc) -> {
                 if (method.equals("getResource") && desc.equals(target_desc)) {
                     Logger.MAIN.debug("Overriding " + method + desc + ".");
                     return mv -> {
