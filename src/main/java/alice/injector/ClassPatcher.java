@@ -8,10 +8,7 @@ import alice.injector.classloading.CollectionWrapper;
 import alice.injector.classloading.Module2Reader;
 import alice.injector.classloading.ResourceWrapper;
 import alice.injector.classloading.WrappedModuleReader;
-import alice.injector.patcher.DebuggerBasePatcher;
-import alice.injector.patcher.DebuggerLocalPatcher;
-import alice.injector.patcher.LinuxDebuggerLocalWorkerThreadPatcher;
-import alice.injector.patcher.UniversalPatcher;
+import alice.injector.patcher.*;
 import alice.interceptor.ReflectionInterceptor;
 import alice.log.Logger;
 import alice.util.*;
@@ -440,6 +437,12 @@ public final class ClassPatcher implements Opcodes {
                 }
             });
         }
+        registerProcessor(new ClassByteProcessor() {
+            @Override
+            public byte[] processChecked(byte[] classBytes, String name) {
+                return AccessPatcher.transform(classBytes, name);
+            }
+        });
         registerProvider(ReflectionInterceptor.MethodHandleInterceptorProvider::provide);
         Logger.MAIN.info("Necessary processors registered.");
     }
