@@ -6,6 +6,7 @@ import alice.util.FileUtil;
 import alice.util.ProcReader;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import sun.jvm.hotspot.debugger.win32.coff.COFFException;
 import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
 import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 
@@ -29,7 +30,13 @@ public final class SymbolLookup {
     private static ExportDirectoryTable getExport(String lib) {
         ExportDirectoryTable table;
         if (!exports.containsKey(lib)) {
-            table = COFFFileParser.getParser().parse(lib).getHeader().getOptionalHeader().getDataDirectories().getExportDirectoryTable();
+            Logger.MAIN.info("Parsing library: ".concat(lib).concat("."));
+            try {
+                table = COFFFileParser.getParser().parse(lib).getHeader().getOptionalHeader().getDataDirectories().getExportDirectoryTable();
+            } catch (COFFException e) {
+                Logger.MAIN.error("Failed to parse library: ".concat(lib).concat("."));
+                return null;
+            }
             if (table == null) {
                 return null;
             }
@@ -62,14 +69,16 @@ public final class SymbolLookup {
                 }
             } else {
                 ExportDirectoryTable table = getExport(lib);
-                for (int i = 0; i < Objects.requireNonNull(table).getNumberOfNamePointers(); i++) {
-                    short ordinal = table.getExportOrdinal(i);
-                    String name = table.getExportName(i);
-                    long address = table.getExportAddress(ordinal);
-                    if (name.equals(symbol)) {
-                        ret[0] = base + address;
+                if (table != null) {
+                    for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+                        short ordinal = table.getExportOrdinal(i);
+                        String name = table.getExportName(i);
+                        long address = table.getExportAddress(ordinal);
+                        if (name.equals(symbol)) {
+                            ret[0] = base + address;
+                        }
+                        cache.put(name, base + address);
                     }
-                    cache.put(name, base + address);
                 }
             }
         });

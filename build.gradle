@@ -39,15 +39,11 @@ test {
 
 shadowJar {
     dependencies {
-//        exclude(dependency('org.ow2.asm:.*:.*'))
         exclude("sun/**")
-//        exclude("com/**")
-//        exclude("org/**")
-//        exclude("it/**")
         exclude("java/**")
         exclude("javax/**")
         exclude("jdk/**")
-        // Example: exclude(dependency('org.scala-lang:.*:.*'))
+        exclude("com/sun/**")
     }
 }
 
@@ -65,7 +61,7 @@ jar {
     exclude("sun/**")
     exclude("jdk/**")
     exclude("javax/**")
-    exclude("com/**")
+    exclude("com/sun/**")
 }
 
 java {

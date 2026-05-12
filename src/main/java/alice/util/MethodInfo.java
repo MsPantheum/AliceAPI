@@ -13,7 +13,11 @@ public final class MethodInfo {
 
     @Override
     public int hashCode() {
-        return (holder.getName() + methodName + methodDesc).hashCode();
+        int result = 0;
+        result = 31 * result + holder.hashCode();
+        result = 31 * result + methodName.hashCode();
+        result = 31 * result + methodDesc.hashCode();
+        return result;
     }
 
     @Override

@@ -5,6 +5,7 @@ package alice._native.win32;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
+import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
@@ -51,10 +52,9 @@ public final class VirtualFree {
         payload[52] = (byte) 0x28;
         payload[53] = (byte) 0xc3;
 
-        code_base = Unsafe.allocateMemory(payload.length);
+        code_base = MemoryUtil.allocate(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 6, SymbolLookup.lookup("VirtualFree"));
-        VirtualProtect.invoke(code_base, 1, 0x40, 0);
         InstanceKlass klass = ClassUtil.getKlass(VirtualFree.class);
         Method method = klass.findMethod("holder", "()I");
         Shellcode.setInterpretedEntry(method, code_base);

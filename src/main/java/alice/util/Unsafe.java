@@ -119,6 +119,10 @@ public final class Unsafe {
             return UNSAFE.getChar(o, offset);
         }
 
+        public static char getChar(long address) {
+            return UNSAFE.getChar(address);
+        }
+
         public static void putByteVolatile(Object o, long offset, byte b) {
             UNSAFE.putByteVolatile(o, offset, b);
         }
@@ -289,6 +293,10 @@ public final class Unsafe {
 
         public static boolean compareAndSwapLong(Object o, long offset, long expected, long x) {
             return UNSAFE.compareAndSwapLong(o, offset, expected, x);
+        }
+
+        public static void putChar(long address, char value) {
+            UNSAFE.putChar(address, value);
         }
     }
 
@@ -483,6 +491,14 @@ public final class Unsafe {
         public static long objectFieldOffset(Class<?> c, String name) {
             return UNSAFE.objectFieldOffset(c, name);
         }
+
+        public static char getChar(long address) {
+            return UNSAFE.getChar(address);
+        }
+
+        public static void putChar(long address, char value) {
+            UNSAFE.putChar(address, value);
+        }
     }
 
     public static final int ADDRESS_SIZE = addressSize();
@@ -570,6 +586,18 @@ public final class Unsafe {
 
     public static char getChar(Object o, long offset) {
         return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getChar(o, offset) : LegacyUnsafe.getChar(o, offset);
+    }
+
+    public static char getChar(long address) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getChar(address) : LegacyUnsafe.getChar(address);
+    }
+
+    public static void putChar(long address, char value) {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.putChar(address, value);
+        } else {
+            LegacyUnsafe.putChar(address, value);
+        }
     }
 
     public static void putByteVolatile(Object o, long offset, byte b) {

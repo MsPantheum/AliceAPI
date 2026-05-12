@@ -1,11 +1,15 @@
 package alice._native.stdlib;
 
 import alice.Platform;
+import alice._native.CString;
 import alice._native.linux.mprotect;
 import alice._native.win32.VirtualProtect;
 import alice.injector.Shellcode;
 import alice.injector.SymbolLookup;
-import alice.util.*;
+import alice.util.AddressUtil;
+import alice.util.ClassUtil;
+import alice.util.MemoryUtil;
+import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 

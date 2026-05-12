@@ -51,7 +51,7 @@ public final class ClassPatcher implements Opcodes {
     private static final Map<String, byte[]> cachedClasses = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> cachedClasses1 = new ConcurrentHashMap<>();
 
-    public static URL mayProvide(String name) throws IOException {
+    private static URL mayProvide(String name) throws IOException {
         if (shouldRunProviders()) {
             byte[] data = runProviders(name);
             if (data != null) {
@@ -226,6 +226,7 @@ public final class ClassPatcher implements Opcodes {
         if (_try != null) {
             return _try;
         }
+        PROVIDERS.removeIf(ClassProvider::endOfLife);
         for (ClassProvider provider : PROVIDERS) {
             _try = provider.provide(name);
             if (_try != null) {
@@ -339,6 +340,7 @@ public final class ClassPatcher implements Opcodes {
         Unsafe.ensureClassInitialized(UniversalPatcher.class);
         Unsafe.ensureClassInitialized(Overrider.class);
         Unsafe.ensureClassInitialized(ReflectionInterceptor.MethodHandleInterceptorProvider.class);
+        Unsafe.ensureClassInitialized(AccessPatcher.class);
 
         try {
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.ClassPatcher$2"));
@@ -469,8 +471,9 @@ public final class ClassPatcher implements Opcodes {
             Enumeration<JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
-                if (entry.getName().endsWith(".class") && !entry.getName().startsWith("java/")) {
-                    _protected.put(entry.getName(), IOUtil.getByteArray(jar.getInputStream(entry)));
+                String name = entry.getName();
+                if (entry.getName().endsWith(".class")) {
+                    _protected.put(name, IOUtil.getByteArray(jar.getInputStream(entry)));
                 }
             }
         } catch (IOException e) {

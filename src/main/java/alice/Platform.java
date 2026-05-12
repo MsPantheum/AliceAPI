@@ -1,7 +1,6 @@
 package alice;
 
 import alice.exception.BadEnvironment;
-import alice.log.Logger;
 import org.objectweb.asm.Opcodes;
 
 /**
@@ -38,7 +37,7 @@ public final class Platform {
         ABI _abi;
         if (os.startsWith("Windows")) {
             _win32 = true;
-            Logger.MAIN.info("Running on windows!");
+            System.out.println("Running on windows!");
             _abi = ABI.WINDOWS_X64;
         } else if (os.equals("Linux")) {
             _linux = true;
@@ -46,15 +45,15 @@ public final class Platform {
         } else if (os.equals("FreeBSD") || os.equals("NetBSD") || os.equals("OpenBSD")) {
             _bsd = true;
             _abi = ABI.SYSTEM_V;
-            Logger.MAIN.warn("Bsd should be supported but it's not guaranteed.");
+            System.out.println("Bsd should be supported but it's not guaranteed.");
         } else if (os.equals("SunOS")) {
             _solaris = true;
             _abi = ABI.SYSTEM_V;
-            Logger.MAIN.warn("Wait what solaris?");
+            System.out.println("Wait what solaris?");
         } else if (os.contains("Darwin") || os.contains("OS X")) {
             _darwin = true;
             _abi = ABI.SYSTEM_V;
-            Logger.MAIN.warn("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
+            System.out.println("Darwin hasn't been tested! And it will never be tested and officially supported unless someone buy me a Mac.");
         } else {
             throw new BadEnvironment(os);
         }
@@ -89,8 +88,10 @@ public final class Platform {
         }
         jigsaw = _module;
         if (jigsaw) {
+            System.out.println("Using ASM9!");
             ASM_LEVEL = Opcodes.ASM9;
         } else {
+            System.out.println("Using ASM5!");
             ASM_LEVEL = Opcodes.ASM5;
         }
         String version = System.getProperty("java.specification.version");

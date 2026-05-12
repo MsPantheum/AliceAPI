@@ -119,4 +119,12 @@ public class Unsafe {
     public long objectFieldOffset(Class<?> c, String name) {
         return 0;
     }
+
+    public char getChar(long address) {
+        return 0;
+    }
+
+    public void putChar(long address, char value) {
+
+    }
 }

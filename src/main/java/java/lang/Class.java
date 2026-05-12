@@ -7,8 +7,7 @@ import java.security.ProtectionDomain;
 
 @SuppressWarnings("all")
 public class Class<T> {
-    public Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes)
-            throws NoSuchMethodException, SecurityException {
+    public Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes) throws NoSuchMethodException, SecurityException {
         return null;
     }
 
@@ -40,8 +39,7 @@ public class Class<T> {
         return null;
     }
 
-    public Method getDeclaredMethod(String name, Class<?>... parameterTypes)
-            throws NoSuchMethodException, SecurityException {
+    public Method getDeclaredMethod(String name, Class<?>... parameterTypes) throws NoSuchMethodException, SecurityException {
         return null;
     }
 
@@ -56,4 +54,8 @@ public class Class<T> {
     public native int getModifiers();
 
     public native Class<?> getComponentType();
+
+    public String getSimpleName() {
+        return null;
+    }
 }
