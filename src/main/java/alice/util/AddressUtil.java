@@ -51,8 +51,17 @@ public final class AddressUtil {
         }
     }
 
-    public static long align(long address) {
+    public static long align_page(long address) {
         return address & -Unsafe.PAGE_SIZE;
+    }
+
+    public static long align(long address, long bound) {
+        //noinspection PointlessBitwiseExpression
+        return (address + bound - 1) & ~(bound - 1);
+    }
+
+    public static long align(long address) {
+        return align(address, Unsafe.ADDRESS_SIZE);
     }
 
     public static final long klass_offset;

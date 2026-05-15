@@ -135,7 +135,7 @@ public final class MemoryUtil {
 
     public static void setMemoryRWX(long address, long size) {
         if (!Platform.win32) {
-            mprotect.invoke(AddressUtil.align(address), size, PROT_EXEC | PROT_WRITE | PROT_READ);
+            mprotect.invoke(AddressUtil.align_page(address), size, PROT_EXEC | PROT_WRITE | PROT_READ);
         } else {
             VirtualProtect.invoke(address, size, PAGE_EXECUTE_READWRITE, 0);
         }

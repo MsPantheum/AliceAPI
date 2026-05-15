@@ -136,7 +136,7 @@ public final class mprotect {
         payload[36] = (byte) 0xe0;
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
-        int ret = Bootstrap.invoke(AddressUtil.align(code_base), 1, PROT_EXEC | PROT_WRITE | PROT_READ);
+        int ret = Bootstrap.invoke(AddressUtil.align_page(code_base), 1, PROT_EXEC | PROT_WRITE | PROT_READ);
         if (ret != 0) {
             throw new NativeException("mprotect failed!", ret);
         }

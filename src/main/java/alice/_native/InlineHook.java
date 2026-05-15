@@ -214,7 +214,7 @@ public final class InlineHook {
         if (hook != null) {
             return hook.simpleHook();
         }
-        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,0x40,0) : mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,0x40,0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
         assert Platform.win32 == (success != 0);
         hook = new Hook(ori, neo, processor);
         HOOKS.put(ori, hook);
@@ -273,7 +273,7 @@ public final class InlineHook {
             return hook.hookWithTrampoline();
         }
 
-        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,PAGE_EXECUTE_READWRITE,0) : mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,PAGE_EXECUTE_READWRITE,0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
         assert Platform.win32 == (success != 0);
         hook = new Hook(ori, neo);
         HOOKS.put(ori, hook);
@@ -287,7 +287,7 @@ public final class InlineHook {
             return hook.hookWithTrampoline(p2trampoline);
         }
 
-        int success = mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        int success = mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
         assert success == 0;
         hook = new Hook(ori, neo);
         HOOKS.put(ori, hook);

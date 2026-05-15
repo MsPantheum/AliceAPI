@@ -49,7 +49,7 @@ public final class mmap {
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 32, SymbolLookup.lookup("mmap"));
-        int ret = mprotect.invoke(AddressUtil.align(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        int ret = mprotect.invoke(AddressUtil.align_page(code_base), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
         if (ret != 0) {
             throw new NativeException("mmap failed!", ret);
         }

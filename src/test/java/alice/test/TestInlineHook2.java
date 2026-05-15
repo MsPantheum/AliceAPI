@@ -95,7 +95,7 @@ public class TestInlineHook2 {
         long neo = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(neo, payload);
         //long neo = Shellcode.getCompiledEntry(TestInlineHook2.class,"hello","()V");
-        int success = mprotect.invoke(AddressUtil.align(neo),1,0x1 | 0x2 | 0x4);
+        int success = mprotect.invoke(AddressUtil.align_page(neo),1,0x1 | 0x2 | 0x4);
         assert success == 0;
         long ori = Shellcode.getCompiledEntry(TestInlineHook2.class,"func","()V");
         InlineHook.simpleHook(ori,neo);

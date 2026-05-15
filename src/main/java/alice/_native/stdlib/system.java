@@ -56,7 +56,7 @@ public final class system {
         if(Platform.win32) {
             VirtualProtect.invoke(code_base,1,PAGE_EXECUTE_READWRITE,0);
         } else {
-            mprotect.invoke(AddressUtil.align(code_base),1,PROT_READ | PROT_WRITE | PROT_EXEC);
+            mprotect.invoke(AddressUtil.align_page(code_base),1,PROT_READ | PROT_WRITE | PROT_EXEC);
         }
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 24, SymbolLookup.lookup("system"));
