@@ -99,7 +99,7 @@ public final class mprotect {
             //__prot here
             payload[35] = (byte) 0xff;
             payload[36] = (byte) 0xe0;
-            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I");
+            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I", true);
             AddressUtil.checkNull(code_base);
             Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
         }

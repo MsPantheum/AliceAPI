@@ -90,6 +90,6 @@ public final class DebugUtil {
     }
 
     public static StackTraceElement getCaller() {
-        return Thread.currentThread().getStackTrace()[2];
+        return Thread.currentThread().getStackTrace()[3];
     }
 }

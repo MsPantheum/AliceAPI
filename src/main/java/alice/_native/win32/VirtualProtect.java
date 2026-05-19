@@ -119,7 +119,7 @@ public final class VirtualProtect {
             payload[60] = (byte) 0x28;
             payload[61] = (byte) 0xc3;
 
-            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I");
+            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I", false);
             Unsafe.putLong(code_base + 36, SymbolLookup.lookup("VirtualProtect"));
         }
 

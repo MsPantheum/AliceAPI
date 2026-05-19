@@ -4,12 +4,17 @@ import alice.Platform;
 import alice._native.linux.mmap;
 import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
+import alice._native.win32.MEMORY_BASIC_INFORMATION;
 import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualProtect;
+import alice._native.win32.VirtualQuery;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.memory.Universe;
 import sun.jvm.hotspot.oops.CompressedKlassPointers;
 import sun.jvm.hotspot.oops.CompressedOops;
+
+import java.util.Collection;
+import java.util.LinkedList;
 
 import static alice.util.constants.Constants.*;
 
@@ -67,6 +72,95 @@ public final class MemoryUtil {
     public static boolean inRel32Range(long p1, long p2) {
         long diff = p2 - p1;
         return diff >= -0x7FFFFF00L && diff <= 0x7FFFFF00L;
+    }
+
+    public static ProcReader.MemoryMapping findMapping(long address) {
+        Collection<LinkedList<ProcReader.MemoryMapping>> list = ProcReader.parseProcMaps().values();
+        for (LinkedList<ProcReader.MemoryMapping> mappings : list) {
+            for (ProcReader.MemoryMapping mapping : mappings) {
+                if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
+                    return mapping;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static boolean safeAddress(long address) {
+        return findMapping(address) != null;
+    }
+
+    public static boolean readable(long address) {
+        if (!Platform.win32) {
+            ProcReader.MemoryMapping mapping = findMapping(address);
+            if (mapping != null) {
+                return mapping.permissions.contains("r");
+            }
+        } else {
+            MEMORY_BASIC_INFORMATION info = new MEMORY_BASIC_INFORMATION();
+            VirtualQuery.invoke(address, info.address, MEMORY_BASIC_INFORMATION.SIZE);
+            int flag = info.Protect() & 0xFF;
+            info.release();
+            switch (flag) {
+                case PAGE_READONLY:
+                case PAGE_READWRITE:
+                case PAGE_WRITECOPY:
+                case PAGE_EXECUTE_READ:
+                case PAGE_EXECUTE_READWRITE:
+                case PAGE_EXECUTE_WRITECOPY:
+                    return true;
+                default: {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean writeable(long address) {
+        if (!Platform.win32) {
+            ProcReader.MemoryMapping mapping = findMapping(address);
+            if (mapping != null) {
+                return mapping.permissions.contains("w");
+            }
+        } else {
+            MEMORY_BASIC_INFORMATION info = new MEMORY_BASIC_INFORMATION();
+            VirtualQuery.invoke(address, info.address, MEMORY_BASIC_INFORMATION.SIZE);
+            int flag = info.Protect() & 0xFF;
+            info.release();
+            switch (flag) {
+                case PAGE_EXECUTE_WRITECOPY:
+                case PAGE_WRITECOPY:
+                case PAGE_EXECUTE_READWRITE:
+                case PAGE_READWRITE:
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean executable(long address) {
+        if (!Platform.win32) {
+            ProcReader.MemoryMapping mapping = findMapping(address);
+            if (mapping != null) {
+                return mapping.permissions.contains("x");
+            }
+        } else {
+            MEMORY_BASIC_INFORMATION info = new MEMORY_BASIC_INFORMATION();
+            VirtualQuery.invoke(address, info.address, MEMORY_BASIC_INFORMATION.SIZE);
+            int flag = info.Protect() & 0xFF;
+            info.release();
+            switch (flag) {
+                case PAGE_EXECUTE:
+                case PAGE_EXECUTE_READ:
+                case PAGE_EXECUTE_READWRITE:
+                case PAGE_EXECUTE_WRITECOPY:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        return false;
     }
 
     /*

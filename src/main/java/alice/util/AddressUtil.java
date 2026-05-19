@@ -1,15 +1,12 @@
 package alice.util;
 
 import alice.exception.BadEnvironment;
-import alice.injector.SymbolLookup;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.oops.Method;
 import sun.jvm.hotspot.runtime.VM;
 import sun.jvm.hotspot.utilities.MethodArray;
 
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 
 import static alice.HSDB.typeDataBase;
@@ -76,7 +73,7 @@ public final class AddressUtil {
         return oopSize == 8 ? Unsafe.getLong(cls, klass_offset) : Unsafe.getInt(cls, klass_offset) & 0xffffffffL;
     }
 
-    public static long getMethod(MethodInfo methodInfo) {
+    public static long getMethodAddress(MethodInfo methodInfo) {
         InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
@@ -107,30 +104,6 @@ public final class AddressUtil {
             }
         }
         return 0;
-    }
-
-    public static boolean safeAddress(String lib, long address) {
-        lib = SymbolLookup.toAbsoluteLibPath(lib);
-        LinkedList<ProcReader.MemoryMapping> mappings = ProcReader.parseProcMaps().get(lib);
-        for (ProcReader.MemoryMapping mapping : mappings) {
-            System.out.println(mapping);
-            if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static boolean safeAddress(long address) {
-        Collection<LinkedList<ProcReader.MemoryMapping>> list = ProcReader.parseProcMaps().values();
-        for (LinkedList<ProcReader.MemoryMapping> mappings : list) {
-            for (ProcReader.MemoryMapping mapping : mappings) {
-                if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
 }

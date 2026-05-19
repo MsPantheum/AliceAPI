@@ -29,14 +29,17 @@ import java.lang.module.ModuleReader;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.Field;
 import java.net.*;
+import java.security.cert.Certificate;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 public final class ClassPatcher implements Opcodes {
 
@@ -257,6 +260,9 @@ public final class ClassPatcher implements Opcodes {
         _try = cachedClasses.get(name);
         if (_try != null) {
             return _try;
+        }
+        if ("org/spongepowered/asm/mixin/FabricUtil.class".equals(name)) {
+            Logger.MAIN.printStackTrace();
         }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
@@ -558,11 +564,7 @@ public final class ClassPatcher implements Opcodes {
                     return new java.net.JarURLConnection(u) {
                         @Override
                         public JarFile getJarFile() throws IOException {
-                            String s = u.toString().substring(4);
-                            if (FileUtil.exists(s)) {
-                                return new JarFile(s.substring(0, s.indexOf("!")));
-                            }
-                            return null;
+                            return juc.getJarFile();
                         }
 
                         @Override
@@ -572,6 +574,36 @@ public final class ClassPatcher implements Opcodes {
                         @Override
                         public InputStream getInputStream() {
                             return new ByteArrayInputStream(finalBytes);
+                        }
+
+                        @Override
+                        public String getEntryName() {
+                            return juc.getEntryName();
+                        }
+
+                        @Override
+                        public Manifest getManifest() throws IOException {
+                            return juc.getManifest();
+                        }
+
+                        @Override
+                        public JarEntry getJarEntry() throws IOException {
+                            return juc.getJarEntry();
+                        }
+
+                        @Override
+                        public Attributes getAttributes() throws IOException {
+                            return juc.getAttributes();
+                        }
+
+                        @Override
+                        public Attributes getMainAttributes() throws IOException {
+                            return juc.getMainAttributes();
+                        }
+
+                        @Override
+                        public Certificate[] getCertificates() throws IOException {
+                            return juc.getCertificates();
                         }
                     };
                 }

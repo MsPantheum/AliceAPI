@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.jar.JarEntry;
@@ -25,26 +26,26 @@ public final class FileUtil {
 
     public static final String ALICE_PATH = getJarPath(Meow.class);
 
-    public static void createFile(String path) {
-        createFile(Paths.get(path));
+    public static void createFile(String path, FileAttribute<?>... attrs) {
+        createFile(Paths.get(path), attrs);
     }
 
-    public static void createFile(Path path) {
+    public static void createFile(Path path, FileAttribute<?>... attrs) {
         try {
             if (path.getParent() != null) {
                 createDirectory(path.getParent());
             }
-            Files.createFile(path);
+            Files.createFile(path, attrs);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void write(String path, byte[] data) {
-        write(Paths.get(path), data);
+    public static void write(String path, byte[] data, StandardOpenOption... options) {
+        write(Paths.get(path), data, options);
     }
 
-    public static void write(Path path, byte[] data) {
+    public static void write(Path path, byte[] data, StandardOpenOption... options) {
         try {
             if (path.getParent() != null) {
                 createDirectory(path.getParent());
@@ -52,17 +53,17 @@ public final class FileUtil {
             if (!exists(path)) {
                 createFile(path);
             }
-            Files.write(path, data);
+            Files.write(path, data, options);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void createDirectory(String path) {
-        createDirectory(Paths.get(path));
+    public static void createDirectory(String path, FileAttribute<?>... attrs) {
+        createDirectory(Paths.get(path), attrs);
     }
 
-    public static void createDirectory(Path path) {
+    public static void createDirectory(Path path, FileAttribute<?>... attrs) {
         if (isDirectory(path)) {
             return;
         }
@@ -71,7 +72,7 @@ public final class FileUtil {
         }
 
         try {
-            Files.createDirectories(path);
+            Files.createDirectories(path, attrs);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

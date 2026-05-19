@@ -79,30 +79,33 @@ public final class Shellcode {
         return getPointer2CompiledEntry(ClassUtil.<InstanceKlass>getKlass(target).findMethod(name, desc));
     }
 
-    public static long inject(byte[] payload, Class<?> target, String name, String desc) {
+    public static long inject(byte[] payload, Class<?> target, String name, String desc, boolean skipVerify) {
         long address = getCompiledEntry(target, name, desc);
         checkNull(address);
-        for(int j = 0; ;j++){
-            byte code = Unsafe.getByte(address + j);
-            if(code == (byte) 0xc2 || code == (byte) 0xc3){
-                if(j + 1 >= payload.length){
+        if (!skipVerify) {
+            for (int j = 0; ; j++) {
+                if (j + 1 >= payload.length) {
                     break;
-                } else {
+                }
+                byte code = Unsafe.getByte(address + j);
+                if (code == (byte) 0xc2 || code == (byte) 0xc3) {
+                    System.out.println(Long.toHexString(code));
                     throw new IllegalArgumentException("Not enough space! Requiring " + payload.length + " but only have " + j + ".");
                 }
+
             }
         }
-        for (int j = 0;j < payload.length ; j++) {
+        for (int j = 0; j < payload.length; j++) {
             Unsafe.putByte(address + j, payload[j]);
         }
         return address;
     }
 
-    public static void dump(long start, long size, PrintStream out){
+    public static void dump(long start, long size, PrintStream out) {
         checkNull(start);
         out.println("----------START_DUMP----------");
-        for(long i = 0; i < size; i++){
-            out.printf("0x%x ",Unsafe.getByte(start+i));
+        for (long i = 0; i < size; i++) {
+            out.printf("0x%x ", Unsafe.getByte(start + i));
         }
         out.println();
         out.println("-----------END_DUMP-----------");

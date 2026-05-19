@@ -9,7 +9,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.CodeSigner;
+import java.security.cert.Certificate;
 import java.util.function.BiFunction;
+import java.util.jar.Manifest;
 
 @SuppressWarnings("DuplicatedCode")
 public class ResourceWrapper {
@@ -46,11 +49,11 @@ public class ResourceWrapper {
                 URL _url = resource.getURL();
                 URL _cs_url = resource.getCodeSourceURL();
                 int length = data.length;
-                return new LegacyStaticResource(_name, _url, _cs_url, is, length);
+                return new LegacyStaticResource(_name, _url, _cs_url, is, length, resource.getManifest(), resource.getCertificates(), resource.getCodeSigners());
             } else if (resource == null && ClassPatcher.shouldRunProviders()) {
                 byte[] data = ClassPatcher.runProviders(name);
                 if (data != null) {
-                    return new LegacyStaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length);
+                    return new LegacyStaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length, null, null, null);
                 }
             }
             return resource;
@@ -62,13 +65,20 @@ public class ResourceWrapper {
             private final URL _cs_url;
             private final InputStream is;
             private final int length;
+            private final Manifest manifest;
+            private final Certificate[] certificates;
+            private final CodeSigner[] codeSigners;
 
-            public LegacyStaticResource(String _name, URL _url, URL _cs_url, InputStream is, int length) {
+
+            public LegacyStaticResource(String _name, URL _url, URL _cs_url, InputStream is, int length, Manifest manifest, Certificate[] certificates, CodeSigner[] codeSigners) {
                 this._name = _name;
                 this._url = _url;
                 this._cs_url = _cs_url;
                 this.is = is;
                 this.length = length;
+                this.manifest = manifest;
+                this.certificates = certificates;
+                this.codeSigners = codeSigners;
             }
 
             @Override
@@ -94,6 +104,21 @@ public class ResourceWrapper {
             @Override
             public int getContentLength() {
                 return length;
+            }
+
+            @Override
+            public Manifest getManifest() {
+                return manifest;
+            }
+
+            @Override
+            public Certificate[] getCertificates() {
+                return certificates;
+            }
+
+            @Override
+            public CodeSigner[] getCodeSigners() {
+                return codeSigners;
             }
         }
     }
@@ -119,29 +144,36 @@ public class ResourceWrapper {
                 URL _url = resource.getURL();
                 URL _cs_url = resource.getCodeSourceURL();
                 int length = data.length;
-                return new StaticResource(_name, _url, _cs_url, is, length);
+                return new StaticResource(_name, _url, _cs_url, is, length, resource.getManifest(), resource.getCertificates(), resource.getCodeSigners());
             } else if (resource == null && ClassPatcher.shouldRunProviders()) {
                 byte[] data = ClassPatcher.runProviders(name);
                 if (data != null) {
-                    return new StaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length);
+                    return new StaticResource(name, null, ALICE_URL, new ByteArrayInputStream(data), data.length, null, null, null);
                 }
             }
             return resource;
         }
 
         public static class StaticResource extends jdk.internal.loader.Resource {
+
             private final String _name;
             private final URL _url;
             private final URL _cs_url;
             private final InputStream is;
             private final int length;
+            private final Manifest manifest;
+            private final Certificate[] certificates;
+            private final CodeSigner[] codeSigners;
 
-            public StaticResource(String _name, URL _url, URL _cs_url, InputStream is, int length) {
+            public StaticResource(String _name, URL _url, URL _cs_url, InputStream is, int length, Manifest manifest, Certificate[] certificates, CodeSigner[] codeSigners) {
                 this._name = _name;
                 this._url = _url;
                 this._cs_url = _cs_url;
                 this.is = is;
                 this.length = length;
+                this.manifest = manifest;
+                this.certificates = certificates;
+                this.codeSigners = codeSigners;
             }
 
             @Override
@@ -167,6 +199,21 @@ public class ResourceWrapper {
             @Override
             public int getContentLength() {
                 return length;
+            }
+
+            @Override
+            public Manifest getManifest() {
+                return manifest;
+            }
+
+            @Override
+            public Certificate[] getCertificates() {
+                return certificates;
+            }
+
+            @Override
+            public CodeSigner[] getCodeSigners() {
+                return codeSigners;
             }
         }
     }

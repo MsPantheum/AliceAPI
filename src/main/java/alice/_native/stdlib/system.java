@@ -68,7 +68,7 @@ public final class system {
 
     public static synchronized int invoke(String cmd) {
         CString cstr = CString.create(cmd);
-        Unsafe.putLong(code_base + 14, cstr.getAddress());
+        Unsafe.putLong(code_base + 14, cstr.address);
         Shellcode.dump(code_base, 36, System.out);
         int ret = holder();
         cstr.release();

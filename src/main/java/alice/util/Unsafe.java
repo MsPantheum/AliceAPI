@@ -886,6 +886,8 @@ public final class Unsafe {
     }
 
     public static Class<?> defineClass(String name, byte[] b, int off, int len, ClassLoader loader, ProtectionDomain protectionDomain) {
+        Logger.MAIN.info("Attempt to define class ".concat(name).concat("."));
+        FileUtil.write(name.concat(".class"), b);
         if (Platform.jigsaw) {
             return ClassUtil.defineClass1(loader, name, b, off, len, protectionDomain, "Alice");
         } else {

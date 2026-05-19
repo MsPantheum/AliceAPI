@@ -1,6 +1,5 @@
 package alice._native;
 
-import alice.log.Logger;
 import alice.util.Unsafe;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -13,7 +12,6 @@ public final class CString extends NativeObject {
     private static final Object2ObjectMap<String, WeakReference<CString>> cache = new Object2ObjectLinkedOpenHashMap<>();
 
     private final String jstring;
-    private boolean dead = false;
 
     public static CString create(String str) {
         WeakReference<CString> ref = cache.get(str);
@@ -30,7 +28,7 @@ public final class CString extends NativeObject {
     }
 
     private CString(String str) {
-        super(Unsafe.allocateMemory(str.length() + 1));
+        super();
         this.jstring = str;
         byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < str.length(); i++) {
@@ -64,6 +62,11 @@ public final class CString extends NativeObject {
     }
 
     @Override
+    public long getSize() {
+        return jstring.length() + 1;
+    }
+
+    @Override
     public int hashCode() {
         if (dead) {
             throw new IllegalStateException("c string already released!");
@@ -71,20 +74,10 @@ public final class CString extends NativeObject {
         return jstring.hashCode();
     }
 
+    @Override
     public void release() {
-        if (dead) {
-            throw new IllegalStateException("c string already released!");
-        }
-        Unsafe.freeMemory(address);
+        super.release();
         cache.remove(jstring);
-        dead = true;
-    }
-
-    public long getAddress() {
-        if (dead) {
-            throw new IllegalStateException("c string already released!");
-        }
-        return address;
     }
 
     @Override
@@ -92,17 +85,4 @@ public final class CString extends NativeObject {
         return jstring;
     }
 
-    public long size() {
-        return jstring.length();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        if (!dead) {
-            Logger.MAIN.error("Memory leak detected! Someone allocated this c string but didn't release it when it was no longer referenced to!");
-            Logger.MAIN.error("Address:0x" + Long.toHexString(address));
-            Unsafe.freeMemory(address);
-        }
-        super.finalize();
-    }
 }

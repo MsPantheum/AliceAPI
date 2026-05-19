@@ -125,4 +125,8 @@ public final class ModuleUtil {
             return Collections.emptySet();
         }
     }
+
+    public static Object getModule(Class<?> cls) {
+        return cls.getModule();
+    }
 }

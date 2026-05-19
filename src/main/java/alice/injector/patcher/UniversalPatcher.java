@@ -52,7 +52,19 @@ public class UniversalPatcher implements Opcodes {
                         }
                     }
 
-                    boolean first_special_insn = true;
+                    boolean first_line = true;
+
+                    Label holder;
+
+                    @Override
+                    public void visitLabel(Label label) {
+                        super.visitLabel(label);
+                        if (holder == null) {
+                            holder = label;
+                        } else {
+                            first_line = false;
+                        }
+                    }
 
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
@@ -67,14 +79,13 @@ public class UniversalPatcher implements Opcodes {
                             if (owner.equals("java/net/URLClassLoader") || owner.equals("sun/applet/AppletClassLoader")) {
                                 changed[0] = true;
                                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
-                                if (first_special_insn) {
+                                if (first_line) {
                                     super.visitVarInsn(ALOAD, 0);
                                 }
                                 super.visitMethodInsn(INVOKESTATIC, "alice/interceptor/URLClassLoaderInterceptor", "creation", "(Ljava/net/URLClassLoader;)Ljava/net/URLClassLoader;", false);
-                                if (first_special_insn) {
+                                if (first_line) {
                                     super.visitInsn(POP);
                                 }
-                                first_special_insn = false;
                                 return;
                             }
                         } else if (owner.equals("java/lang/reflect/Method")) {
@@ -121,9 +132,6 @@ public class UniversalPatcher implements Opcodes {
                             return;
                         }
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
-                        if (opcode == INVOKESPECIAL) {
-                            first_special_insn = false;
-                        }
                     }
 
                     @Override

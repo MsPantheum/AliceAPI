@@ -33,13 +33,16 @@ public class MEMORY_BASIC_INFORMATION extends NativeObject {
         SIZE = AddressUtil.align(Unsafe.ADDRESS_SIZE * 3L + 2 + 4 * 4);
     }
 
-    public static MEMORY_BASIC_INFORMATION allocate() {
-        long address = Unsafe.allocateMemory(SIZE);
-        return new MEMORY_BASIC_INFORMATION(address);
-    }
-
     public MEMORY_BASIC_INFORMATION(long address) {
         super(address);
+    }
+
+    public MEMORY_BASIC_INFORMATION() {
+    }
+
+    @Override
+    public long getSize() {
+        return SIZE;
     }
 
     public long BaseAddress() {

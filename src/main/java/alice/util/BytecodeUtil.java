@@ -1,5 +1,6 @@
 package alice.util;
 
+import alice.Platform;
 import alice.exception.ShouldNotReachHere;
 import alice.log.Logger;
 import org.objectweb.asm.*;
@@ -430,5 +431,41 @@ public final class BytecodeUtil implements Opcodes {
         };
         cr.accept(cv, 0);
         return cw.toByteArray();
+    }
+
+    public static byte[] searchString(byte[] clazz, String target) {
+        return patchClass(clazz, cw -> new StringSearcher(cw, target));
+    }
+
+    private static final class StringSearcher extends ClassVisitor {
+
+        private final String target;
+        private String className;
+
+        private StringSearcher(ClassVisitor classVisitor, String target) {
+            super(Platform.ASM_LEVEL, classVisitor);
+            this.target = target;
+        }
+
+        @Override
+        public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+            className = name;
+            super.visit(version, access, name, signature, superName, interfaces);
+        }
+
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+            return new MethodVisitor(Platform.ASM_LEVEL, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+                @Override
+                public void visitLdcInsn(Object value) {
+                    if (value instanceof String) {
+                        if (((String) value).contains(target)) {
+                            Logger.MAIN.debug("[StringSearcher] Find target ".concat(target).concat(" in ".concat(className).concat(".").concat(name).concat(descriptor).concat(".")));
+                        }
+                    }
+                    super.visitLdcInsn(value);
+                }
+            };
+        }
     }
 }

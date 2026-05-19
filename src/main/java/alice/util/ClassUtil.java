@@ -173,7 +173,6 @@ public final class ClassUtil {
         if (!Platform.jigsaw) {
             throw new IllegalStateException();
         }
-        System.out.println("Attempt to define class ".concat(name));
         try {
             return (Class<?>) defineClass1.invoke(loader, name, b, off, len, pd, source);
         } catch (Throwable e) {
