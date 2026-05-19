@@ -261,9 +261,6 @@ public final class ClassPatcher implements Opcodes {
         if (_try != null) {
             return _try;
         }
-        if ("org/spongepowered/asm/mixin/FabricUtil.class".equals(name)) {
-            Logger.MAIN.printStackTrace();
-        }
         for (ClassByteProcessor processor : PROCESSORS) {
             data = processor.process(data, name);
         }
