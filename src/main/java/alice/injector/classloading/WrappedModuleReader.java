@@ -18,6 +18,8 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -28,6 +30,19 @@ public class WrappedModuleReader implements ModuleReader {
     public WrappedModuleReader(ModuleReader delegate) {
         this.delegate = delegate;
         Logger.MAIN.debug("Wrap module reader: ".concat(delegate.toString()));
+    }
+
+    private static final Map<URI, FileSystem> cache = new HashMap<>();
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> cache.values().forEach(fs -> {
+            try {
+                fs.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        })) {
+        });
     }
 
     private static URI processURI(URI uri, String name) {
@@ -44,9 +59,12 @@ public class WrappedModuleReader implements ModuleReader {
                 String[] parts = uri.toString().split("!");
                 URI fileUri = URI.create(parts[0]);
                 String internalPath = parts[1];
-                try (FileSystem fs = FileSystems.newFileSystem(fileUri, Collections.emptyMap())) {
-                    data = FileUtil.read(fs.getPath(internalPath));
+                FileSystem fs = cache.get(fileUri);
+                if (fs == null) {
+                    fs = FileSystems.newFileSystem(fileUri, Collections.emptyMap());
+                    cache.put(fileUri, fs);
                 }
+                data = FileUtil.read(fs.getPath(internalPath));
             } else if (uri.getScheme().equals("file")) {
                 data = FileUtil.read(Paths.get(uri));
             } else {

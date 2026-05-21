@@ -422,7 +422,7 @@ public final class BytecodeUtil implements Opcodes {
     public static byte[] patchMethod(byte[] classBytes, String target, Function<MethodVisitor, MethodVisitor> methodProcessor) {
         ClassReader cr = new ClassReader(classBytes);
         ClassWriter cw = new ClassWriter(0);
-        ClassVisitor cv = new ClassVisitor(Opcodes.ASM5, cw) {
+        ClassVisitor cv = new ClassVisitor(Platform.ASM_LEVEL, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                 MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
