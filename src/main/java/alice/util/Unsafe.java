@@ -298,6 +298,22 @@ public final class Unsafe {
         public static void putChar(long address, char value) {
             UNSAFE.putChar(address, value);
         }
+
+        public static double getDouble(Object o, long offset) {
+            return UNSAFE.getDouble(o, offset);
+        }
+
+        public static double getDouble(long address) {
+            return UNSAFE.getDouble(address);
+        }
+
+        public static void putDouble(Object o, long offset, double value) {
+            UNSAFE.putDouble(o, offset, value);
+        }
+
+        public static void putDouble(long address, double value) {
+            UNSAFE.putDouble(address, value);
+        }
     }
 
     private static final class InternalUnsafe {
@@ -499,6 +515,23 @@ public final class Unsafe {
         public static void putChar(long address, char value) {
             UNSAFE.putChar(address, value);
         }
+
+        public static double getDouble(Object o, long offset) {
+            return UNSAFE.getDouble(o, offset);
+        }
+
+        public static double getDouble(long address) {
+            return UNSAFE.getDouble(address);
+        }
+
+        public static void putDouble(Object o, long offset, double value) {
+            UNSAFE.putDouble(o, offset, value);
+        }
+
+        public static void putDouble(long address, double value) {
+            UNSAFE.putDouble(address, value);
+        }
+
     }
 
     public static final int ADDRESS_SIZE = addressSize();
@@ -936,6 +969,30 @@ public final class Unsafe {
             return InternalUnsafe.objectFieldOffset(c, name);
         } else {
             return LegacyUnsafe.objectFieldOffset(ReflectionUtil.getField(c, name));
+        }
+    }
+
+    public static double getDouble(Object o, long offset) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getDouble(o, offset) : LegacyUnsafe.getDouble(o, offset);
+    }
+
+    public static void putDouble(Object o, long offset, double value) {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.putDouble(o, offset, value);
+        } else {
+            LegacyUnsafe.putDouble(o, offset, value);
+        }
+    }
+
+    public static double getDouble(long address) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getDouble(address) : LegacyUnsafe.getDouble(address);
+    }
+
+    public static void putDouble(long address, double value) {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.putDouble(address, value);
+        } else {
+            LegacyUnsafe.putDouble(address, value);
         }
     }
 }

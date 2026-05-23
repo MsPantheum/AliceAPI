@@ -127,4 +127,18 @@ public class Unsafe {
     public void putChar(long address, char value) {
 
     }
+
+    public double getDouble(Object o, long offset) {
+        return 0;
+    }
+
+    public void putDouble(Object o, long offset, double value) {
+    }
+
+    public double getDouble(long address) {
+        return 0;
+    }
+
+    public void putDouble(long address, double value) {
+    }
 }
