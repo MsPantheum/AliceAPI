@@ -2,7 +2,7 @@ package alice.test;
 
 import alice.Init;
 import alice._native.InlineHook;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -148,8 +148,8 @@ public class TestInlineHook1 {
         assert test_value == 0x114514 + 1;
         func2(0x191980); System.out.println("After func2 called: 0x" + Long.toHexString(test_value));
         assert test_value == 0x191980 - 1;
-        long p1 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func1","(I)V");
-        long p2 = Shellcode.getCompiledEntry(TestInlineHook1.class,"func2","(I)V");
+        long p1 = MethodInjector.getCompiledEntry(TestInlineHook1.class, "func1", "(I)V");
+        long p2 = MethodInjector.getCompiledEntry(TestInlineHook1.class, "func2", "(I)V");
         InlineHook.simpleHook(p2,p1);
         func2(0x12345);
         assert test_value == 0x12345 + 1;

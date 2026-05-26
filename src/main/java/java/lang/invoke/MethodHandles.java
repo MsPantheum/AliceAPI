@@ -9,6 +9,15 @@ import static java.lang.invoke.MethodHandleNatives.Constants.NESTMATE_CLASS;
 import static java.lang.invoke.MethodHandleNatives.Constants.STRONG_LOADER_LINK;
 
 public class MethodHandles {
+
+    public static MethodHandle constant(Class<?> type, Object value) {
+        return null;
+    }
+
+    public static Lookup lookup() {
+        return null;
+    }
+
     public static final class Lookup {
 
         public static final int PUBLIC = Modifier.PUBLIC;

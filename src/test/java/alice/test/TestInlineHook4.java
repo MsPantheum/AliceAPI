@@ -3,7 +3,7 @@ package alice.test;
 import alice.Init;
 import alice.Platform;
 import alice._native.InlineHook;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -46,11 +46,11 @@ public class TestInlineHook4 {
     @EnabledOnOs(OS.LINUX) //I don't know why JUnit crashed on this.
     public void test(){
         Init.ensureInit();
-        long func1 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func1","()V");
-        long func2 = Shellcode.getCompiledEntry(TestInlineHook4.class,"func2","()V");
+        long func1 = MethodInjector.getCompiledEntry(TestInlineHook4.class, "func1", "()V");
+        long func2 = MethodInjector.getCompiledEntry(TestInlineHook4.class, "func2", "()V");
         long trampoline = InlineHook.hookWithTrampoline(func1,func2);
         func1();
-        boolean success = Shellcode.setCompiledEntry(TestInlineHook4.class, "func3", "()V", trampoline);
+        boolean success = MethodInjector.setCompiledEntry(TestInlineHook4.class, "func3", "()V", trampoline);
         assert success;
         func3();
     }

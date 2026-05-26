@@ -141,4 +141,13 @@ public class Unsafe {
 
     public void putDouble(long address, double value) {
     }
+
+    public void loadFence() {
+    }
+
+    public void storeFence() {
+    }
+
+    public void fullFence() {
+    }
 }

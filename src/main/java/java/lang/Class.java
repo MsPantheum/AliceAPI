@@ -7,6 +7,12 @@ import java.security.ProtectionDomain;
 
 @SuppressWarnings("all")
 public class Class<T> {
+
+    public Method getMethod(String name, Class<?>... parameterTypes)
+            throws NoSuchMethodException, SecurityException {
+        return null;
+    }
+
     public Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes) throws NoSuchMethodException, SecurityException {
         return null;
     }
@@ -28,6 +34,10 @@ public class Class<T> {
     }
 
     public static Class<?> forName(String name) throws ClassNotFoundException {
+        return null;
+    }
+
+    public static Class<?> forName(String name, boolean init, ClassLoader loader) {
         return null;
     }
 

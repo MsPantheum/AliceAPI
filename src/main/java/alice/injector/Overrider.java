@@ -2,7 +2,6 @@ package alice.injector;
 
 import alice.Platform;
 import alice.util.ClassUtil;
-import alice.util.FileUtil;
 import alice.util.ReflectionUtil;
 import alice.util.Unsafe;
 import org.objectweb.asm.ClassWriter;
@@ -114,7 +113,6 @@ public final class Overrider implements Opcodes {
         }
         cw.visitEnd();
         byte[] b = cw.toByteArray();
-        FileUtil.write("Dump/" + c_name + ".class", b);
         return Platform.jigsaw ? ClassUtil.defineClass1(target.getClassLoader(), target.getName() + "Overrides", b, 0, b.length, target.getProtectionDomain(), "null") : Unsafe.defineClass(target.getName() + "Overrides", b, 0, b.length, target.getClassLoader(), target.getProtectionDomain());
     }
 }

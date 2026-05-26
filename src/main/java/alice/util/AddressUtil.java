@@ -77,7 +77,7 @@ public final class AddressUtil {
         InstanceKlass klass = ClassUtil.getKlass(methodInfo.holder);
         @SuppressWarnings("unchecked") List<Method> methods = klass.getImmediateMethods();
         for (Method method : methods) {
-            if (method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)) {
+            if (method.getName().asString().equals(methodInfo.name) && method.getSignature().asString().equals(methodInfo.descriptor)) {
                 return Converter.getAddressValue(method.getAddress());
             }
         }
@@ -99,7 +99,7 @@ public final class AddressUtil {
             long p = start + method_dataFieldOffset + i * offset;
             long m = Unsafe.getAddress(start + method_dataFieldOffset + i * offset);
             Method method = (Method) Metadata.instantiateWrapperFor(Converter.toAddress(m));
-            if (method.getName().asString().equals(methodInfo.methodName) && method.getSignature().asString().equals(methodInfo.methodDesc)) {
+            if (method.getName().asString().equals(methodInfo.name) && method.getSignature().asString().equals(methodInfo.descriptor)) {
                 return p;
             }
         }

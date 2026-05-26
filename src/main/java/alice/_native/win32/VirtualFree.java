@@ -2,7 +2,7 @@ package alice._native.win32;
 
 //WINBOOL WINAPI VirtualFree (LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
 import alice.util.MemoryUtil;
@@ -12,14 +12,11 @@ import sun.jvm.hotspot.oops.Method;
 
 public final class VirtualFree {
 
-    private static int holder() {
-        return System.out.hashCode();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
     static {
-        holder();
         byte[] payload = new byte[54];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0x83;
@@ -57,8 +54,7 @@ public final class VirtualFree {
         Unsafe.putLong(code_base + 6, SymbolLookup.lookup("VirtualFree"));
         InstanceKlass klass = ClassUtil.getKlass(VirtualFree.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.setInterpretedEntry(method, code_base);
-        Shellcode.antiOptimization(method);
+        MethodInjector.setNativePointer(method, code_base);
 
     }
 
@@ -66,7 +62,7 @@ public final class VirtualFree {
         Unsafe.putLong(code_base + 21, lpAddress);
         Unsafe.putLong(code_base + 31, dwSize);
         Unsafe.putInt(code_base + 41, dwFreeType);
-        Shellcode.dump(code_base, 54, System.out);
+        MethodInjector.dump(code_base, 54, System.out);
         return holder();
     }
 }

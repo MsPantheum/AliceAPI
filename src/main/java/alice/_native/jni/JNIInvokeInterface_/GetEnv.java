@@ -1,7 +1,7 @@
 package alice._native.jni.JNIInvokeInterface_;
 
 import alice.Platform;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.util.*;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
@@ -11,16 +11,13 @@ import sun.jvm.hotspot.oops.Method;
 public final class GetEnv {
 
     @SuppressWarnings({"DuplicatedCode"})
-    private static int holder() {
-        return System.out.hashCode();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
     private static final boolean flag = Platform.abi == Platform.ABI.SYSTEM_V;
 
     static {
-        holder();
         byte[] payload = new byte[flag ? 37 : 54];
 
         code_base = MemoryUtil.allocate(payload.length);
@@ -29,9 +26,6 @@ public final class GetEnv {
         AddressUtil.checkNull(JavaVM);
         long GetEnv = Unsafe.getLong(Unsafe.getLong(JavaVM) + Unsafe.ADDRESS_SIZE * 6L);
         AddressUtil.checkNull(GetEnv);
-
-        System.out.println("GetEnv is: 0x".concat(Long.toHexString(GetEnv)));
-
         if (flag) {
             payload[0] = (byte) 0x48;
             payload[1] = (byte) (0xbf);
@@ -83,8 +77,7 @@ public final class GetEnv {
         Unsafe.putLong(code_base + (flag ? 22 : 6), GetEnv);
         InstanceKlass klass = ClassUtil.getKlass(GetEnv.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static int invoke(long vm, long penv, int version) {

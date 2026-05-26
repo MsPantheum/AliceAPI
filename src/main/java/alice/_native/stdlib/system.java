@@ -2,9 +2,7 @@ package alice._native.stdlib;
 
 import alice.Platform;
 import alice._native.CString;
-import alice._native.linux.mprotect;
-import alice._native.win32.VirtualProtect;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
@@ -13,15 +11,9 @@ import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
-import static alice.util.constants.Constants.*;
-
 public final class system {
 
-    private static int holder() {
-        //noinspection ResultOfMethodCallIgnored
-        System.getenv().keySet();
-        return System.lineSeparator().length();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
@@ -53,23 +45,18 @@ public final class system {
         payload[35] = (byte) 0xc3;
         code_base = MemoryUtil.allocate(23);
         AddressUtil.checkNull(code_base);
-        if(Platform.win32) {
-            VirtualProtect.invoke(code_base,1,PAGE_EXECUTE_READWRITE,0);
-        } else {
-            mprotect.invoke(AddressUtil.align_page(code_base),1,PROT_READ | PROT_WRITE | PROT_EXEC);
-        }
+        MemoryUtil.setMemoryRWX(code_base, 1);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 24, SymbolLookup.lookup("system"));
         InstanceKlass klass = ClassUtil.getKlass(system.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public static synchronized int invoke(String cmd) {
         CString cstr = CString.create(cmd);
         Unsafe.putLong(code_base + 14, cstr.address);
-        Shellcode.dump(code_base, 36, System.out);
+        MethodInjector.dump(code_base, 36, System.out);
         int ret = holder();
         cstr.release();
         return ret;

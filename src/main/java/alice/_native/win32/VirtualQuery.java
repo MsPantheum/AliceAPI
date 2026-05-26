@@ -2,7 +2,7 @@ package alice._native.win32;
 
 //SIZE_T WINAPI VirtualFree (LPVOID lpAddress, PMEMORY_BASIC_INFORMATION lpBuffer, SIZE_T dwLength);
 
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
 import alice.util.MemoryUtil;
@@ -12,9 +12,7 @@ import sun.jvm.hotspot.oops.Method;
 
 public class VirtualQuery {
 
-    private static long holder() {
-        return System.nanoTime();
-    }
+    private static native long holder();
 
     private static final long code_base;
 
@@ -62,8 +60,7 @@ public class VirtualQuery {
         Unsafe.putLong(code_base + 10, SymbolLookup.lookup("VirtualQuery"));
         InstanceKlass klass = ClassUtil.getKlass(VirtualQuery.class);
         Method method = klass.findMethod("holder", "()J");
-        Shellcode.setInterpretedEntry(method, code_base);
-        Shellcode.antiOptimization(method);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public static synchronized long invoke(long lpAddress, long lpBuffer, long dwLength) {

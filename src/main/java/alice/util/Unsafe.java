@@ -314,6 +314,18 @@ public final class Unsafe {
         public static void putDouble(long address, double value) {
             UNSAFE.putDouble(address, value);
         }
+
+        public static void loadFence() {
+            UNSAFE.loadFence();
+        }
+
+        public static void storeFence() {
+            UNSAFE.storeFence();
+        }
+
+        public static void fullFence() {
+            UNSAFE.fullFence();
+        }
     }
 
     private static final class InternalUnsafe {
@@ -530,6 +542,18 @@ public final class Unsafe {
 
         public static void putDouble(long address, double value) {
             UNSAFE.putDouble(address, value);
+        }
+
+        public static void loadFence() {
+            UNSAFE.loadFence();
+        }
+
+        public static void storeFence() {
+            UNSAFE.storeFence();
+        }
+
+        public static void fullFence() {
+            UNSAFE.fullFence();
         }
 
     }
@@ -993,6 +1017,30 @@ public final class Unsafe {
             InternalUnsafe.putDouble(address, value);
         } else {
             LegacyUnsafe.putDouble(address, value);
+        }
+    }
+
+    public static void loadFence() {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.loadFence();
+        } else {
+            LegacyUnsafe.loadFence();
+        }
+    }
+
+    public static void storeFence() {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.storeFence();
+        } else {
+            LegacyUnsafe.storeFence();
+        }
+    }
+
+    public static void fullFence() {
+        if (INTERNAL_UNSAFE_AVAILABLE) {
+            InternalUnsafe.fullFence();
+        } else {
+            LegacyUnsafe.fullFence();
         }
     }
 }

@@ -1,7 +1,7 @@
 package alice._native.win32;
 
 import alice.exception.NativeException;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
 import alice.util.Unsafe;
@@ -119,7 +119,7 @@ public final class VirtualProtect {
             payload[60] = (byte) 0x28;
             payload[61] = (byte) 0xc3;
 
-            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I", false);
+            code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", false);
             Unsafe.putLong(code_base + 36, SymbolLookup.lookup("VirtualProtect"));
         }
 
@@ -141,17 +141,11 @@ public final class VirtualProtect {
         }
     }
 
-
-    @SuppressWarnings({"DuplicatedCode"})
-    private static int holder() {
-        return System.out.hashCode();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
     static {
-        holder();
-
         byte[] payload = new byte[62];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0x83;
@@ -193,14 +187,14 @@ public final class VirtualProtect {
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 36, SymbolLookup.lookup("VirtualProtect"));
-        InstanceKlass klass = ClassUtil.getKlass(VirtualProtect.class);
-        Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
         int ret = Bootstrap.invoke(code_base, 1, 0x40, 0);
         if (ret == 0) {
             throw new NativeException("VirtualProtect failed!", ret);
         }
+        InstanceKlass klass = ClassUtil.getKlass(VirtualProtect.class);
+        Method method = klass.findMethod("holder", "()I");
+        MethodInjector.setNativePointer(method, code_base);
+
     }
 
     @SuppressWarnings("DuplicatedCode")

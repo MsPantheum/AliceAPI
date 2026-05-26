@@ -1,6 +1,6 @@
 package alice._native.jni.JNINativeInterface_;
 
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.util.ClassUtil;
 import alice.util.JNIUtil;
 import alice.util.MemoryUtil;
@@ -13,12 +13,9 @@ public class NewGlobalRef {
 
     private static final long code_base;
 
-    private static long holder() {
-        return System.in.hashCode();
-    }
+    private static native long holder();
 
     static {
-        holder();
         byte[] payload = new byte[32];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -38,14 +35,13 @@ public class NewGlobalRef {
         Unsafe.putLong(code_base + 22, function);
         InstanceKlass klass = ClassUtil.getKlass(NewGlobalRef.class);
         Method method = klass.findMethod("holder", "()J");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static long invoke(long JNIEnv, long lobj) {
         Unsafe.putLong(code_base + 2, JNIEnv);
         Unsafe.putLong(code_base + 12, lobj);
-        Shellcode.dump(code_base, 32, System.out);
+        MethodInjector.dump(code_base, 32, System.out);
         return holder();
     }
 }

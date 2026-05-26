@@ -2,7 +2,7 @@ package alice.test;
 
 import alice.Init;
 import alice._native.InlineHook;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -33,9 +33,9 @@ public class TestInlineHook3 {
         Init.ensureInit();
         Class<?> clazz = ArrayList.class;
         assert clazz.getClassLoader() == null;
-        long ori = Shellcode.getCompiledEntry(ArrayList.class,"add","(Ljava/lang/Object;)Z");
+        long ori = MethodInjector.getCompiledEntry(ArrayList.class, "add", "(Ljava/lang/Object;)Z");
         assert ori != 0;
-        long neo = Shellcode.getCompiledEntry(TestInlineHook3.class,"fuck","(Ljava/util/ArrayList;Ljava/lang/Object;)Z");
+        long neo = MethodInjector.getCompiledEntry(TestInlineHook3.class, "fuck", "(Ljava/util/ArrayList;Ljava/lang/Object;)Z");
         assert neo != 0;
         InlineHook.simpleHook(ori,neo);
         //Well,JUnit breaks after this. It ignores this test and not execute subsequent instructions.

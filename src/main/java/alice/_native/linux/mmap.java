@@ -1,7 +1,7 @@
 package alice._native.linux;
 
 import alice.exception.NativeException;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
@@ -16,14 +16,11 @@ import static alice.util.constants.Constants.*;
 public final class mmap {
 
     @SuppressWarnings(value = {"DuplicatedCode"})
-    private static long holder() {
-        return System.nanoTime();
-    }
+    private static native long holder();
 
     private static final long code_base;
 
     static {
-        holder();
         byte[] payload = new byte[58];
         payload[0] = (byte) 0x48;
         payload[1] = (byte) 0xbf;
@@ -55,8 +52,7 @@ public final class mmap {
         }
         InstanceKlass klass = ClassUtil.getKlass(mmap.class);
         Method method = klass.findMethod("holder", "()J");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static long invoke(long __addr, long __len, int __prot, int __flags, int __fd, long __offset) {

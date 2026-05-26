@@ -2,12 +2,15 @@ package alice.util;
 
 import alice.Platform;
 import alice.log.Logger;
+import sun.jvm.hotspot.types.Field;
+import sun.jvm.hotspot.types.Type;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Iterator;
 
 public final class DebugUtil {
 
@@ -91,5 +94,18 @@ public final class DebugUtil {
 
     public static StackTraceElement getCaller() {
         return Thread.currentThread().getStackTrace()[3];
+    }
+
+    public static void printType(Type type) {
+        printType(type, System.out);
+    }
+
+    public static void printType(Type type, PrintStream out) {
+        out.println(type.getName().concat(type.getSuperclass() != null ? " extends ".concat(type.getSuperclass().getName()) : ""));
+        out.println("size=".concat(String.valueOf(type.getSize())));
+        Iterator<Field> fields = type.getFields();
+        if (fields != null) {
+            fields.forEachRemaining(field -> out.println("\t".concat(field.isStatic() ? "static " : "").concat(field.getName()).concat(" ").concat(field.getType().getName()).concat(" size=").concat(String.valueOf(field.getSize())).concat(field.isStatic() ? "" : " offset=".concat(String.valueOf(field.getOffset())))));
+        }
     }
 }

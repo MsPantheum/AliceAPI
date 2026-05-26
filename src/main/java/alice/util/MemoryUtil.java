@@ -20,7 +20,7 @@ import static alice.util.constants.Constants.*;
 
 public final class MemoryUtil {
 
-    public static long allocate(long size) {
+    public synchronized static long allocate(long size) {
         return Platform.win32 ? VirtualAlloc.invoke(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(0, size, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     }
 

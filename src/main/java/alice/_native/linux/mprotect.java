@@ -3,7 +3,7 @@ package alice._native.linux;
 //int mprotect (void *__addr, size_t __len, int __prot)
 
 import alice.exception.NativeException;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
@@ -99,7 +99,7 @@ public final class mprotect {
             //__prot here
             payload[35] = (byte) 0xff;
             payload[36] = (byte) 0xe0;
-            code_base = Shellcode.inject(payload, Bootstrap.class, "holder", "()I", true);
+            code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", true);
             AddressUtil.checkNull(code_base);
             Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
         }
@@ -112,9 +112,7 @@ public final class mprotect {
         }
     }
 
-    private static int holder() {
-        return (int) System.nanoTime();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
@@ -142,8 +140,7 @@ public final class mprotect {
         }
         InstanceKlass klass = ClassUtil.getKlass(mprotect.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static int invoke(long __addr, long __len, int __prot) {

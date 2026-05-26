@@ -1,7 +1,7 @@
 package alice._native.jni;
 
 import alice.Platform;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
@@ -14,15 +14,11 @@ import sun.jvm.hotspot.oops.Method;
 
 public final class JNI_GetCreatedJavaVMs {
 
-    @SuppressWarnings({"DuplicatedCode"})
-    private static int holder() {
-        return (int) System.nanoTime();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
     static {
-        holder();
         byte[] payload = new byte[37];
         boolean flag = Platform.abi == Platform.ABI.SYSTEM_V;
         payload[0] = (byte) 0x48;
@@ -46,8 +42,7 @@ public final class JNI_GetCreatedJavaVMs {
         Unsafe.putLong(code_base + 22, function);
         InstanceKlass klass = ClassUtil.getKlass(JNI_GetCreatedJavaVMs.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static int invoke(long vmBuf, int bufLen, long nVMs) {

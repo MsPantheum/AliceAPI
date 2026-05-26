@@ -3,7 +3,7 @@ package alice.test;
 import alice.Init;
 import alice._native.InlineHook;
 import alice._native.linux.mprotect;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.util.AddressUtil;
 import alice.util.DebugUtil;
 import alice.util.Unsafe;
@@ -97,7 +97,7 @@ public class TestInlineHook2 {
         //long neo = Shellcode.getCompiledEntry(TestInlineHook2.class,"hello","()V");
         int success = mprotect.invoke(AddressUtil.align_page(neo),1,0x1 | 0x2 | 0x4);
         assert success == 0;
-        long ori = Shellcode.getCompiledEntry(TestInlineHook2.class,"func","()V");
+        long ori = MethodInjector.getCompiledEntry(TestInlineHook2.class, "func", "()V");
         InlineHook.simpleHook(ori,neo);
         func();
     }

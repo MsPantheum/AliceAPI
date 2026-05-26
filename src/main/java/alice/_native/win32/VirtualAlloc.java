@@ -3,7 +3,7 @@ package alice._native.win32;
 //LPVOID WINAPI VirtualAlloc (LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 
 import alice.exception.NativeException;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
 import alice.util.Unsafe;
@@ -13,9 +13,7 @@ import sun.jvm.hotspot.oops.Method;
 public final class VirtualAlloc {
 
     @SuppressWarnings({"DuplicatedCode"})
-    public static long holder() {
-        return System.nanoTime();
-    }
+    public static native long holder();
 
     private static final long code_base;
 
@@ -59,14 +57,14 @@ public final class VirtualAlloc {
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 6, SymbolLookup.lookup("VirtualAlloc"));
-        InstanceKlass klass = ClassUtil.getKlass(VirtualAlloc.class);
-        Method method = klass.findMethod("holder", "()J");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
         int ret = VirtualProtect.invoke(code_base, 1, 0x40, 0);
         if (ret == 0) {
             throw new NativeException("VirtualAlloc failed!", ret);
         }
+        InstanceKlass klass = ClassUtil.getKlass(VirtualAlloc.class);
+        Method method = klass.findMethod("holder", "()J");
+        MethodInjector.setNativePointer(method, code_base);
+
     }
 
     public static synchronized long invoke(long lpAddress, long dwSize, int flAllocationType, int flProtect) {

@@ -1,6 +1,6 @@
 package alice._native.linux;
 
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
 import alice.util.MemoryUtil;
@@ -12,15 +12,7 @@ import sun.jvm.hotspot.oops.Method;
 
 public final class munmap {
 
-    private static int holder() {
-        long lllll = 11221144L;
-        int iii = 14514;
-        while (iii != 0 && lllll > 0){
-            iii--;
-            lllll -= iii;
-        }
-        return System.in.hashCode();
-    }
+    private static native int holder();
 
     private static final long code_base;
 
@@ -42,8 +34,7 @@ public final class munmap {
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("munmap"));
         InstanceKlass klass = ClassUtil.getKlass(munmap.class);
         Method method = klass.findMethod("holder", "()I");
-        Shellcode.antiOptimization(method);
-        Shellcode.setInterpretedEntry(method, code_base);
+        MethodInjector.setNativePointer(method, code_base);
     }
 
     public synchronized static int invoke(long __addr, long __len) {

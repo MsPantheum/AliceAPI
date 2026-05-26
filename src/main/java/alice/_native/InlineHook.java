@@ -6,7 +6,7 @@ import alice._native.linux.mprotect;
 import alice._native.linux.munmap;
 import alice._native.win32.VirtualAlloc;
 import alice._native.win32.VirtualProtect;
-import alice.injector.Shellcode;
+import alice.injector.MethodInjector;
 import alice.log.Logger;
 import alice.util.AddressUtil;
 import alice.util.HDE64;
@@ -186,7 +186,7 @@ public final class InlineHook {
             }
             this.backup = Unsafe.readBytes(ori, 14 + offset);
             createJump(ori, offset, neo);
-            Shellcode.dump(ori, 14 + offset, System.err);
+            MethodInjector.dump(ori, 14 + offset, System.err);
             hooked = true;
             return true;
         }
