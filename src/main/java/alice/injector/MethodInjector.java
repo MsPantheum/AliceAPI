@@ -1,13 +1,12 @@
 package alice.injector;
 
-import alice.Platform;
-import alice.util.*;
-import sun.jvm.hotspot.code.NMethod;
+import alice.util.ClassUtil;
+import alice.util.MethodInfo;
+import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
 import java.io.PrintStream;
-import java.lang.invoke.*;
 
 import static alice.HSDB.typeDataBase;
 import static alice.util.AddressUtil.checkNull;
@@ -146,65 +145,7 @@ public final class MethodInjector {
         Unsafe.putInt(getAddressValue(method) + _access_flags_offset, access);
     }
 
-    private static final long _marked_for_deoptimization_offset = Platform.JAVA_VERSION <= 8 ? typeDataBase.lookupType("nmethod").getField("_marked_for_deoptimization").getOffset() : -1;
-    private static final long _state_offset = typeDataBase.lookupType("nmethod").getField("_state").getOffset();
-    private static final long _lock_count_offset = typeDataBase.lookupType("nmethod").getField("_lock_count").getOffset();
 
-    public static void mark4deoptimization(NMethod nmethod) {
-        if (!nmethod.canBeDeoptimized()) {
-            throw new IllegalStateException(nmethod.getName().concat(" can't be deoptimized!"));
-        }
-        if (_marked_for_deoptimization_offset != -1) {
-            Unsafe.putByte(Converter.getAddressValue(nmethod) + _marked_for_deoptimization_offset, (byte) 1);
-        }
-        //Unsafe.putByte(Converter.getAddressValue(nmethod) + _state_offset, (byte) 1);
-    }
-
-    public static void lockNMethod(NMethod nmethod) {
-        long target_address = getAddressValue(nmethod) + _lock_count_offset;
-        int lock = Unsafe.getInt(target_address);
-        Unsafe.loadFence();
-        Unsafe.storeFence();
-        Unsafe.putInt(target_address, lock + 1);
-        Unsafe.fullFence();
-    }
-
-    public static void unlockNMethod(NMethod nmethod) {
-        long target_address = getAddressValue(nmethod) + _lock_count_offset;
-        int lock = Unsafe.getInt(target_address);
-        Unsafe.loadFence();
-        if (lock == 0) {
-            throw new IllegalArgumentException();
-        }
-        Unsafe.storeFence();
-        Unsafe.putInt(target_address, lock - 1);
-        Unsafe.fullFence();
-    }
-
-    private static final Class<?> MHN;
-    private static final MethodHandle setCallSiteTargetNormal;
-
-    static {
-        try {
-            MHN = Class.forName("java.lang.invoke.MethodHandleNatives");
-            setCallSiteTargetNormal = Platform.JAVA_VERSION <= 8 ? ReflectionUtil.findStatic(MHN, "setCallSiteTargetNormal", MethodType.methodType(void.class, CallSite.class, MethodHandle.class)) : null;
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void tryDecompile(Method method) {
-        NMethod nmethod = method.getNativeMethod();
-        lockNMethod(nmethod);
-        mark4deoptimization(nmethod);
-        MutableCallSite mcs = new MutableCallSite(Converter.convert(method));
-        unlockNMethod(nmethod);
-        try {
-            setCallSiteTargetNormal.invoke(mcs, MethodHandles.constant(long.class, 114514191980L));
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static final long Method_SIZE = typeDataBase.lookupType("Method").getSize();
 
