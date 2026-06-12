@@ -53,8 +53,10 @@ public class Logger extends Thread {
         if (!"true".equals(System.getProperty("alice.debug.prioritize_logger"))) {
             setPriority(Thread.MIN_PRIORITY);
         }
-        start();
-        ALL_LOGGERS.add(this);
+        if ("true".equals(System.getProperty("alice.debug.enable_logger"))) {
+            start();
+            ALL_LOGGERS.add(this);
+        }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package alice._native.linux;
 
+import alice._native.ASMUtil;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
@@ -7,6 +8,8 @@ import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
+
+import static alice._native.ASMUtil.Register.*;
 
 //int munmap (void *__addr, size_t __len)
 
@@ -18,17 +21,11 @@ public final class munmap {
 
     static {
         byte[] payload = new byte[32];
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0xbf;
-        //__addr here
-        payload[10] = (byte) 0x48;
-        payload[11] = (byte) 0xbe;
-        //__len here
-        payload[20] = (byte) 0x48;
-        payload[21] = (byte) 0xb8;
-        //function
-        payload[30] = (byte) 0xff;
-        payload[31] = (byte) 0xe0;
+        int p = 0;
+        p = ASMUtil.movabs(payload, p, RDI); // __addr
+        p = ASMUtil.movabs(payload, p, RSI); // __len
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        ASMUtil.jmp(payload, p, RAX);
         code_base = MemoryUtil.allocate(32);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("munmap"));

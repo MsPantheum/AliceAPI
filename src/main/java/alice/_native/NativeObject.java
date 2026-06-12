@@ -6,11 +6,16 @@ import alice.util.Unsafe;
 public abstract class NativeObject {
     public final long address;
     protected boolean dead = false;
-    protected boolean allocated;
+    protected final boolean allocated;
 
     protected NativeObject(long address) {
         this.address = address;
         this.allocated = false;
+    }
+
+    protected NativeObject(long address, boolean allocated) {
+        this.address = address;
+        this.allocated = allocated;
     }
 
     protected NativeObject() {
@@ -51,10 +56,11 @@ public abstract class NativeObject {
 
     @Override
     protected void finalize() throws Throwable {
-        if (!dead) {
+        if (allocated && !dead) {
             Logger.MAIN.error("Memory leak detected! Someone allocated this but didn't release it when it was no longer referenced to!");
             Logger.MAIN.error("Address:0x" + Long.toHexString(address));
             Unsafe.freeMemory(address);
+            dead = true;
         }
         super.finalize();
     }

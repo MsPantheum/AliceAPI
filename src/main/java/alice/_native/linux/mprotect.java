@@ -2,6 +2,7 @@ package alice._native.linux;
 
 //int mprotect (void *__addr, size_t __len, int __prot)
 
+import alice._native.ASMUtil;
 import alice.exception.NativeException;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
@@ -11,6 +12,7 @@ import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
+import static alice._native.ASMUtil.Register.*;
 import static alice.util.constants.Constants.*;
 
 public final class mprotect {
@@ -86,19 +88,12 @@ public final class mprotect {
                 holder();
             }
             byte[] payload = new byte[37];
-            payload[0] = (byte) 0x48;
-            payload[1] = (byte) 0xbf;
-            //__addr here
-            payload[10] = (byte) 0x48;
-            payload[11] = (byte) 0xbe;
-            //__len here
-            payload[20] = (byte) 0x48;
-            payload[21] = (byte) 0xb8;
-            //function
-            payload[30] = (byte) 0xba;
-            //__prot here
-            payload[35] = (byte) 0xff;
-            payload[36] = (byte) 0xe0;
+            int p = 0;
+            p = ASMUtil.movabs(payload, p, RDI); // __addr
+            p = ASMUtil.movabs(payload, p, RSI); // __len
+            p = ASMUtil.movabs(payload, p, RAX); // function
+            p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
+            ASMUtil.jmp(payload, p, RAX);
             code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", true);
             AddressUtil.checkNull(code_base);
             Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
@@ -119,19 +114,12 @@ public final class mprotect {
     static {
         byte[] payload = new byte[37];
         code_base = Unsafe.allocateMemory(payload.length);
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0xbf;
-        //__addr here
-        payload[10] = (byte) 0x48;
-        payload[11] = (byte) 0xbe;
-        //__len here
-        payload[20] = (byte) 0x48;
-        payload[21] = (byte) 0xb8;
-        //function
-        payload[30] = (byte) 0xba;
-        //__prot here
-        payload[35] = (byte) 0xff;
-        payload[36] = (byte) 0xe0;
+        int p = 0;
+        p = ASMUtil.movabs(payload, p, RDI); // __addr
+        p = ASMUtil.movabs(payload, p, RSI); // __len
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
+        ASMUtil.jmp(payload, p, RAX);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
         int ret = Bootstrap.invoke(AddressUtil.align_page(code_base), 1, PROT_EXEC | PROT_WRITE | PROT_READ);

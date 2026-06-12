@@ -1,6 +1,7 @@
 package alice._native.jni;
 
 import alice.Platform;
+import alice._native.ASMUtil;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
@@ -9,6 +10,8 @@ import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
+
+import static alice._native.ASMUtil.Register.*;
 
 //JNI_GetCreatedJavaVMs(JavaVM **, jsize, jsize *);
 
@@ -21,19 +24,12 @@ public final class JNI_GetCreatedJavaVMs {
     static {
         byte[] payload = new byte[37];
         boolean flag = Platform.abi == Platform.ABI.SYSTEM_V;
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) (flag ? 0xbf : 0xb9);
-        //vmBuf here
-        payload[10] = (byte) (flag ? 0x48 : 0x49);
-        payload[11] = (byte) (flag ? 0xba : 0xb8);
-        //nVMs here
-        payload[20] = (byte) 0x48;
-        payload[21] = (byte) 0xb8;
-        //function
-        payload[30] = (byte) (flag ? 0xbe : 0xba);
-        //bufLen here
-        payload[35] = (byte) 0xff;
-        payload[36] = (byte) 0xe0;
+        int p = 0;
+        p = ASMUtil.movabs(payload, p, flag ? RDI : RCX); // vmBuf
+        p = ASMUtil.movabs(payload, p, flag ? RDX : R8); // nVMs
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.movImm32(payload, p, flag ? RSI : RDX, 0); // bufLen
+        ASMUtil.jmp(payload, p, RAX);
         code_base = MemoryUtil.allocate(payload.length);
         AddressUtil.checkNull(code_base);
         Unsafe.writeBytes(code_base, payload);

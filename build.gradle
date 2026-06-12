@@ -2,7 +2,7 @@ import java.text.SimpleDateFormat
 
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '8.3.+'
+    id 'com.gradleup.shadow' version '8.3.10'
 }
 
 group = 'alice'
@@ -26,7 +26,6 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:9.9.1")
     implementation("org.ow2.asm:asm-analysis:9.9.1")
     implementation("it.unimi.dsi:fastutil:8.5.18")
-    implementation('com.gradleup.shadow:shadow-gradle-plugin:8.3.+')
     implementation 'commons-io:commons-io:2.21.0'
     implementation("com.google.guava:guava:33.5.0-jre")
     implementation 'org.apache.commons:commons-compress:1.28.0'

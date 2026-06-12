@@ -24,6 +24,10 @@ import java.util.jar.JarFile;
 
 public final class ClassUtil {
 
+    public static boolean isClassFile(byte[] data) {
+        return isClassFile(data, 0);
+    }
+
     public static boolean isClassFile(byte[] data, int offset) {
         return data.length > 4 && data[offset] == (byte) 0xca && data[offset + 1] == (byte) 0xfe && data[offset + 2] == (byte) 0xba && data[offset + 3] == (byte) 0xbe;
     }

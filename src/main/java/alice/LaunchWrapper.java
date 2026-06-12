@@ -1,6 +1,7 @@
 package alice;
 
 import alice.log.Logger;
+import alice.util.ClassLoaderUtil;
 import alice.util.DebugUtil;
 import alice.util.ReflectionUtil;
 
@@ -19,6 +20,7 @@ public final class LaunchWrapper {
         Logger.MAIN.info("Working directory: ".concat(System.getProperty("user.dir")).concat("."));
         Init.ensureInit();
         ExtensionLoader.load(args);
+        ClassLoaderUtil.disableCertChecking();
         try {
             String target_name = System.getProperty("alice.launch_target");
             if (target_name == null) {

@@ -1,6 +1,7 @@
 package alice._native.stdlib;
 
 import alice.Platform;
+import alice._native.ASMUtil;
 import alice._native.CString;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
@@ -10,6 +11,8 @@ import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
+
+import static alice._native.ASMUtil.Register.*;
 
 public final class system {
 
@@ -33,16 +36,12 @@ public final class system {
         payload[9] = (byte) 0x83;
         payload[10] = (byte) 0xec;
         payload[11] = (byte) 0x20;
-        payload[12] = (byte) 0x48;
-        payload[13] = Platform.win32 ? (byte) 0xb9 : (byte) 0xbf;
-        //_Command here
-        payload[22] = (byte) 0x48;
-        payload[23] = (byte) 0xb8;
-        //function
-        payload[32] = (byte) 0xff;
-        payload[33] = (byte) 0xd0;
-        payload[34] = (byte) 0xc9;
-        payload[35] = (byte) 0xc3;
+        int p = 12;
+        p = ASMUtil.movabs(payload, p, Platform.win32 ? RCX : RDI); // command
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.call(payload, p, RAX);
+        p = ASMUtil.leave(payload, p);
+        ASMUtil.ret(payload, p);
         code_base = MemoryUtil.allocate(23);
         AddressUtil.checkNull(code_base);
         MemoryUtil.setMemoryRWX(code_base, 1);

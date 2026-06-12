@@ -1,9 +1,14 @@
 package alice.util;
 
 import alice.Platform;
+import alice.injector.MethodInjector;
 import jdk.internal.loader.BuiltinClassLoader;
 import jdk.internal.loader.ClassLoaders;
 import jdk.internal.loader.URLClassPath;
+import org.objectweb.asm.Opcodes;
+import sun.jvm.hotspot.code.NMethod;
+import sun.jvm.hotspot.oops.InstanceKlass;
+import sun.jvm.hotspot.oops.Method;
 
 import java.lang.invoke.VarHandle;
 import java.lang.module.ModuleReader;
@@ -76,5 +81,21 @@ public final class ClassLoaderUtil {
 
     public static void setModule2Reader(ClassLoader loader, Map<ModuleReference, ModuleReader> m2r) {
         moduleToReader_handle.set(loader, m2r);
+    }
+
+    public static void disableCertChecking() {
+        InstanceKlass klass = ClassUtil.getKlass(ClassLoader.class);
+        Method method = klass.findMethod("checkCerts", "(Ljava/lang/String;Ljava/security/CodeSource;)V");
+        long bytecode = MethodInjector.getBytecodeAddress(method.getConstMethod());
+        Unsafe.putByte(bytecode, (byte) Opcodes.RETURN);
+        NMethod nmethod = method.getNativeMethod();
+        if (nmethod != null) {
+            long address = Converter.getAddressValue(nmethod.getEntryPoint());
+            if (address != 0) {
+                Unsafe.putByte(address, (byte) 0xc3);
+            }
+            address = Converter.getAddressValue(nmethod.getVerifiedEntryPoint());
+            Unsafe.putByte(address, (byte) 0xc3);
+        }
     }
 }

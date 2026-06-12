@@ -1,5 +1,6 @@
 package alice._native.win32;
 
+import alice._native.ASMUtil;
 import alice.exception.NativeException;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
@@ -7,6 +8,8 @@ import alice.util.ClassUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
+
+import static alice._native.ASMUtil.Register.*;
 
 //WINBASEAPI WINBOOL WINAPI VirtualProtect (LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
 
@@ -82,42 +85,17 @@ public final class VirtualProtect {
             }
 
             byte[] payload = new byte[62];
-            payload[0] = (byte) 0x48;
-            payload[1] = (byte) 0x83;
-            payload[2] = (byte) 0xec;
-            payload[3] = (byte) 0x28;
-
-            payload[4] = (byte) 0x48;
-            payload[5] = (byte) 0xb9;
-            //lpAddress here
-
-            payload[14] = (byte) 0x48;
-            payload[15] = (byte) 0xba;
-            //dwSize here
-
-            payload[24] = (byte) 0x49;
-            payload[25] = (byte) 0xb9;
-            //lpflOldProtect here
-
-            payload[34] = (byte) 0x48;
-            payload[35] = (byte) 0xb8;
-            //function here
-
-            payload[44] = (byte) 0x41;
-            payload[45] = (byte) 0xb8;
-            //flNewProtect here
-            payload[50] = (byte) 0xff;
-            payload[51] = (byte) 0xd0;
-            payload[52] = (byte) 0xb8;
-            payload[53] = (byte) 0x01;
-            payload[54] = (byte) 0x00;
-            payload[55] = (byte) 0x00;
-            payload[56] = (byte) 0x00;
-            payload[57] = (byte) 0x48;
-            payload[58] = (byte) 0x83;
-            payload[59] = (byte) 0xc4;
-            payload[60] = (byte) 0x28;
-            payload[61] = (byte) 0xc3;
+            int p = 0;
+            p = ASMUtil.subRsp(payload, p, 0x28);
+            p = ASMUtil.movabs(payload, p, RCX); // lpAddress
+            p = ASMUtil.movabs(payload, p, RDX); // dwSize
+            p = ASMUtil.movabs(payload, p, R9); // lpflOldProtect
+            p = ASMUtil.movabs(payload, p, RAX); // function
+            p = ASMUtil.movImm32(payload, p, R8, 0); // flNewProtect
+            p = ASMUtil.call(payload, p, RAX);
+            p = ASMUtil.movImm32(payload, p, RAX, 1);
+            p = ASMUtil.addRsp(payload, p, 0x28);
+            ASMUtil.ret(payload, p);
 
             code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", false);
             Unsafe.putLong(code_base + 36, SymbolLookup.lookup("VirtualProtect"));
@@ -147,42 +125,17 @@ public final class VirtualProtect {
 
     static {
         byte[] payload = new byte[62];
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0x83;
-        payload[2] = (byte) 0xec;
-        payload[3] = (byte) 0x28;
-
-        payload[4] = (byte) 0x48;
-        payload[5] = (byte) 0xb9;
-        //lpAddress here
-
-        payload[14] = (byte) 0x48;
-        payload[15] = (byte) 0xba;
-        //dwSize here
-
-        payload[24] = (byte) 0x49;
-        payload[25] = (byte) 0xb9;
-        //lpflOldProtect here
-
-        payload[34] = (byte) 0x48;
-        payload[35] = (byte) 0xb8;
-        //function here
-
-        payload[44] = (byte) 0x41;
-        payload[45] = (byte) 0xb8;
-        //flNewProtect here
-        payload[50] = (byte) 0xff;
-        payload[51] = (byte) 0xd0;
-        payload[52] = (byte) 0xb8;
-        payload[53] = (byte) 0x01;
-        payload[54] = (byte) 0x00;
-        payload[55] = (byte) 0x00;
-        payload[56] = (byte) 0x00;
-        payload[57] = (byte) 0x48;
-        payload[58] = (byte) 0x83;
-        payload[59] = (byte) 0xc4;
-        payload[60] = (byte) 0x28;
-        payload[61] = (byte) 0xc3;
+        int p = 0;
+        p = ASMUtil.subRsp(payload, p, 0x28);
+        p = ASMUtil.movabs(payload, p, RCX); // lpAddress
+        p = ASMUtil.movabs(payload, p, RDX); // dwSize
+        p = ASMUtil.movabs(payload, p, R9); // lpflOldProtect
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.movImm32(payload, p, R8, 0); // flNewProtect
+        p = ASMUtil.call(payload, p, RAX);
+        p = ASMUtil.movImm32(payload, p, RAX, 1);
+        p = ASMUtil.addRsp(payload, p, 0x28);
+        ASMUtil.ret(payload, p);
 
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);

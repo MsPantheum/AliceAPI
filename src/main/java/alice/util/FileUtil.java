@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -86,6 +83,18 @@ public final class FileUtil {
 
         try (Stream<Path> files = Files.list(path)) {
             return files.toArray(Path[]::new);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Path[] walk(String path, FileVisitOption... options) {
+        return walk(Paths.get(path), options);
+    }
+
+    public static Path[] walk(Path path, FileVisitOption... options) {
+        try (Stream<Path> stream = Files.walk(path, options)) {
+            return stream.toArray(Path[]::new);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

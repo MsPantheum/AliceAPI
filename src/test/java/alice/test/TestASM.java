@@ -2,7 +2,10 @@ package alice.test;
 
 import alice.Init;
 import alice.injector.SymbolLookup;
-import alice.util.*;
+import alice.util.FileUtil;
+import alice.util.MemoryUtil;
+import alice.util.ProcessUtil;
+import alice.util.Unsafe;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;

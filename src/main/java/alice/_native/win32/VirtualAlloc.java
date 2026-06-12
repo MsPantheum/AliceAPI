@@ -2,6 +2,7 @@ package alice._native.win32;
 
 //LPVOID WINAPI VirtualAlloc (LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 
+import alice._native.ASMUtil;
 import alice.exception.NativeException;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
@@ -9,6 +10,8 @@ import alice.util.ClassUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
+
+import static alice._native.ASMUtil.Register.*;
 
 public final class VirtualAlloc {
 
@@ -20,39 +23,17 @@ public final class VirtualAlloc {
     static {
         holder();
         byte[] payload = new byte[60];
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0x83;
-        payload[2] = (byte) 0xec;
-        payload[3] = (byte) 0x28;
-        payload[4] = (byte) 0x48;
-        payload[5] = (byte) 0xb8;
-        //function here
-        payload[14] = (byte) 0x48;
-        payload[15] = (byte) 0x89;
-        payload[16] = (byte) 0x44;
-        payload[17] = (byte) 0x24;
-        payload[18] = (byte) 0x20;
-        payload[19] = (byte) 0x48;
-        payload[20] = (byte) 0xb9;
-        //lpAddress here
-        payload[29] = (byte) 0x48;
-        payload[30] = (byte) 0xba;
-        //dwSize here
-        payload[39] = (byte) 0x41;
-        payload[40] = (byte) 0xb8;
-        //flAllocationType here
-        payload[45] = (byte) 0x41;
-        payload[46] = (byte) 0xb9;
-        //flProtect here
-        payload[51] = (byte) 0xff;
-        payload[52] = (byte) 0x54;
-        payload[53] = (byte) 0x24;
-        payload[54] = (byte) 0x20;
-        payload[55] = (byte) 0x48;
-        payload[56] = (byte) 0x83;
-        payload[57] = (byte) 0xc4;
-        payload[58] = (byte) 0x28;
-        payload[59] = (byte) 0xc3;
+        int p = 0;
+        p = ASMUtil.subRsp(payload, p, 0x28);
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.movStack(payload, p, 0x20, RAX);
+        p = ASMUtil.movabs(payload, p, RCX); // lpAddress
+        p = ASMUtil.movabs(payload, p, RDX); // dwSize
+        p = ASMUtil.movImm32(payload, p, R8, 0); // flAllocationType
+        p = ASMUtil.movImm32(payload, p, R9, 0); // flProtect
+        p = ASMUtil.callStack(payload, p, 0x20);
+        p = ASMUtil.addRsp(payload, p, 0x28);
+        ASMUtil.ret(payload, p);
 
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);

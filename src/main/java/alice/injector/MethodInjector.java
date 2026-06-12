@@ -1,19 +1,24 @@
 package alice.injector;
 
-import alice.util.ClassUtil;
-import alice.util.MethodInfo;
-import alice.util.Unsafe;
+import alice.Platform;
+import alice.exception.ShouldNotReachHere;
+import alice.util.*;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import sun.jvm.hotspot.oops.ConstMethod;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
 import java.io.PrintStream;
+import java.lang.invoke.MethodType;
 
 import static alice.HSDB.typeDataBase;
 import static alice.util.AddressUtil.checkNull;
 import static alice.util.Converter.getAddressValue;
 import static alice.util.constants.AccessFlags.*;
 
-public final class MethodInjector {
+public final class MethodInjector implements Opcodes {
 
     private static final long _from_compiled_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_compiled_entry").getOffset();
     private static final long _from_interpreted_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_interpreted_entry").getOffset();
@@ -145,9 +150,8 @@ public final class MethodInjector {
         Unsafe.putInt(getAddressValue(method) + _access_flags_offset, access);
     }
 
-
-
     private static final long Method_SIZE = typeDataBase.lookupType("Method").getSize();
+    private static final long ConstMethod_SIZE = typeDataBase.lookupType("ConstMethod").getSize();
 
     public static long getNativePointer(Method method) {
         if (!method.isNative()) {
@@ -161,5 +165,57 @@ public final class MethodInjector {
             throw new IllegalArgumentException(method.getName().asString().concat(method.getSignature().asString()).concat(" is not a native method!"));
         }
         Unsafe.putLong(getAddressValue(method) + Method_SIZE, value);
+    }
+
+    public static long getBytecodeAddress(ConstMethod cm) {
+        return getAddressValue(cm) + ConstMethod_SIZE;
+    }
+
+    public static void runShellcodeNative(byte[] shellcode) {
+        ClassWriter cw = new ClassWriter(0);
+        cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
+        cw.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_NATIVE, "invoke", "()V", null, null);
+        byte[] data = cw.toByteArray();
+        Class<?> holder;
+        if (!Platform.jigsaw) {
+            holder = Unsafe.defineAnonymousClass(Object.class, data, null);
+        } else {
+            holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
+        }
+        InstanceKlass klass = ClassUtil.getKlass(holder);
+        Method method = klass.findMethod("invoke", "()V");
+        long codes = MemoryUtil.allocate(shellcode.length);
+        Unsafe.writeBytes(codes, shellcode);
+        setNativePointer(method, codes);
+        try {
+            ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(void.class)).invoke();
+        } catch (Throwable e) {
+            throw new ShouldNotReachHere();
+        }
+    }
+
+    public static void runShellcodeInterpreter(byte[] shellcode) {
+        ClassWriter cw = new ClassWriter(0);
+        cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "invoke", "()V", null, null);
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(0, 0);
+        byte[] data = cw.toByteArray();
+        Class<?> holder;
+        if (!Platform.jigsaw) {
+            holder = Unsafe.defineAnonymousClass(Object.class, data, null);
+        } else {
+            holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
+        }
+        InstanceKlass klass = ClassUtil.getKlass(holder);
+        Method method = klass.findMethod("invoke", "()V");
+        long codes = MemoryUtil.allocate(shellcode.length);
+        Unsafe.writeBytes(codes, shellcode);
+        setInterpretedEntry(method, codes);
+        try {
+            ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(void.class)).invoke();
+        } catch (Throwable e) {
+            throw new ShouldNotReachHere();
+        }
     }
 }

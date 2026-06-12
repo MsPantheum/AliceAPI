@@ -70,7 +70,7 @@ public class MethodDecompiler {
             MHN = Class.forName("java.lang.invoke.MethodHandleNatives");
             CallSiteContextAvailable = Platform.JAVA_VERSION > 8 && Platform.JAVA_VERSION < 21;
             CallSiteContext = CallSiteContextAvailable ? Class.forName("java.lang.invoke.MethodHandleNatives$CallSiteContext") : null;
-            setCallSiteTargetNormal = CallSiteContextAvailable ? ReflectionUtil.findStatic(MHN, "setCallSiteTargetNormal", MethodType.methodType(void.class, CallSite.class, MethodHandle.class)) : null;
+            setCallSiteTargetNormal = ReflectionUtil.findStatic(MHN, "setCallSiteTargetNormal", MethodType.methodType(void.class, CallSite.class, MethodHandle.class));
             clearCallSiteContext = CallSiteContextAvailable ? ReflectionUtil.findStatic(MHN, "clearCallSiteContext", MethodType.methodType(void.class, CallSiteContext)) : null;
             CallSiteContext_vmdependencies_offset = CallSiteContextAvailable ? Unsafe.objectFieldOffset(ReflectionUtil.getField(CallSiteContext, "vmdependencies")) : -1;
             Type type = typeDataBase.lookupType("InstanceKlass");
@@ -116,6 +116,9 @@ public class MethodDecompiler {
 
     public static void tryDecompile(Method method) {
         NMethod nmethod = method.getNativeMethod();
+        if (nmethod == null) {
+            return;
+        }
         lockNMethod(nmethod);
         mark4deoptimization(nmethod);
         unlockNMethod(nmethod);

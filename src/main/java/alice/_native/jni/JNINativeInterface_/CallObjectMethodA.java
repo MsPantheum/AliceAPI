@@ -1,0 +1,26 @@
+package alice._native.jni.JNINativeInterface_;
+
+import alice.util.JNIUtil;
+
+//jobject (JNICALL *CallObjectMethodA)(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args);
+public final class CallObjectMethodA {
+
+    private static final long code_base = JNINativeCall.create(CallObjectMethodA.class, "()J", JNINativeCall.CALL_OBJECT_METHOD_A, 3);
+
+    private static native long holder();
+
+    private CallObjectMethodA() {
+    }
+
+    public synchronized static long invoke(long JNIEnv, long obj, long methodID, long args) {
+        JNINativeCall.setEnv(code_base, JNIEnv);
+        JNINativeCall.setArg(code_base, 0, obj);
+        JNINativeCall.setArg(code_base, 1, methodID);
+        JNINativeCall.setArg(code_base, 2, args);
+        return holder();
+    }
+
+    public synchronized static long invoke(long obj, long methodID, long args) {
+        return invoke(JNIUtil.getJNIEnv(), obj, methodID, args);
+    }
+}

@@ -70,75 +70,99 @@ public final class InlineHook {
             Logger.MAIN.trace("Trampoline=");
             Logger.MAIN.trace(Long.toHexString(trampoline));
             long offset = prepare != null ? prepare.process(trampoline) : 0;
-            int current = 0;
-            while (current < 14) {
-                int tmp = hde64_disasm(ori, current, hs);
-                Unsafe.copy(ori + current, trampoline + current + offset, tmp);
+            int readOffset = 0;
+            int writeOffset = 0;
+            while (readOffset < 14) {
+                int tmp = hde64_disasm(ori, readOffset, hs);
+                long src = ori + readOffset;
+                long dst = trampoline + offset + writeOffset;
+                int written = tmp;
+                Unsafe.copy(src, dst, tmp);
                 if ((hs.modrm & 0xC7) == 0x05) {//RIP Addressing
-                    long original_target = ori + current + hs.len + hs.disp;
-                    long new_rip = trampoline + current + offset + hs.len;
+                    long original_target = ori + readOffset + hs.len + hs.disp;
+                    long new_rip = dst + hs.len;
                     long new_disp = original_target - new_rip;
                     if (new_disp > Integer.MAX_VALUE || new_disp < Integer.MIN_VALUE) {
-                        long p = trampoline + current + offset + hs.len - ((hs.flags & 0x3C) >> 2) - 4;
+                        long p = dst + hs.len - ((hs.flags & 0x3C) >> 2) - 4;
                         Unsafe.putInt(p, 0x2);
                         p += 4;
                         Unsafe.putByte(p++, (byte) 0xeb);
                         Unsafe.putByte(p++, (byte) 0x08);
                         Unsafe.putLong(p, original_target);
-                        current += 14;
-                        continue;
+                        written = 14;
                     } else {
-                        Unsafe.putInt(trampoline + current + offset + hs.len - ((hs.flags & 0x3C) >> 2) - 4, Math.toIntExact(new_disp));
+                        Unsafe.putInt(dst + hs.len - ((hs.flags & 0x3C) >> 2) - 4, Math.toIntExact(new_disp));
                     }
                 } else if (hs.opcode == 0xE8 || ((hs.opcode & 0xFD) == 0xE9)) {//Direct relative CALL and Direct relative JMP
-                    long ori_target = ori + current + hs.len + hs.imm;
-                    long neo_imm = ori_target - (trampoline + current + offset + hs.len);
-                    if (neo_imm > Integer.MAX_VALUE || neo_imm < Integer.MIN_VALUE) {
-                        if (hs.opcode == 0xE8) {
-                            createJump(trampoline, current + offset, ori_target);
+                    long ori_target = ori + readOffset + hs.len + signedRelativeImmediate(hs);
+                    if (hs.opcode == 0xEB) {
+                        long rel8 = ori_target - (dst + 2);
+                        if (rel8 <= Byte.MAX_VALUE && rel8 >= Byte.MIN_VALUE) {
+                            Unsafe.putByte(dst + 1, (byte) rel8);
                         } else {
-                            createCall(trampoline, current + offset, ori_target);
+                            long rel32 = ori_target - (dst + 5);
+                            if (rel32 <= Integer.MAX_VALUE && rel32 >= Integer.MIN_VALUE) {
+                                Unsafe.putByte(dst, (byte) 0xE9);
+                                Unsafe.putInt(dst + 1, Math.toIntExact(rel32));
+                                written = 5;
+                            } else {
+                                createJump(trampoline, offset + writeOffset, ori_target);
+                                written = 14;
+                            }
                         }
-                        current += 14;
-                        continue;
                     } else {
-                        Unsafe.putInt(trampoline + current + offset + 1, Math.toIntExact(neo_imm));
+                        long neo_imm = ori_target - (dst + hs.len);
+                        if (neo_imm <= Integer.MAX_VALUE && neo_imm >= Integer.MIN_VALUE) {
+                            Unsafe.putInt(dst + 1, Math.toIntExact(neo_imm));
+                        } else {
+                            if (hs.opcode == 0xE8) {
+                                createCall(trampoline, offset + writeOffset, ori_target);
+                            } else {
+                                createJump(trampoline, offset + writeOffset, ori_target);
+                            }
+                            written = 14;
+                        }
                     }
                 } else if ((hs.opcode & 0xf0) == 0x70) {//two bit short jcc
-                    long original_target = ori + current + hs.len + hs.imm;
-                    long neo_imm = original_target - (trampoline + current + offset + hs.len);
-                    if (neo_imm <= Byte.MAX_VALUE && neo_imm >= Byte.MIN_VALUE) {
-                        Unsafe.putByte(trampoline + current + offset + 1, (byte) neo_imm);
-                    } else if (neo_imm <= Integer.MAX_VALUE && neo_imm >= Integer.MIN_VALUE) {
-                        long p = trampoline + current + offset;
-                        Unsafe.putByte(p++, (byte) 0x0f);
-                        Unsafe.putByte(p++, (byte) ((hs.opcode2 & 0x0f) | 0x80));
-                        Unsafe.putInt(p, Math.toIntExact(neo_imm));
-                        current += 6;
-                        continue;
+                    int condition = hs.opcode & 0x0f;
+                    long original_target = ori + readOffset + hs.len + signedRelativeImmediate(hs);
+                    long rel8 = original_target - (dst + 2);
+                    if (rel8 <= Byte.MAX_VALUE && rel8 >= Byte.MIN_VALUE) {
+                        Unsafe.putByte(dst + 1, (byte) rel8);
                     } else {
-                        throw new RuntimeException("The Fuck!");
-                        //continue;
+                        long rel32 = original_target - (dst + 6);
+                        if (rel32 <= Integer.MAX_VALUE && rel32 >= Integer.MIN_VALUE) {
+                            long p = dst;
+                            Unsafe.putByte(p++, (byte) 0x0f);
+                            Unsafe.putByte(p++, (byte) (0x80 | condition));
+                            Unsafe.putInt(p, Math.toIntExact(rel32));
+                            written = 6;
+                        } else {
+                            createConditionalAbsoluteJump(trampoline, offset + writeOffset, condition, original_target);
+                            written = 16;
+                        }
                     }
                 } else if (hs.opcode == 0x0f && (hs.opcode2 & 0xf0) == 0x80) {//int32 jcc
-                    long original_target = ori + current + hs.len + hs.imm;
-                    long neo_imm = original_target - (trampoline + current + offset + hs.len);
+                    int condition = hs.opcode2 & 0x0f;
+                    long original_target = ori + readOffset + hs.len + signedRelativeImmediate(hs);
+                    long neo_imm = original_target - (dst + hs.len);
                     if (neo_imm <= Integer.MAX_VALUE && neo_imm >= Integer.MIN_VALUE) {
-                        Unsafe.putInt(trampoline + current + offset + 2, Math.toIntExact(neo_imm));
+                        Unsafe.putInt(dst + 2, Math.toIntExact(neo_imm));
                     } else {
-                        throw new RuntimeException("The Fuck!");
-                        //continue;
+                        createConditionalAbsoluteJump(trampoline, offset + writeOffset, condition, original_target);
+                        written = 16;
                     }
                 }
 
-                current += tmp;
+                readOffset += tmp;
+                writeOffset += written;
             }
 
-            createJump(trampoline, current + offset, ori + current);
+            createJump(trampoline, writeOffset + offset, ori + readOffset);
             if (p2trampoline != 0) {
                 Unsafe.putLong(p2trampoline, trampoline);
             }
-            this.backup = Unsafe.readBytes(ori, current);
+            this.backup = Unsafe.readBytes(ori, readOffset);
 //            System.out.println("Trampoline:");
 //            Shellcode.dump(trampoline,current + offset + 14,System.out);
             createJump(ori, 0, neo);
@@ -170,6 +194,23 @@ public final class InlineHook {
             Unsafe.putByte(p++, (byte) 0xeb);
             Unsafe.putByte(p++, (byte) 0x08);
             Unsafe.putLong(p, call_target);
+        }
+
+        private static void createConditionalAbsoluteJump(long target, long offset, int condition, long jump_target) {
+            long p = target + offset;
+            Unsafe.putByte(p++, (byte) (0x70 | ((condition ^ 1) & 0x0f)));
+            Unsafe.putByte(p, (byte) 0x0e);
+            createJump(target, offset + 2, jump_target);
+        }
+
+        private static long signedRelativeImmediate(HDE64.Hde64s hs) {
+            if ((hs.flags & HDE64.F_IMM8) != 0) {
+                return (byte) hs.imm;
+            }
+            if ((hs.flags & HDE64.F_IMM16) != 0) {
+                return (short) hs.imm;
+            }
+            return (int) hs.imm;
         }
 
         private long hookWithTrampoline() {

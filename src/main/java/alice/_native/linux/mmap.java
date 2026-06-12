@@ -1,5 +1,6 @@
 package alice._native.linux;
 
+import alice._native.ASMUtil;
 import alice.exception.NativeException;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
@@ -9,6 +10,7 @@ import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
+import static alice._native.ASMUtil.Register.*;
 import static alice.util.constants.Constants.*;
 
 //void *mmap (void *__addr, size_t __len, int __prot,int __flags, int __fd, __off_t __offset)
@@ -22,27 +24,15 @@ public final class mmap {
 
     static {
         byte[] payload = new byte[58];
-        payload[0] = (byte) 0x48;
-        payload[1] = (byte) 0xbf;
-        //__addr here
-        payload[10] = (byte) 0x48;
-        payload[11] = (byte) 0xbe;
-        //__len here
-        payload[20] = (byte) 0x49;
-        payload[21] = (byte) 0xb9;
-        //__offset here
-        payload[30] = (byte) 0x48;
-        payload[31] = (byte) 0xb8;
-        //function
-        payload[40] = (byte) 0xba;
-        //__prot here
-        payload[45] = (byte) 0xb9;
-        //__flags here
-        payload[50] = (byte) 0x41;
-        payload[51] = (byte) 0xb8;
-        //__fd here
-        payload[56] = (byte) 0xff;
-        payload[57] = (byte) 0xe0;
+        int p = 0;
+        p = ASMUtil.movabs(payload, p, RDI); // __addr
+        p = ASMUtil.movabs(payload, p, RSI); // __len
+        p = ASMUtil.movabs(payload, p, R9); // __offset
+        p = ASMUtil.movabs(payload, p, RAX); // function
+        p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
+        p = ASMUtil.movImm32(payload, p, RCX, 0); // __flags
+        p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
+        ASMUtil.jmp(payload, p, RAX);
         code_base = Unsafe.allocateMemory(payload.length);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 32, SymbolLookup.lookup("mmap"));

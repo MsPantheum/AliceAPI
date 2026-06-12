@@ -180,25 +180,14 @@ public final class SymbolLookup {
             System.err.println("Not an elf file:" + lib);
             return 0;
         }
-        final long[] base = {Long.MAX_VALUE};
-        if (bases.containsKey(lib)) {
-            base[0] = bases.getLong(lib);
-        } else {
-            Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
-            LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
-            for (ProcReader.MemoryMapping mapping : mappings) {
-                base[0] = Math.min(Long.parseLong(mapping.addressRangeStart, 16), base[0]);
-            }
-            bases.put(lib, base[0]);
-        }
-        if (base[0] == Long.MAX_VALUE) {
-            Logger.MAIN.error("Cannot find base of " + lib + "!");
+        long base = lookupLibBase(lib);
+        if (base == 0) {
             return 0;
         }
         if (!Platform.win32) {
             Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
             if (symbols.containsKey(symbol)) {
-                return symbols.get(symbol).offset + base[0];
+                return symbols.get(symbol).offset + base;
             }
         } else {
             ExportDirectoryTable table = getExport(lib);
@@ -208,12 +197,37 @@ public final class SymbolLookup {
                 String name = table.getExportName(i);
                 long address = table.getExportAddress(ordinal);
                 if (name.equals(symbol)) {
-                    ret = base[0] + address;
+                    ret = base + address;
                 }
-                cache.put(name, base[0] + address);
+                cache.put(name, base + address);
             }
             return ret;
         }
+        return 0;
+    }
+
+    public static long lookupLibBase(String lib) {
+        if (lib == null) {
+            return 0;
+        }
+        if (!Paths.get(lib).isAbsolute()) {
+            lib = toAbsoluteLibPath(lib);
+        }
+        long _try = bases.getLong(lib);
+        if (_try != 0) {
+            return _try;
+        }
+        _try = Long.MAX_VALUE;
+        Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+        LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
+        for (ProcReader.MemoryMapping mapping : mappings) {
+            _try = Math.min(Long.parseLong(mapping.addressRangeStart, 16), _try);
+        }
+        if (_try != Long.MAX_VALUE) {
+            bases.put(lib, _try);
+            return _try;
+        }
+        Logger.MAIN.error("Cannot find base of ".concat(lib).concat("!"));
         return 0;
     }
 }

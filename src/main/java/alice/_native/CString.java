@@ -1,53 +1,44 @@
 package alice._native;
 
 import alice.util.Unsafe;
-import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 
-import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 
 public final class CString extends NativeObject {
 
-    private static final Object2ObjectMap<String, WeakReference<CString>> cache = new Object2ObjectLinkedOpenHashMap<>();
-
     private final String jstring;
+    private final int byteLength;
 
     public static CString create(String str) {
-        WeakReference<CString> ref = cache.get(str);
-        if (ref != null) {
-            if (ref.get() != null) {
-                return ref.get();
-            } else {
-                cache.remove(str);
-            }
-        }
-        CString cstr = new CString(str);
-        cache.put(str, new WeakReference<>(cstr));
-        return cstr;
+        return new CString(str);
     }
 
     private CString(String str) {
-        super();
+        this(str, str.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private CString(String str, byte[] bytes) {
+        super(Unsafe.allocateMemory(bytes.length + 1L), true);
         this.jstring = str;
-        byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
-        for (int i = 0; i < str.length(); i++) {
+        this.byteLength = bytes.length;
+        for (int i = 0; i < bytes.length; i++) {
             Unsafe.putByte(address + i, bytes[i]);
         }
-        Unsafe.putByte(address + str.length(), (byte) 0);
+        Unsafe.putByte(address + bytes.length, (byte) 0);
     }
 
     public CString(long address) {
         super(address);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; ; i++) {
-            char c = Unsafe.getChar(address + i);
-            if (c == (byte) 0) {
-                break;
-            }
-            sb.append(c);
+        int length = 0;
+        while (Unsafe.getByte(address + length) != 0) {
+            length++;
         }
-        jstring = sb.toString();
+        byte[] bytes = new byte[length];
+        for (int i = 0; i < length; i++) {
+            bytes[i] = Unsafe.getByte(address + i);
+        }
+        this.jstring = new String(bytes, StandardCharsets.UTF_8);
+        this.byteLength = length;
     }
 
     @Override
@@ -63,7 +54,7 @@ public final class CString extends NativeObject {
 
     @Override
     public long getSize() {
-        return jstring.length() + 1;
+        return byteLength + 1L;
     }
 
     @Override
@@ -77,7 +68,6 @@ public final class CString extends NativeObject {
     @Override
     public void release() {
         super.release();
-        cache.remove(jstring);
     }
 
     @Override

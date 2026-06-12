@@ -29,6 +29,9 @@ import java.lang.module.ModuleReader;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.Field;
 import java.net.*;
+import java.nio.file.FileVisitOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.cert.Certificate;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -484,9 +487,26 @@ public final class ClassPatcher implements Opcodes {
         }
     }
 
+    public static void addProtectedDirectory(String root) {
+        for (Path path : FileUtil.walk(root, FileVisitOption.FOLLOW_LINKS)) {
+            if (!Files.isDirectory(path)) {
+                String name = path.toString().substring(root.length() + 1);
+                byte[] data = FileUtil.read(path);
+                if (ClassUtil.isClassFile(data)) {
+                    _protected.put(name, data);
+                }
+            }
+        }
+    }
+
     static {
         if (!DebugUtil.isRunningTest()) {
-            addProtectedJar(FileUtil.getJarPath(LaunchWrapper.class));
+            String str = FileUtil.getJarPath(LaunchWrapper.class);
+            if (FileUtil.exists(str) && !FileUtil.isDirectory(str)) {
+                addProtectedJar(str);
+            } else {
+                addProtectedDirectory(str);
+            }
         }
     }
 
