@@ -23,6 +23,10 @@ public final class FileUtil {
 
     public static final String ALICE_PATH = getJarPath(Meow.class);
 
+    static {
+        System.out.println(ALICE_PATH);
+    }
+
     public static void createFile(String path, FileAttribute<?>... attrs) {
         createFile(Paths.get(path), attrs);
     }

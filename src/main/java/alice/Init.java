@@ -23,9 +23,12 @@ import org.objectweb.asm.util.Printer;
 
 import java.nio.file.Files;
 
+/**
+ * Do the essential setup to use AliceAPI.
+ */
 public final class Init {
 
-    /*
+    /**
      * Check whether hotspot debugger database is in the classpath, if not, append it into classpath.
      */
     private static void checkHSDB() {

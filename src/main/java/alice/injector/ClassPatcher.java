@@ -347,6 +347,7 @@ public final class ClassPatcher implements Opcodes {
         Unsafe.ensureClassInitialized(Overrider.class);
         Unsafe.ensureClassInitialized(ReflectionInterceptor.MethodHandleInterceptorProvider.class);
         Unsafe.ensureClassInitialized(AccessPatcher.class);
+        Unsafe.ensureClassInitialized(ResourceWrapper.class);
 
         try {
             Unsafe.ensureClassInitialized(Class.forName("alice.injector.ClassPatcher$2"));
@@ -501,7 +502,7 @@ public final class ClassPatcher implements Opcodes {
 
     static {
         if (!DebugUtil.isRunningTest()) {
-            String str = FileUtil.getJarPath(LaunchWrapper.class);
+            String str = FileUtil.ALICE_PATH;
             if (FileUtil.exists(str) && !FileUtil.isDirectory(str)) {
                 addProtectedJar(str);
             } else {
