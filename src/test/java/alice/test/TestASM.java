@@ -22,12 +22,16 @@ public class TestASM {
         System.out.println("Target:0x" + Long.toHexString(target));
         MemoryUtil.setMemoryRWX(target,1);
         Unsafe.putByte(target, (byte) 0xc3);
-        System.out.println("Try to sleep. Current time:" + System.nanoTime());
+        long before = System.nanoTime();
+        System.out.println("Try to sleep.\nCurrent time:".concat(String.valueOf(before)));
         try {
             Thread.sleep(Long.MAX_VALUE);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Done. Current time:" + System.nanoTime());
+        long after = System.nanoTime();
+        System.out.println("Done.\nCurrent time:".concat(String.valueOf(after)));
+        assert after - before < 100000;
+
     }
 }

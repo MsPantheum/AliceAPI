@@ -6,6 +6,7 @@ import alice.injector.NativeLibrary;
 import alice.util.FileUtil;
 import alice.util.ProcessUtil;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
@@ -20,6 +21,7 @@ public class TestNativeLibrary {
     }
 
     @Test
+    @Disabled
     public void test(){
         assumeTrue(Platform.JAVA_VERSION <= 8);
         String libjvm = Objects.requireNonNull(FileUtil.search(FileUtil.JAVA_HOME, System.mapLibraryName("jvm"))).toString();

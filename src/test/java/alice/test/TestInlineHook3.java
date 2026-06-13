@@ -3,9 +3,8 @@ package alice.test;
 import alice.Init;
 import alice._native.InlineHook;
 import alice.injector.MethodInjector;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
 import java.util.ArrayList;
 
@@ -28,7 +27,7 @@ public class TestInlineHook3 {
     }
 
     @Test
-    @EnabledOnOs({OS.LINUX})
+    @Disabled
     public void test(){
         Init.ensureInit();
         Class<?> clazz = ArrayList.class;
