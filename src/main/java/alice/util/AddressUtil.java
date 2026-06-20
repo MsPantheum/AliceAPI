@@ -1,6 +1,9 @@
 package alice.util;
 
+import alice.Platform;
 import alice.exception.BadEnvironment;
+import sun.jvm.hotspot.memory.Universe;
+import sun.jvm.hotspot.oops.CompressedOops;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Metadata;
 import sun.jvm.hotspot.oops.Method;
@@ -31,21 +34,28 @@ public final class AddressUtil {
         } else {
             Object[] array = new Object[]{object};
             long baseOffset = Unsafe.arrayBaseOffset(Object[].class);
-            int addressSize = Unsafe.ADDRESS_SIZE;
+            int referenceSize = Unsafe.arrayIndexScale(Object[].class);
             long location;
-            switch (addressSize) {
+            switch (referenceSize) {
                 case 4:
-                    location = Unsafe.getInt(array, baseOffset);
+                    location = decodeNarrowOop(Unsafe.getInt(array, baseOffset));
                     break;
                 case 8:
                     location = Unsafe.getLong(array, baseOffset);
                     break;
                 default:
-                    throw new BadEnvironment("unsupported address size: " + addressSize);
+                    throw new BadEnvironment("unsupported reference size: " + referenceSize);
             }
 
-            return location * 8L;
+            return location;
         }
+    }
+
+    private static final long _narrow_oop_base = Platform.jigsaw ? CompressedOops.getBase() : Universe.getNarrowOopBase();
+    private static final int _narrow_oop_shift = Platform.jigsaw ? CompressedOops.getShift() : Universe.getNarrowOopShift();
+
+    private static long decodeNarrowOop(int narrow) {
+        return ((narrow & 0xffffffffL) << _narrow_oop_shift) + _narrow_oop_base;
     }
 
     public static long align_page(long address) {
