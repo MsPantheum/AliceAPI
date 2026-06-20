@@ -1,8 +1,7 @@
 package alice;
 
-import alice.util.ClassUtil;
-import sun.jvm.hotspot.oops.InstanceKlass;
-import sun.jvm.hotspot.oops.Method;
+import alice._native.jvmti.jvmtiInterface_1_.Allocate;
+import alice.util.Unsafe;
 
 public class Test {
 
@@ -12,8 +11,8 @@ public class Test {
 
     public static void main(String[] args) {
         Init.ensureInit();
-        InstanceKlass klass = ClassUtil.getKlass(Test.class);
-        Method method = klass.findMethod("meow", "()V");
-
+        long p = Unsafe.allocateMemory(Unsafe.ADDRESS_SIZE);
+        Allocate.invoke(32, p);
+        System.out.println("0x".concat(Long.toHexString(Unsafe.getLong(p))));
     }
 }

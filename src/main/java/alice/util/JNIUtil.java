@@ -6,12 +6,12 @@ import alice.exception.JNIException;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
-import static alice.util.constants.Constants.JNI_OK;
-import static alice.util.constants.Constants.JNI_VERSION_1_8;
+import static alice.util.constants.Constants.*;
 
 public class JNIUtil {
 
     private static long JavaVM = -1;
+    private static long jvmtiEnv = -1;
 
     public static long getJavaVM() {
         if (JavaVM == -1) {
@@ -46,13 +46,33 @@ public class JNIUtil {
             return JNIEnvs.getLong(currentThread);
         }
         long penv = Unsafe.allocateMemory(Unsafe.ADDRESS_SIZE);
-        int ret = GetEnv.invoke(JavaVM, penv, JNI_VERSION_1_8);//JNI_VERSION_1_8
-        if (ret != JNI_OK) {
-            throw new JNIException("Failed to get JNIEnv!", ret);
+        long JNIEnv;
+        try {
+            int ret = GetEnv.invoke(getJavaVM(), penv, JNI_VERSION_1_8);//JNI_VERSION_1_8
+            if (ret != JNI_OK) {
+                throw new JNIException("Failed to get JNIEnv!", ret);
+            }
+            JNIEnv = Unsafe.getLong(penv);
+            JNIEnvs.put(currentThread, JNIEnv);
+        } finally {
+            Unsafe.freeMemory(penv);
         }
-        long JNIEnv = Unsafe.getLong(penv);
-        JNIEnvs.put(currentThread, JNIEnv);
-        Unsafe.freeMemory(penv);
         return JNIEnv;
+    }
+
+    public static long getJVMTIEnv() {
+        if (jvmtiEnv == -1) {
+            long penv = Unsafe.allocateMemory(Unsafe.ADDRESS_SIZE);
+            try {
+                int ret = GetEnv.invoke(getJavaVM(), penv, JVMTI_VERSION_1_2);//JNI_VERSION_1_8
+                if (ret != JNI_OK) {
+                    throw new JNIException("Failed to get JVMTIEnv!", ret);
+                }
+                jvmtiEnv = Unsafe.getLong(penv);
+            } finally {
+                Unsafe.freeMemory(penv);
+            }
+        }
+        return jvmtiEnv;
     }
 }

@@ -21,7 +21,6 @@ public final class VirtualAlloc {
     private static final long code_base;
 
     static {
-        holder();
         byte[] payload = new byte[60];
         int p = 0;
         p = ASMUtil.subRsp(payload, p, 0x28);

@@ -415,7 +415,7 @@ public final class BytecodeUtil implements Opcodes {
      * Patch a specific method in a class.
      *
      * @param classBytes      the class to patch
-     * @param target          the target method, pass null to apply to all methods
+     * @param target          the target method, name and descriptor, pass null to apply to all methods
      * @param methodProcessor do your patches
      * @return the patched class
      */
