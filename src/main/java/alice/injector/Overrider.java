@@ -35,11 +35,19 @@ public final class Overrider implements Opcodes {
         void accept(ClassWriter cw);
     }
 
+    public interface ConstructorProcessor {
+        void accept(MethodVisitor mv, String superName);
+    }
+
     public static Class<?> overrideWithDelegate(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider) {
         return overrideWithDelegate(target, mpProvider, null);
     }
 
     public static Class<?> overrideWithDelegate(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider, ClassProcessor cp) {
+        return overrideWithDelegate(target, mpProvider, cp, null);
+    }
+
+    public static Class<?> overrideWithDelegate(Class<?> target, BiFunction<String, String, MethodProcessor> mpProvider, ClassProcessor cp, ConstructorProcessor constructorProcessor) {
         if (Modifier.isAbstract(target.getModifiers())) {
             throw new IllegalArgumentException("Target class is abstract!");
         }
@@ -54,12 +62,16 @@ public final class Overrider implements Opcodes {
         MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "(" + super_type + ")V", null, null);
         mv.visitCode();
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        if (constructorProcessor != null) {
+            constructorProcessor.accept(mv, super_name);
+        } else {
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        }
         mv.visitVarInsn(ALOAD, 0);
         mv.visitVarInsn(ALOAD, 1);
         mv.visitFieldInsn(PUTFIELD, c_name, "delegate", super_type);
         mv.visitInsn(RETURN);
-        mv.visitMaxs(2, 2);
+        mv.visitMaxs(8, 2);
         mv.visitEnd();
         for (Method method : methods) {
             if (!Modifier.isPrivate(method.getModifiers()) && !Modifier.isStatic(method.getModifiers())) {
@@ -113,6 +125,10 @@ public final class Overrider implements Opcodes {
         }
         cw.visitEnd();
         byte[] b = cw.toByteArray();
-        return Platform.jigsaw ? ClassUtil.defineClass1(target.getClassLoader(), target.getName() + "Overrides", b, 0, b.length, target.getProtectionDomain(), "null") : Unsafe.defineClass(target.getName() + "Overrides", b, 0, b.length, target.getClassLoader(), target.getProtectionDomain());
+        if (Platform.jigsaw) {
+            return ClassUtil.defineClass1(target.getClassLoader(), target.getName() + "Overrides", b, 0, b.length, target.getProtectionDomain(), "null");
+        }
+        return target.getClassLoader() == null ? Unsafe.defineAnonymousClass(target, b, null) : Unsafe.defineClass(target.getName() + "Overrides", b, 0, b.length, target.getClassLoader(), target.getProtectionDomain());
     }
+
 }

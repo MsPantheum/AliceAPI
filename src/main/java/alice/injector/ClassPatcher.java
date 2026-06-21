@@ -168,7 +168,7 @@ public final class ClassPatcher implements Opcodes {
                         mv.visitFieldInsn(GETSTATIC, target.getName().replace('.', '/') + "Overrides", "urlProcessor", "Ljava/util/function/Function;");
                         mv.visitVarInsn(ALOAD, 1);
                         mv.visitMethodInsn(INVOKEINTERFACE, "java/util/function/Function", "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
-                        mv.visitTypeInsn(CHECKCAST, "Ljava/net/URL;");
+                        mv.visitTypeInsn(CHECKCAST, "java/net/URL");
                         mv.visitLabel(_if);
                         mv.visitFrame(F_SAME, 0, null, 0, null);
                     };
@@ -183,6 +183,16 @@ public final class ClassPatcher implements Opcodes {
                 if (Platform.jigsaw) {
                     fv.visitAnnotation("Ljdk/internal/vm/annotation/Stable;", true);
                 }
+            }, Platform.jigsaw ? null : (mv, superName) -> {
+                mv.visitVarInsn(ALOAD, 1);
+                mv.visitFieldInsn(GETFIELD, "sun/misc/URLClassPath$JarLoader", "csu", "Ljava/net/URL;");
+                mv.visitVarInsn(ALOAD, 1);
+                mv.visitFieldInsn(GETFIELD, "sun/misc/URLClassPath$JarLoader", "handler", "Ljava/net/URLStreamHandler;");
+                mv.visitVarInsn(ALOAD, 1);
+                mv.visitFieldInsn(GETFIELD, "sun/misc/URLClassPath$JarLoader", "lmap", "Ljava/util/HashMap;");
+                mv.visitVarInsn(ALOAD, 1);
+                mv.visitFieldInsn(GETFIELD, "sun/misc/URLClassPath$JarLoader", "acc", "Ljava/security/AccessControlContext;");
+                mv.visitMethodInsn(INVOKESPECIAL, superName, "<init>", "(Ljava/net/URL;Ljava/net/URLStreamHandler;Ljava/util/HashMap;Ljava/security/AccessControlContext;)V", false);
             });
             if (Platform.jigsaw) {
                 ReflectionUtil.findStaticVarHandle(overrideJarLoader, "resourceProcessor", BiFunction.class).set(ResourceWrapper.InternalResource.resourceFunction);

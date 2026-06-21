@@ -109,7 +109,7 @@ public class NativeLibrary {
         handle = Unsafe.getLong(LIBRARY_INSTANCE, handle_offset);
         long _base = Long.MAX_VALUE;
         if (!Platform.win32) {
-            Map<String,LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+            Map<String, ArrayList<ProcReader.MemoryMapping>> maps = parseProcMaps();
             for(ProcReader.MemoryMapping map : maps.get(path)){
                 _base = Math.min(_base,Long.parseLong(map.addressRangeStart, 16));
             }

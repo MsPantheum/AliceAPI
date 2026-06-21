@@ -357,7 +357,7 @@ public final class Unsafe {
             return UNSAFE.staticFieldBase(f);
         }
 
-        public static int arrayBaseOffset(Class<?> arrayClass) {
+        public static long arrayBaseOffset(Class<?> arrayClass) {
             return UNSAFE.arrayBaseOffset(arrayClass);
         }
 
@@ -1042,5 +1042,9 @@ public final class Unsafe {
         } else {
             LegacyUnsafe.fullFence();
         }
+    }
+
+    public static long createPointer() {
+        return allocateMemory(ADDRESS_SIZE);
     }
 }

@@ -15,6 +15,7 @@ import static org.objectweb.asm.Opcodes.IRETURN;
 
 public class Test8 {
     public static void main(String[] args) {
+        System.out.println("Before redefinition: ".concat(String.valueOf(Meow.test())));
         Init.ensureInit();
         jvmtiCapabilities caps = new jvmtiCapabilities();
         caps.clear();
@@ -25,7 +26,6 @@ public class Test8 {
         }
         byte[] raw_class = ClassUtil.dumpFromMemory(Meow.class);
         byte[] patched = BytecodeUtil.patchMethod(raw_class, "test()I", mv -> {
-            System.out.println("Get target.");
             mv.visitInsn(ICONST_3);
             mv.visitInsn(IRETURN);
             mv.visitMaxs(1, 0);
@@ -48,6 +48,6 @@ public class Test8 {
             jvmtiClassDefinition.release();
             caps.release();
         }
-        System.out.println(Meow.test());
+        System.out.println("After redefinition: ".concat(String.valueOf(Meow.test())));
     }
 }

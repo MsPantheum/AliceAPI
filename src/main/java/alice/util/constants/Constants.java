@@ -1,5 +1,6 @@
 package alice.util.constants;
 
+import alice.Platform;
 import alice.util.Unsafe;
 
 public interface Constants {
@@ -19,7 +20,7 @@ public interface Constants {
     int MAP_TYPE = 0x0f;
     int MAP_FIXED = 0x10;
     int MAP_FILE = 0;
-    int MAP_ANONYMOUS = 0x20;
+    int MAP_ANONYMOUS = Platform.bsd ? 0x1000 : 0x20;
     int MAP_HUGE_SHIFT = 26;
     int MAP_HUGE_MASK = 0x3f;
 

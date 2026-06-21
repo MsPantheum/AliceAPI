@@ -43,7 +43,7 @@ public class Test6 {
         Unsafe.putLong(tmp + 36, entry);
         Unsafe.putByte(tmp + 44, (byte) 0xff);
         Unsafe.putByte(tmp + 45, (byte) 0xe0);
-        MethodInjector.dump(tmp, 46, System.out);
+        //MethodInjector.dump(tmp, 46, System.out);
         byte[] payload = Unsafe.readBytes(tmp, 46);
         MethodInjector.runShellcodeInterpreter(payload);
         System.out.println("Reach the end of main.");

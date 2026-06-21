@@ -12,13 +12,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 public final class ProcReader {
 
-    private static final Map<Object, Map<String, SymbolInfo>> cache = new HashMap<>();
+    private static final Map<String, Map<String, SymbolInfo>> cache = new HashMap<>();
 
     public static boolean isElf(String path) {
         try (InputStream is = Files.newInputStream(Paths.get(path))) {
@@ -75,8 +75,65 @@ public final class ProcReader {
         }
     }
 
-    private static Map<String, LinkedList<MemoryMapping>> parseProcMapsMXBean() {
-        Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
+    private static Map<String, ArrayList<MemoryMapping>> parseProcMapsBSD() {
+        Map<String, ArrayList<MemoryMapping>> mappings = new HashMap<>();
+        try {
+            int pid = ProcessUtil.getPID();
+            Process process = new ProcessBuilder("procstat", "-v", String.valueOf(pid)).redirectErrorStream(true).start();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                reader.readLine();//Skip first line
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) {
+                        continue;
+                    }
+
+                    String[] parts = line.split("\\s+");
+                    if (parts.length < 10) {
+                        continue;
+                    }
+
+                    MemoryMapping mapping = new MemoryMapping();
+                    mapping.addressRangeStart = trimHexPrefix(parts[1]);
+                    mapping.addressRangeEnd = trimHexPrefix(parts[2]);
+                    mapping.permissions = parts[3];
+                    mapping.offset = -1;
+                    mapping.device = null;
+                    mapping.inode = -1;
+                    mapping.pathname = parts.length > 10 ? join(parts, 10) : "";
+
+                    ArrayList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new ArrayList<>());
+                    list.add(mapping);
+                }
+            }
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new IOException("procstat -v exited with code " + exitCode);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return mappings;
+    }
+
+    private static String trimHexPrefix(String value) {
+        return value.startsWith("0x") || value.startsWith("0X") ? value.substring(2) : value;
+    }
+
+    private static String join(String[] parts, int start) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = start; i < parts.length; i++) {
+            if (i > start) {
+                builder.append(' ');
+            }
+            builder.append(parts[i]);
+        }
+        return builder.toString();
+    }
+
+    private static Map<String, ArrayList<MemoryMapping>> parseProcMapsMXBean() {
+        Map<String, ArrayList<MemoryMapping>> mappings = new HashMap<>();
         try {
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             ObjectName name = new ObjectName("com.sun.management:type=DiagnosticCommand");
@@ -90,7 +147,7 @@ public final class ProcReader {
                 }
                 MemoryMapping mapping = parseMapping(line);
                 if (mapping != null) {
-                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new LinkedList<>());
+                    ArrayList<MemoryMapping> list = mappings.computeIfAbsent(mapping.pathname, k -> new ArrayList<>());
                     list.add(mapping);
                 }
             }
@@ -101,10 +158,17 @@ public final class ProcReader {
         }
     }
 
-    public static Map<String, LinkedList<MemoryMapping>> parseProcMaps() {
-        Map<String, LinkedList<MemoryMapping>> ret = parseProcMapsMXBean();
+    public static Map<String, ArrayList<MemoryMapping>> parseProcMaps() {
+        if (Platform.bsd) {//Java can't parse virtual maps on bsd itself, so skip trying to parse it through MXBean.
+            return parseProcMapsBSD();
+        }
+        Map<String, ArrayList<MemoryMapping>> ret = parseProcMapsMXBean();
         if (ret != null) {
-            return ret;
+            if (!ret.isEmpty()) {
+                return ret;
+            } else {
+                System.err.println("MXBean returns empty result!");
+            }
         }
         System.err.println("Failed to parse memory mappings through MXBean!");
         if (Platform.win32) {
@@ -155,8 +219,8 @@ public final class ProcReader {
         return map;
     }
 
-    private static Map<String, LinkedList<MemoryMapping>> parseProcMapsWin32(int pid) {
-        Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
+    private static Map<String, ArrayList<MemoryMapping>> parseProcMapsWin32(int pid) {
+        Map<String, ArrayList<MemoryMapping>> mappings = new HashMap<>();
         Path jcmd = FileUtil.search(FileUtil.JAVA_HOME, "jcmd.exe");
         assert jcmd != null;
         ProcessBuilder processBuilder = new ProcessBuilder(jcmd.toString(), String.valueOf(pid), "VM.dynlibs");
@@ -172,7 +236,7 @@ public final class ProcReader {
                 if (line.startsWith("0x")) {
                     MemoryMapping map = parseMapping(line);
                     if (map != null) {
-                        LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
+                        ArrayList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new ArrayList<>());
                         list.add(map);
                     }
                 }
@@ -184,8 +248,8 @@ public final class ProcReader {
     }
 
     //Generated by Gemini.
-    private static Map<String, LinkedList<MemoryMapping>> parseProcMaps(int pid) {
-        Map<String, LinkedList<MemoryMapping>> mappings = new HashMap<>();
+    private static Map<String, ArrayList<MemoryMapping>> parseProcMaps(int pid) {
+        Map<String, ArrayList<MemoryMapping>> mappings = new HashMap<>();
         String filePath = "/proc/" + pid + "/maps";
 
         try (FileInputStream fis = new FileInputStream(filePath); InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(isr)) {
@@ -193,7 +257,7 @@ public final class ProcReader {
             while ((line = br.readLine()) != null) {
                 MemoryMapping map = parseMapping(line);
                 if (map != null) {
-                    LinkedList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new LinkedList<>());
+                    ArrayList<MemoryMapping> list = mappings.computeIfAbsent(map.pathname, k -> new ArrayList<>());
                     list.add(map);
                 }
             }

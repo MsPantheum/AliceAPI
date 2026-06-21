@@ -3,109 +3,17 @@ package alice._native.linux;
 //int mprotect (void *__addr, size_t __len, int __prot)
 
 import alice._native.ASMUtil;
-import alice.exception.NativeException;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
-import alice.util.AddressUtil;
 import alice.util.ClassUtil;
+import alice.util.MemoryUtil;
 import alice.util.Unsafe;
 import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
 import static alice._native.ASMUtil.Register.*;
-import static alice.util.constants.Constants.*;
 
 public final class mprotect {
-
-    private static class Bootstrap {
-        @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment", "ResultOfMethodCallIgnored"})
-        private static int holder() {
-            for (int i = 9; i > 200; i++) {
-                i -= 1;
-            }
-            Runtime.getRuntime();
-            long lllll = 11221144L;
-            int iii = 14514;
-            while (iii != 0) {
-                iii--;
-                lllll -= iii;
-            }
-            lllll++;
-            int i = 0;
-            int j = 123;
-            while (i < 1000) {
-                i++;
-                j--;
-                if (j < 20) {
-                    j += 40;
-                }
-
-                double d = 114514.114514;
-                d -= 0.1234;
-                if (d < i) {
-                    d += 3;
-                }
-            }
-            System.getProperties();
-            i += 114514;
-            while (i < 123) {
-                i--;
-                j = 123;
-                j++;
-                if (j < 20) {
-                    j += 40;
-                }
-
-                double d = 114514.114514;
-                d -= 0.1234;
-                if (d < i) {
-                    d += 1221;
-                }
-                d--;
-            }
-            System.nanoTime();
-            double ddd = 12311.312312;
-            long ll = 9923L;
-            while (ddd > -9) {
-                ddd -= 1.223;
-                i %= ddd;
-                ll += j;
-                j %= 12;
-            }
-            double dd = i + 14514;
-            dd *= (i - 32768);
-            i++;
-            System.currentTimeMillis();
-            j += (i * dd * ll);
-            j -= lllll;
-            return j;
-        }
-
-        private static final long code_base;
-
-        static {
-            for (int i = 0; i < 40000; i++) {
-                holder();
-            }
-            byte[] payload = new byte[37];
-            int p = 0;
-            p = ASMUtil.movabs(payload, p, RDI); // __addr
-            p = ASMUtil.movabs(payload, p, RSI); // __len
-            p = ASMUtil.movabs(payload, p, RAX); // function
-            p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
-            ASMUtil.jmp(payload, p, RAX);
-            code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", true);
-            AddressUtil.checkNull(code_base);
-            Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
-        }
-
-        private synchronized static int invoke(long __addr, long __len, int __prot) {
-            Unsafe.putLong(code_base + 2, __addr);
-            Unsafe.putLong(code_base + 12, __len);
-            Unsafe.putInt(code_base + 31, __prot);
-            return holder();
-        }
-    }
 
     private static native int holder();
 
@@ -113,7 +21,7 @@ public final class mprotect {
 
     static {
         byte[] payload = new byte[37];
-        code_base = Unsafe.allocateMemory(payload.length);
+        code_base = MemoryUtil.allocate(payload.length);
         int p = 0;
         p = ASMUtil.movabs(payload, p, RDI); // __addr
         p = ASMUtil.movabs(payload, p, RSI); // __len
@@ -122,10 +30,6 @@ public final class mprotect {
         ASMUtil.jmp(payload, p, RAX);
         Unsafe.writeBytes(code_base, payload);
         Unsafe.putLong(code_base + 22, SymbolLookup.lookup("mprotect"));
-        int ret = Bootstrap.invoke(AddressUtil.align_page(code_base), 1, PROT_EXEC | PROT_WRITE | PROT_READ);
-        if (ret != 0) {
-            throw new NativeException("mprotect failed!", ret);
-        }
         InstanceKlass klass = ClassUtil.getKlass(mprotect.class);
         Method method = klass.findMethod("holder", "()I");
         MethodInjector.setNativePointer(method, code_base);

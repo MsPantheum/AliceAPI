@@ -6,13 +6,12 @@ import alice.util.FileUtil;
 import alice.util.ProcReader;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import sun.jvm.hotspot.debugger.win32.coff.COFFException;
 import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
 import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 
@@ -33,7 +32,7 @@ public final class SymbolLookup {
             Logger.MAIN.info("Parsing library: ".concat(lib).concat("."));
             try {
                 table = COFFFileParser.getParser().parse(lib).getHeader().getOptionalHeader().getDataDirectories().getExportDirectoryTable();
-            } catch (COFFException e) {
+            } catch (Exception e) {
                 Logger.MAIN.error("Failed to parse library: ".concat(lib).concat("."));
                 return null;
             }
@@ -218,8 +217,8 @@ public final class SymbolLookup {
             return _try;
         }
         _try = Long.MAX_VALUE;
-        Map<String, LinkedList<ProcReader.MemoryMapping>> maps = parseProcMaps();
-        LinkedList<ProcReader.MemoryMapping> mappings = maps.get(lib);
+        Map<String, ArrayList<ProcReader.MemoryMapping>> maps = parseProcMaps();
+        ArrayList<ProcReader.MemoryMapping> mappings = maps.get(lib);
         for (ProcReader.MemoryMapping mapping : mappings) {
             _try = Math.min(Long.parseLong(mapping.addressRangeStart, 16), _try);
         }

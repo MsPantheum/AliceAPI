@@ -13,8 +13,8 @@ import sun.jvm.hotspot.memory.Universe;
 import sun.jvm.hotspot.oops.CompressedKlassPointers;
 import sun.jvm.hotspot.oops.CompressedOops;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 
 import static alice.util.constants.Constants.*;
 
@@ -75,8 +75,8 @@ public final class MemoryUtil {
     }
 
     public static ProcReader.MemoryMapping findMapping(long address) {
-        Collection<LinkedList<ProcReader.MemoryMapping>> list = ProcReader.parseProcMaps().values();
-        for (LinkedList<ProcReader.MemoryMapping> mappings : list) {
+        Collection<ArrayList<ProcReader.MemoryMapping>> list = ProcReader.parseProcMaps().values();
+        for (ArrayList<ProcReader.MemoryMapping> mappings : list) {
             for (ProcReader.MemoryMapping mapping : mappings) {
                 if (address > Long.parseLong(mapping.addressRangeStart, 16) && address < Long.parseLong(mapping.addressRangeEnd, 16)) {
                     return mapping;
