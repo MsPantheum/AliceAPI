@@ -172,9 +172,46 @@ public final class MethodInjector implements Opcodes {
     }
 
     public static void runShellcodeNative(byte[] shellcode) {
+        runShellcodeNative0(shellcode, void.class);
+    }
+
+    public static boolean runShellcodeNativeBoolean(byte[] shellcode) {
+        return (Boolean) runShellcodeNative0(shellcode, boolean.class);
+    }
+
+    public static byte runShellcodeNativeByte(byte[] shellcode) {
+        return (Byte) runShellcodeNative0(shellcode, byte.class);
+    }
+
+    public static short runShellcodeNativeShort(byte[] shellcode) {
+        return (Short) runShellcodeNative0(shellcode, short.class);
+    }
+
+    public static char runShellcodeNativeChar(byte[] shellcode) {
+        return (Character) runShellcodeNative0(shellcode, char.class);
+    }
+
+    public static int runShellcodeNativeInt(byte[] shellcode) {
+        return (Integer) runShellcodeNative0(shellcode, int.class);
+    }
+
+    public static long runShellcodeNativeLong(byte[] shellcode) {
+        return (Long) runShellcodeNative0(shellcode, long.class);
+    }
+
+    public static float runShellcodeNativeFloat(byte[] shellcode) {
+        return (Float) runShellcodeNative0(shellcode, float.class);
+    }
+
+    public static double runShellcodeNativeDouble(byte[] shellcode) {
+        return (Double) runShellcodeNative0(shellcode, double.class);
+    }
+
+    private static Object runShellcodeNative0(byte[] shellcode, Class<?> returnType) {
+        String descriptor = MethodType.methodType(returnType).toMethodDescriptorString();
         ClassWriter cw = new ClassWriter(0);
         cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
-        cw.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_NATIVE, "invoke", "()V", null, null);
+        cw.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_NATIVE, "invoke", descriptor, null, null);
         byte[] data = cw.toByteArray();
         Class<?> holder;
         if (!Platform.jigsaw) {
@@ -183,23 +220,59 @@ public final class MethodInjector implements Opcodes {
             holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
         }
         InstanceKlass klass = ClassUtil.getKlass(holder);
-        Method method = klass.findMethod("invoke", "()V");
+        Method method = klass.findMethod("invoke", descriptor);
         long codes = MemoryUtil.allocate(shellcode.length);
         Unsafe.writeBytes(codes, shellcode);
         setNativePointer(method, codes);
         try {
-            ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(void.class)).invoke();
+            return ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(returnType)).invoke();
         } catch (Throwable e) {
             throw new ShouldNotReachHere();
         }
     }
 
     public static void runShellcodeInterpreter(byte[] shellcode) {
+        runShellcodeInterpreter0(shellcode, void.class);
+    }
+
+    public static boolean runShellcodeInterpreterBoolean(byte[] shellcode) {
+        return (Boolean) runShellcodeInterpreter0(shellcode, boolean.class);
+    }
+
+    public static byte runShellcodeInterpreterByte(byte[] shellcode) {
+        return (Byte) runShellcodeInterpreter0(shellcode, byte.class);
+    }
+
+    public static short runShellcodeInterpreterShort(byte[] shellcode) {
+        return (Short) runShellcodeInterpreter0(shellcode, short.class);
+    }
+
+    public static char runShellcodeInterpreterChar(byte[] shellcode) {
+        return (Character) runShellcodeInterpreter0(shellcode, char.class);
+    }
+
+    public static int runShellcodeInterpreterInt(byte[] shellcode) {
+        return (Integer) runShellcodeInterpreter0(shellcode, int.class);
+    }
+
+    public static long runShellcodeInterpreterLong(byte[] shellcode) {
+        return (Long) runShellcodeInterpreter0(shellcode, long.class);
+    }
+
+    public static float runShellcodeInterpreterFloat(byte[] shellcode) {
+        return (Float) runShellcodeInterpreter0(shellcode, float.class);
+    }
+
+    public static double runShellcodeInterpreterDouble(byte[] shellcode) {
+        return (Double) runShellcodeInterpreter0(shellcode, double.class);
+    }
+
+    private static Object runShellcodeInterpreter0(byte[] shellcode, Class<?> returnType) {
+        String descriptor = MethodType.methodType(returnType).toMethodDescriptorString();
         ClassWriter cw = new ClassWriter(0);
         cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
-        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "invoke", "()V", null, null);
-        mv.visitInsn(RETURN);
-        mv.visitMaxs(0, 0);
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "invoke", descriptor, null, null);
+        visitDefaultReturn(mv, returnType);
         byte[] data = cw.toByteArray();
         Class<?> holder;
         if (!Platform.jigsaw) {
@@ -208,14 +281,37 @@ public final class MethodInjector implements Opcodes {
             holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
         }
         InstanceKlass klass = ClassUtil.getKlass(holder);
-        Method method = klass.findMethod("invoke", "()V");
+        Method method = klass.findMethod("invoke", descriptor);
         long codes = MemoryUtil.allocate(shellcode.length);
         Unsafe.writeBytes(codes, shellcode);
         setInterpretedEntry(method, codes);
         try {
-            ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(void.class)).invoke();
+            return ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(returnType)).invoke();
         } catch (Throwable e) {
             throw new ShouldNotReachHere();
+        }
+    }
+
+    private static void visitDefaultReturn(MethodVisitor mv, Class<?> returnType) {
+        if (returnType == void.class) {
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0, 0);
+        } else if (returnType == long.class) {
+            mv.visitInsn(LCONST_0);
+            mv.visitInsn(LRETURN);
+            mv.visitMaxs(2, 0);
+        } else if (returnType == float.class) {
+            mv.visitInsn(FCONST_0);
+            mv.visitInsn(FRETURN);
+            mv.visitMaxs(1, 0);
+        } else if (returnType == double.class) {
+            mv.visitInsn(DCONST_0);
+            mv.visitInsn(DRETURN);
+            mv.visitMaxs(2, 0);
+        } else {
+            mv.visitInsn(ICONST_0);
+            mv.visitInsn(IRETURN);
+            mv.visitMaxs(1, 0);
         }
     }
 }

@@ -53,7 +53,7 @@ public final class ProcReader {
         if (symbols != null) {
             for (ElfSymbol symbol : symbols.symbols) {
                 if (symbol.getName() != null && symbol.st_shndx != 0x0) {
-                    map.put(symbol.getName(), new SymbolInfo(symbol.st_value, (char) symbol.getType(), symbol.getName()));
+                    map.put(symbol.getName(), new SymbolInfo(symbol.st_value, symbol.st_size, symbol.getType(), symbol.getName()));
                 }
             }
         }
@@ -269,13 +269,15 @@ public final class ProcReader {
 
     public static class SymbolInfo {
         public final long offset;
-        public final char type;
+        public final long size;
+        public final int type;
         public final String name;
 
-        public SymbolInfo(long offset, char type, String name) {
+        public SymbolInfo(long offset, long size, int type, String name) {
             this.offset = offset;
             this.type = type;
             this.name = name;
+            this.size = size;
         }
 
         @Override

@@ -4,7 +4,6 @@ import alice.Platform;
 import alice._native.ASMUtil;
 import alice.exception.NativeException;
 import alice.injector.MethodInjector;
-import alice.injector.SymbolLookup;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
 import alice.util.Unsafe;
@@ -18,30 +17,24 @@ import static alice.util.constants.Constants.*;
 
 public final class mmap {
 
-    private static final int LIBC_TRAMPOLINE_SIZE = 58;
+    private static final int LINUX_SYSCALL_TRAMPOLINE_SIZE = 55;
     private static final int FREEBSD_SYSCALL_TRAMPOLINE_SIZE = 60;
-    private static final int TRAMPOLINE_SIZE = Platform.bsd ? FREEBSD_SYSCALL_TRAMPOLINE_SIZE : LIBC_TRAMPOLINE_SIZE;
+    private static final int TRAMPOLINE_SIZE = Platform.bsd ? FREEBSD_SYSCALL_TRAMPOLINE_SIZE : LINUX_SYSCALL_TRAMPOLINE_SIZE;
     private static final int ARG0_OFFSET = 2;
     private static final int ARG1_OFFSET = 12;
     private static final int ARG5_OFFSET = 22;
-    private static final int LIBC_FUNCTION_OFFSET = 32;
-    private static final int LIBC_ARG2_OFFSET = 41;
-    private static final int LIBC_ARG3_OFFSET = 46;
-    private static final int LIBC_ARG4_OFFSET = 52;
-    private static final int FREEBSD_SYSCALL_OFFSET = 31;
-    private static final int FREEBSD_ARG2_OFFSET = 36;
-    private static final int FREEBSD_ARG3_OFFSET = 42;
-    private static final int FREEBSD_ARG4_OFFSET = 48;
+    private static final int SYSCALL_OFFSET = 31;
+    private static final int ARG2_OFFSET = 36;
+    private static final int ARG3_OFFSET = 42;
+    private static final int ARG4_OFFSET = 48;
+    private static final int LINUX_SYS_MMAP = 9;
+    private static final int LINUX_SYS_MPROTECT = 10;
     private static final int FREEBSD_SYS_MPROTECT = 74;
     private static final int FREEBSD_SYS_MMAP = 477;
     private static final int BSD_MAP_ANON = 0x1000;
     private static final int LINUX_MAP_ANONYMOUS = 0x20;
 
     private static class Bootstrap {
-        private static final long mmap;
-        private static final long mprotect;
-        private static final long errnoLocation;
-
         @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment", "ResultOfMethodCallIgnored"})
         private static long holder() {
             for (int i = 9; i > 200; i++) {
@@ -113,23 +106,10 @@ public final class mmap {
             for (int i = 0; i < 40000; i++) {
                 holder();
             }
-            if (Platform.bsd) {
-                mmap = 0;
-                mprotect = 0;
-                errnoLocation = 0;
-            } else {
-                mmap = SymbolLookup.lookup("mmap");
-                mprotect = SymbolLookup.lookup("mprotect");
-                errnoLocation = SymbolLookup.lookup("__errno_location");
-                AddressUtil.checkNull(mmap, mprotect);
-            }
             byte[] payload = new byte[TRAMPOLINE_SIZE];
             emitPayload(payload);
             code_base = MethodInjector.inject(payload, mmap.Bootstrap.class, "holder", "()J", true);
             AddressUtil.checkNull(code_base);
-            if (!Platform.bsd) {
-                Unsafe.putLong(code_base + LIBC_FUNCTION_OFFSET, mmap);
-            }
         }
 
         private synchronized static long invoke() {
@@ -146,16 +126,13 @@ public final class mmap {
             Unsafe.putLong(code_base + ARG1_OFFSET, TRAMPOLINE_SIZE);
             Unsafe.putLong(code_base + ARG5_OFFSET, 0);
             if (Platform.bsd) {
-                Unsafe.putInt(code_base + FREEBSD_SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
-                Unsafe.putInt(code_base + FREEBSD_ARG2_OFFSET, PROT_READ | PROT_WRITE);
-                Unsafe.putInt(code_base + FREEBSD_ARG3_OFFSET, flags);
-                Unsafe.putInt(code_base + FREEBSD_ARG4_OFFSET, -1);
+                Unsafe.putInt(code_base + SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
             } else {
-                Unsafe.putLong(code_base + LIBC_FUNCTION_OFFSET, mmap);
-                Unsafe.putInt(code_base + LIBC_ARG2_OFFSET, PROT_READ | PROT_WRITE);
-                Unsafe.putInt(code_base + LIBC_ARG3_OFFSET, flags);
-                Unsafe.putInt(code_base + LIBC_ARG4_OFFSET, -1);
+                Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MMAP);
             }
+            Unsafe.putInt(code_base + ARG2_OFFSET, PROT_READ | PROT_WRITE);
+            Unsafe.putInt(code_base + ARG3_OFFSET, flags);
+            Unsafe.putInt(code_base + ARG4_OFFSET, -1);
             lastMmapFlags = flags;
             lastMmapResult = holder();
             return lastMmapResult;
@@ -167,16 +144,13 @@ public final class mmap {
             Unsafe.putLong(code_base + ARG1_OFFSET, size + (address - page));
             Unsafe.putLong(code_base + ARG5_OFFSET, 0);
             if (Platform.bsd) {
-                Unsafe.putInt(code_base + FREEBSD_SYSCALL_OFFSET, FREEBSD_SYS_MPROTECT);
-                Unsafe.putInt(code_base + FREEBSD_ARG2_OFFSET, prot);
-                Unsafe.putInt(code_base + FREEBSD_ARG3_OFFSET, 0);
-                Unsafe.putInt(code_base + FREEBSD_ARG4_OFFSET, 0);
+                Unsafe.putInt(code_base + SYSCALL_OFFSET, FREEBSD_SYS_MPROTECT);
             } else {
-                Unsafe.putLong(code_base + LIBC_FUNCTION_OFFSET, mprotect);
-                Unsafe.putInt(code_base + LIBC_ARG2_OFFSET, prot);
-                Unsafe.putInt(code_base + LIBC_ARG3_OFFSET, 0);
-                Unsafe.putInt(code_base + LIBC_ARG4_OFFSET, 0);
+                Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MPROTECT);
             }
+            Unsafe.putInt(code_base + ARG2_OFFSET, prot);
+            Unsafe.putInt(code_base + ARG3_OFFSET, 0);
+            Unsafe.putInt(code_base + ARG4_OFFSET, 0);
             return (int) holder();
         }
 
@@ -186,21 +160,14 @@ public final class mmap {
                     + ", errno=" + errno
                     + ", flags=0x" + Integer.toHexString(lastMmapFlags)
                     + ", MAP_ANONYMOUS=0x" + Integer.toHexString(MAP_ANONYMOUS)
-                    + ", mmap=0x" + Long.toHexString(mmap)
-                    + ", mprotect=0x" + Long.toHexString(mprotect)
                     + ", os.name=" + System.getProperty("os.name");
         }
 
         private static int getErrno() {
-            if (Platform.bsd && lastMmapResult < 0) {
+            if (lastMmapResult < 0) {
                 return (int) -lastMmapResult;
             }
-            if (errnoLocation == 0) {
-                return 0;
-            }
-            Unsafe.putLong(code_base + LIBC_FUNCTION_OFFSET, errnoLocation);
-            long errnoAddress = holder();
-            return errnoAddress == 0 ? 0 : Unsafe.getInt(errnoAddress);
+            return 0;
         }
     }
 
@@ -218,9 +185,6 @@ public final class mmap {
             throw new NativeException(Bootstrap.mmapFailureDetails(), -1);
         }
         Unsafe.writeBytes(code_base, payload);
-        if (!Platform.bsd) {
-            Unsafe.putLong(code_base + LIBC_FUNCTION_OFFSET, SymbolLookup.lookup("mmap"));
-        }
         int mprotect = Bootstrap.mprotect(code_base, payload.length, PROT_READ | PROT_EXEC);
         if (mprotect != 0) {
             throw new NativeException("mprotect failed!", mprotect);
@@ -239,24 +203,23 @@ public final class mmap {
         Unsafe.putLong(code_base + ARG1_OFFSET, __len);
         Unsafe.putLong(code_base + ARG5_OFFSET, __offset);
         if (Platform.bsd) {
-            Unsafe.putInt(code_base + FREEBSD_SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
-            Unsafe.putInt(code_base + FREEBSD_ARG2_OFFSET, __prot);
-            Unsafe.putInt(code_base + FREEBSD_ARG3_OFFSET, __flags);
-            Unsafe.putInt(code_base + FREEBSD_ARG4_OFFSET, __fd);
+            Unsafe.putInt(code_base + SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
         } else {
-            Unsafe.putInt(code_base + LIBC_ARG2_OFFSET, __prot);
-            Unsafe.putInt(code_base + LIBC_ARG3_OFFSET, __flags);
-            Unsafe.putInt(code_base + LIBC_ARG4_OFFSET, __fd);
+            Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MMAP);
         }
+        Unsafe.putInt(code_base + ARG2_OFFSET, __prot);
+        Unsafe.putInt(code_base + ARG3_OFFSET, __flags);
+        Unsafe.putInt(code_base + ARG4_OFFSET, __fd);
         mprotect = Bootstrap.mprotect(code_base, TRAMPOLINE_SIZE, PROT_READ | PROT_EXEC);
         if (mprotect != 0) {
             throw new NativeException("mprotect failed!", mprotect);
         }
-        return holder();
+        long result = holder();
+        return isMapFailed(result) ? MAP_FAILED : result;
     }
 
     private static boolean isMapFailed(long address) {
-        return address == MAP_FAILED || address == 0xffffffffL || (Platform.bsd && address < 0);
+        return address == MAP_FAILED || address == 0xffffffffL || address < 0;
     }
 
     private static void emitPayload(byte[] payload) {
@@ -264,18 +227,16 @@ public final class mmap {
         p = ASMUtil.movabs(payload, p, RDI); // __addr
         p = ASMUtil.movabs(payload, p, RSI); // __len
         p = ASMUtil.movabs(payload, p, R9); // __offset
+        p = ASMUtil.movImm32(payload, p, RAX, 0); // syscall number
+        p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
+        p = ASMUtil.movImm32(payload, p, R10, 0); // __flags
+        p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
         if (Platform.bsd) {
-            p = ASMUtil.movImm32(payload, p, RAX, 0); // syscall number
-            p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
-            p = ASMUtil.movImm32(payload, p, R10, 0); // __flags
-            p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
             emitFreeBsdSyscallReturn(payload, p);
         } else {
-            p = ASMUtil.movabs(payload, p, RAX); // function
-            p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
-            p = ASMUtil.movImm32(payload, p, RCX, 0); // __flags
-            p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
-            ASMUtil.jmp(payload, p, RAX);
+            payload[p++] = (byte) 0x0f; // syscall
+            payload[p++] = (byte) 0x05;
+            ASMUtil.ret(payload, p);
         }
     }
 

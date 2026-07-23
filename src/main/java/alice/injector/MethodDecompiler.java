@@ -2,6 +2,7 @@ package alice.injector;
 
 import alice.Platform;
 import alice.util.*;
+import com.google.common.annotations.Beta;
 import sun.jvm.hotspot.code.NMethod;
 import sun.jvm.hotspot.debugger.Address;
 import sun.jvm.hotspot.oops.Klass;
@@ -15,6 +16,7 @@ import java.util.Iterator;
 import static alice.HSDB.typeDataBase;
 import static alice.util.Converter.getAddressValue;
 
+@Beta
 public class MethodDecompiler {
 
     private static final long _marked_for_deoptimization_offset = Platform.JAVA_VERSION <= 8 ? typeDataBase.lookupType("nmethod").getField("_marked_for_deoptimization").getOffset() : -1;

@@ -1,5 +1,7 @@
 package alice;
 
+import alice._native.ASMUtil;
+import alice._native.KernelConfig;
 import alice._native.jni.JNIInvokeInterface_.GetEnv;
 import alice._native.jni.JNINativeInterface_.NewGlobalRef;
 import alice._native.jni.JNI_GetCreatedJavaVMs;
@@ -12,6 +14,8 @@ import alice._native.win32.VirtualProtect;
 import alice.exception.BadEnvironment;
 import alice.exception.ShouldNotReachHere;
 import alice.injector.ClassPatcher;
+import alice.injector.MethodInjector;
+import alice.injector.SymbolLookup;
 import alice.log.Logger;
 import alice.util.*;
 import com.google.common.base.Objects;
@@ -22,6 +26,10 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.util.Printer;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static alice._native.ASMUtil.Register.R10;
 
 /**
  * Do the essential setup to use AliceAPI.
@@ -96,6 +104,43 @@ public final class Init {
         Unsafe.ensureClassInitialized(JNI_GetCreatedJavaVMs.class);
         Unsafe.ensureClassInitialized(GetEnv.class);
         Unsafe.ensureClassInitialized(NewGlobalRef.class);
+
+        if (Platform.win32) {
+            try {
+                System.loadLibrary("advapi32");
+            } catch (UnsatisfiedLinkError e) {
+                throw new ShouldNotReachHere();
+            }
+
+        }
+
+        if ("true".equals(System.getProperty("alice.enchanced_environment_detection"))) {
+            if (Platform.win32) {
+                long function = SymbolLookup.lookup("NtQuerySystemInformation");
+                byte[] raw = new byte[]{(byte) 0x55, (byte) 0x48, (byte) 0x89, (byte) 0xe5, (byte) 0x48, (byte) 0x83, (byte) 0xec, (byte) 0x30, (byte) 0xc7, (byte) 0x45, (byte) 0xf0, (byte) 0x8, (byte) 0x0, (byte) 0x0, (byte) 0x0, (byte) 0xc7, (byte) 0x45, (byte) 0xf4, (byte) 0x0, (byte) 0x0, (byte) 0x0, (byte) 0x0, (byte) 0xb9, (byte) 0x67, (byte) 0x0, (byte) 0x0, (byte) 0x0, (byte) 0x48, (byte) 0x8d, (byte) 0x55, (byte) 0xf0, (byte) 0x41, (byte) 0xb8, (byte) 0x8, (byte) 0x0, (byte) 0x0, (byte) 0x0, (byte) 0x4c, (byte) 0x8d, (byte) 0x4d, (byte) 0xf8, (byte) 0x41, (byte) 0xff, (byte) 0xd2, (byte) 0x85, (byte) 0xc0, (byte) 0x75, (byte) 0x10, (byte) 0x8b, (byte) 0x45, (byte) 0xf4, (byte) 0x83, (byte) 0xe0, (byte) 0x2, (byte) 0x74, (byte) 0x4, (byte) 0xb0, (byte) 0x1, (byte) 0xeb, (byte) 0x6, (byte) 0x30, (byte) 0xc0, (byte) 0xeb, (byte) 0x2, (byte) 0x30, (byte) 0xc0, (byte) 0x48, (byte) 0x89, (byte) 0xec, (byte) 0x5d, (byte) 0xc3};
+                byte[] payload = new byte[raw.length + 10];
+                System.arraycopy(raw, 0, payload, 0, 8);
+                ASMUtil.movabs(payload, 8, R10, function);
+                System.arraycopy(raw, 8, payload, 18, raw.length - 8);
+                int value = MethodInjector.runShellcodeNativeInt(payload);
+                if (value == 1) {
+                    throw new BadEnvironment("Suspicious environment detected!");
+                }
+            } else {
+                if (KernelConfig.isConfigBuiltin("CONFIG_MODULES")) {
+                    Path p = Paths.get("/sys/module/module/parameters/sig_enforce");
+                    if (Files.exists(p)) {
+                        String s = new String(FileUtil.read(p));
+                        if (s.equals("N") || s.equals("0")) {
+                            throw new BadEnvironment("Suspicious environment detected!");
+                        }
+                    } else {
+                        throw new BadEnvironment("Suspicious environment detected!");
+                    }
+                }
+            }
+        }
+
         init = true;
     }
 

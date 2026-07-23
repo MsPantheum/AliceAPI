@@ -28,13 +28,6 @@ public final class InlineHook {
         long process(long address);
     }
 
-    public static void MovRBX(long target, long offset, long mov_target) {
-        long p = 0;
-        Unsafe.putByte(target + offset + (p++), (byte) 0x48);
-        Unsafe.putByte(target + offset + (p++), (byte) 0xBB);
-        Unsafe.putLong(target + offset + (p), mov_target);
-    }
-
     private static class Hook {
         private final long ori;
         private final long neo;
@@ -266,46 +259,6 @@ public final class InlineHook {
     public synchronized static boolean simpleHook(long ori, long neo) {
         return simpleHook(ori, neo, null);
     }
-
-//    public synchronized static long hookWithTrampoline(MethodInfo ori_method, MethodInfo neo_method, MethodInfo trampoline_method) {
-//        long ori = Shellcode.getCompiledEntry(ori_method.holder, ori_method.methodName, ori_method.methodDesc);
-//        long neo = Shellcode.getCompiledEntry(neo_method.holder, neo_method.methodName, neo_method.methodDesc);
-//        long p2trampoline = Shellcode.getPointer2CompiledEntry(trampoline_method.holder, trampoline_method.methodName, trampoline_method.methodDesc);
-//
-//        System.out.print("ori_method=");
-//        AddressUtil.println(AddressUtil.getMethod(ori_method));
-//        System.out.print("Ori=");
-//        AddressUtil.println(ori);
-//        System.out.print("Neo=");
-//        AddressUtil.println(neo);
-//
-//        Hook hook = HOOKS.get(ori);
-//        if (hook != null) {
-//            return hook.hookWithTrampoline(p2trampoline);
-//        }
-//
-//        int success = mprotect.invoke(AddressUtil.align(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-//        assert success == 0;
-//        Processor p = address -> {
-//            Unsafe.putByte(address++, (byte) 0x48);
-//            Unsafe.putByte(address++, (byte) 0x8b);
-//            Unsafe.putByte(address++, (byte) 0xe5);
-//            Unsafe.putByte(address++, (byte) 0x5d);
-//            Unsafe.putByte(address++, (byte) 0x48);
-//            Unsafe.putByte(address++, (byte) 0x83);
-//            Unsafe.putByte(address++, (byte) 0xc4);
-//            Unsafe.putByte(address++, (byte) 0x08);
-//            Hook.MovRBX(address,0,AddressUtil.getMethod(ori_method));
-//            address += 10;
-//            Unsafe.putByte(address++, (byte) 0x55);
-//            return 19;
-//        };
-//        hook = new Hook(ori, neo, p);
-//        HOOKS.put(ori, hook);
-//        System.out.println("Ori before hook:");
-//        Shellcode.dump(ori,28,System.out);
-//        return hook.hookWithTrampoline(p2trampoline);
-//    }
 
     public synchronized static long hookWithTrampoline(long ori, long neo) {
         checkNull(ori, neo);

@@ -1,19 +1,19 @@
 package alice.injector;
 
+import alice.Init;
 import alice.Platform;
 import alice.log.Logger;
 import alice.util.FileUtil;
 import alice.util.ProcReader;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.apache.commons.lang3.Strings;
 import sun.jvm.hotspot.debugger.win32.coff.COFFFileParser;
 import sun.jvm.hotspot.debugger.win32.coff.ExportDirectoryTable;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static alice.util.ProcReader.isElf;
 import static alice.util.ProcReader.parseProcMaps;
@@ -24,7 +24,13 @@ import static alice.util.ProcReader.parseProcMaps;
 public final class SymbolLookup {
     private static final Object2LongOpenHashMap<String> bases = new Object2LongOpenHashMap<>();
     private static final Object2LongOpenHashMap<String> cache = new Object2LongOpenHashMap<>();
+    private static final Map<Long, String> reverseCache = new HashMap<>();
     private static final Object2ObjectOpenHashMap<String, ExportDirectoryTable> exports = new Object2ObjectOpenHashMap<>();
+
+    private static void cacheSymbol(String name, long address) {
+        cache.put(name, address);
+        reverseCache.put(address, name);
+    }
 
     private static ExportDirectoryTable getExport(String lib) {
         ExportDirectoryTable table;
@@ -64,6 +70,7 @@ public final class SymbolLookup {
                     Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
                     if (symbols.containsKey(symbol)) {
                         ret[0] = base + symbols.get(symbol).offset;
+                        cacheSymbol(symbol, ret[0]);
                     }
                 }
             } else {
@@ -76,14 +83,14 @@ public final class SymbolLookup {
                         if (name.equals(symbol)) {
                             ret[0] = base + address;
                         }
-                        cache.put(name, base + address);
+                        cacheSymbol(name, base + address);
                     }
                 }
             }
         });
 
         if (ret[0] != 0) {
-            cache.put(symbol, ret[0]);
+            cacheSymbol(symbol, ret[0]);
             return ret[0];
         }
 
@@ -104,6 +111,7 @@ public final class SymbolLookup {
                                 Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
                                 if (symbols.containsKey(symbol)) {
                                     ret[0] = base + symbols.get(symbol).offset;
+                                    cacheSymbol(symbol, ret[0]);
                                 }
 
                             }
@@ -118,7 +126,7 @@ public final class SymbolLookup {
                                         ret[0] = base + address;
 
                                     }
-                                    cache.put(name, base + address);
+                                    cacheSymbol(name, base + address);
                                 }
                             }
                         }
@@ -129,8 +137,49 @@ public final class SymbolLookup {
             }
         });
         if (ret[0] != 0) {
-            cache.put(symbol, ret[0]);
+            cacheSymbol(symbol, ret[0]);
         }
+        return ret[0];
+    }
+
+    /**
+     * Look up a symbol name by its address from all loaded libraries.
+     *
+     * @param address the symbol address in the current process
+     * @return the symbol name, or null if not found
+     */
+    public static String lookup(long address) {
+        if (reverseCache.containsKey(address)) {
+            return reverseCache.get(address);
+        }
+        final String[] ret = {null};
+        bases.keySet().forEach(lib -> {
+            if (ret[0] == null) {
+                ret[0] = lookup(lib, address);
+            }
+        });
+        if (ret[0] != null) {
+            return ret[0];
+        }
+        ProcReader.parseProcMaps().forEach((path, mappings) -> {
+            if (ret[0] == null && FileUtil.exists(path) && !FileUtil.isDirectory(path)) {
+                if (!bases.containsKey(path)) {
+                    long base = Long.MAX_VALUE;
+
+                    for (ProcReader.MemoryMapping mapping : mappings) {
+                        base = Math.min(Long.parseLong(Platform.win32 ? mapping.addressRangeStart.substring(2) : mapping.addressRangeStart, 16), base);
+                    }
+
+                    if (base != Long.MAX_VALUE) {
+                        bases.put(path, base);
+                    } else {
+                        Logger.MAIN.error("Failed to get base of " + path + '.');
+                        return;
+                    }
+                }
+                ret[0] = lookup(path, address);
+            }
+        });
         return ret[0];
     }
 
@@ -145,12 +194,12 @@ public final class SymbolLookup {
             lib = File.separator + lib;
         }
         for (String p : bases.keySet()) {
-            if (p.endsWith(lib)) {
+            if (Platform.win32 ? Strings.CI.endsWith(p, lib) : p.endsWith(lib)) {//Windows is case-insensitive. Sh*t.
                 return p;
             }
         }
         for (String path : ProcReader.parseProcMaps().keySet()) {
-            if (path.endsWith(lib)) {
+            if (Platform.win32 ? Strings.CI.endsWith(path, lib) : path.endsWith(lib)) {
                 return path;
             }
         }
@@ -186,7 +235,9 @@ public final class SymbolLookup {
         if (!Platform.win32) {
             Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
             if (symbols.containsKey(symbol)) {
-                return symbols.get(symbol).offset + base;
+                long ret = symbols.get(symbol).offset + base;
+                cacheSymbol(symbol, ret);
+                return ret;
             }
         } else {
             ExportDirectoryTable table = getExport(lib);
@@ -198,11 +249,61 @@ public final class SymbolLookup {
                 if (name.equals(symbol)) {
                     ret = base + address;
                 }
-                cache.put(name, base + address);
+                cacheSymbol(name, base + address);
             }
             return ret;
         }
         return 0;
+    }
+
+    /**
+     * Look up a symbol name by its address from a specific dynamic library.<br>
+     * If param lib is null, it will search in all libraries.
+     *
+     * @param lib     the dynamic library to use
+     * @param address the symbol address in the current process
+     * @return the symbol name, or null if not found
+     */
+    public static String lookup(String lib, long address) {
+        if (lib == null) {
+            return lookup(address);
+        }
+        if (!Paths.get(lib).isAbsolute()) {
+            lib = toAbsoluteLibPath(lib);
+        }
+        if (!Platform.win32 && !isElf(lib)) {
+            System.err.println("Not an elf file:" + lib);
+            return null;
+        }
+        long base = lookupLibBase(lib);
+        if (base == 0) {
+            return null;
+        }
+        if (!Platform.win32) {
+            Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
+            for (Map.Entry<String, ProcReader.SymbolInfo> entry : symbols.entrySet()) {
+                long symbolAddress = entry.getValue().offset + base;
+                cacheSymbol(entry.getKey(), symbolAddress);
+                if (symbolAddress == address) {
+                    return entry.getKey();
+                }
+            }
+        } else {
+            ExportDirectoryTable table = getExport(lib);
+            if (table == null) {
+                return null;
+            }
+            for (int i = 0; i < table.getNumberOfNamePointers(); i++) {
+                short ordinal = table.getExportOrdinal(i);
+                String name = table.getExportName(i);
+                long symbolAddress = base + table.getExportAddress(ordinal);
+                cacheSymbol(name, symbolAddress);
+                if (symbolAddress == address) {
+                    return name;
+                }
+            }
+        }
+        return null;
     }
 
     public static long lookupLibBase(String lib) {
@@ -216,17 +317,50 @@ public final class SymbolLookup {
         if (_try != 0) {
             return _try;
         }
-        _try = Long.MAX_VALUE;
         Map<String, ArrayList<ProcReader.MemoryMapping>> maps = parseProcMaps();
         ArrayList<ProcReader.MemoryMapping> mappings = maps.get(lib);
-        for (ProcReader.MemoryMapping mapping : mappings) {
-            _try = Math.min(Long.parseLong(mapping.addressRangeStart, 16), _try);
-        }
-        if (_try != Long.MAX_VALUE) {
+        _try = getBase(mappings);
+        if (_try != 0) {
             bases.put(lib, _try);
             return _try;
         }
         Logger.MAIN.error("Cannot find base of ".concat(lib).concat("!"));
         return 0;
+    }
+
+    public static long getBase(ArrayList<ProcReader.MemoryMapping> mappings) {
+        long base = Long.MAX_VALUE;
+        for (ProcReader.MemoryMapping mapping : mappings) {
+            base = Math.min(Long.parseLong(mapping.addressRangeStart, 16), base);
+        }
+        return base == Long.MAX_VALUE ? 0 : base;
+    }
+
+    public static void main(String[] args) {
+        if (Platform.win32) {
+            Init.ensureInit();
+        }
+        switch (args.length) {
+            case 0: {
+                System.err.println("Usage: SymbolLookup <lib> <symbol>");
+                return;
+            }
+            case 1: {
+                String symbol = args[0];
+                System.out.println("0x".concat(Long.toHexString(lookup(symbol))));
+                return;
+            }
+            default: {
+                if (args.length > 2) {
+                    System.out.println("Warning: arguments ".concat(Arrays.toString(Arrays.copyOfRange(args, 2, args.length))).concat(" will be ignored"));
+                }
+                String lib = args[0];
+                if (!lib.contains(".")) {
+                    lib = System.mapLibraryName(lib);
+                }
+                String symbol = args[1];
+                System.out.println("0x".concat(Long.toHexString(lookup(lib, symbol))));
+            }
+        }
     }
 }
