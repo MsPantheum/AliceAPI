@@ -1,6 +1,6 @@
 package alice;
 
-import alice._native.FunctionUtil;
+import alice._native.InvocationUtil;
 import alice.injector.MethodInjector;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ public class Test12 {
             return;
         }
         Init.ensureInit();
-        FunctionUtil.FunctionInfo fi = FunctionUtil.getFunctionInfo(args[0]);
+        InvocationUtil.FunctionInfo fi = InvocationUtil.getFunctionInfo(args[0]);
         System.out.println(fi.name);
         System.out.println(fi.start);
         System.out.println(fi.end);

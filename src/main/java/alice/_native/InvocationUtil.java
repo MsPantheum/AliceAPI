@@ -4,7 +4,9 @@ import alice.Platform;
 import alice.injector.SymbolLookup;
 import alice.log.Logger;
 import alice.util.FileUtil;
+import alice.util.HDE64;
 import alice.util.ProcReader;
+import alice.util.Unsafe;
 import com.kichik.pecoff4j.PE;
 import com.kichik.pecoff4j.io.PEParser;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -20,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-public class FunctionUtil {
+public class InvocationUtil {
 
     public static final class FunctionInfo {
         public final String name;
@@ -464,6 +466,35 @@ public class FunctionUtil {
                 this.lengthFieldSize = lengthFieldSize;
                 this.idSize = idSize;
             }
+        }
+    }
+
+    public static int resolveSyscall(String name) {
+        return resolveSyscall(SymbolLookup.lookup(name));
+    }
+
+    public static int resolveSyscall(long target) {
+        if (target == 0) {
+            return -1;
+        }
+        byte[] pattern = Unsafe.readBytes(target, 4);
+        if (Platform.win32) {
+            if (!Arrays.equals(pattern, new byte[]{(byte) 0x4c, (byte) 0x8b, (byte) 0xd1, (byte) 0xb8})) {//The stub is hooked.
+                //TODO
+                return -1;
+            }
+        }
+        HDE64.Hde64s hs = new HDE64.Hde64s();
+        int i = 0;
+        while (true) {
+            int len = HDE64.hde64_disasm(target, i, hs);
+            if (len <= 0 || (hs.flags & HDE64.F_ERROR) != 0) {
+                return -1;
+            }
+            if (hs.opcode == 0xb8 && (hs.flags & HDE64.F_IMM32) != 0) {
+                return Math.toIntExact(hs.imm);
+            }
+            i += len;
         }
     }
 }
