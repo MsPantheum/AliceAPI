@@ -150,4 +150,8 @@ public class Unsafe {
 
     public void fullFence() {
     }
+
+    public double getDoubleVolatile(Object o, long offset) {
+        return 0;
+    }
 }

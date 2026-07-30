@@ -123,6 +123,10 @@ public final class Unsafe {
             return UNSAFE.getChar(address);
         }
 
+        public static double getDoubleVolatile(Object o, long offset) {
+            return UNSAFE.getDoubleVolatile(o, offset);
+        }
+
         public static void putByteVolatile(Object o, long offset, byte b) {
             UNSAFE.putByteVolatile(o, offset, b);
         }
@@ -530,6 +534,10 @@ public final class Unsafe {
 
         public static double getDouble(Object o, long offset) {
             return UNSAFE.getDouble(o, offset);
+        }
+
+        public static double getDoubleVolatile(Object o, long offset) {
+            return UNSAFE.getDoubleVolatile(o, offset);
         }
 
         public static double getDouble(long address) {
@@ -996,6 +1004,10 @@ public final class Unsafe {
 
     public static double getDouble(Object o, long offset) {
         return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getDouble(o, offset) : LegacyUnsafe.getDouble(o, offset);
+    }
+
+    public static double getDoubleVolatile(Object o, long offset) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getDoubleVolatile(o, offset) : LegacyUnsafe.getDoubleVolatile(o, offset);
     }
 
     public static void putDouble(Object o, long offset, double value) {
