@@ -127,6 +127,14 @@ public final class Unsafe {
             return UNSAFE.getDoubleVolatile(o, offset);
         }
 
+        public static float getFloatVolatile(Object o, long offset) {
+            return UNSAFE.getFloatVolatile(o, offset);
+        }
+
+        public static float getFloat(Object o, long offset) {
+            return UNSAFE.getFloat(o, offset);
+        }
+
         public static void putByteVolatile(Object o, long offset, byte b) {
             UNSAFE.putByteVolatile(o, offset, b);
         }
@@ -538,6 +546,14 @@ public final class Unsafe {
 
         public static double getDoubleVolatile(Object o, long offset) {
             return UNSAFE.getDoubleVolatile(o, offset);
+        }
+
+        public static float getFloatVolatile(Object o, long offset) {
+            return UNSAFE.getFloatVolatile(o, offset);
+        }
+
+        public static float getFloat(Object o, long offset) {
+            return UNSAFE.getFloat(o, offset);
         }
 
         public static double getDouble(long address) {
@@ -1008,6 +1024,14 @@ public final class Unsafe {
 
     public static double getDoubleVolatile(Object o, long offset) {
         return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getDoubleVolatile(o, offset) : LegacyUnsafe.getDoubleVolatile(o, offset);
+    }
+
+    public static float getFloat(Object o, long offset) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getFloat(o, offset) : LegacyUnsafe.getFloat(o, offset);
+    }
+
+    public static float getFloatVolatile(Object o, long offset) {
+        return INTERNAL_UNSAFE_AVAILABLE ? InternalUnsafe.getFloatVolatile(o, offset) : LegacyUnsafe.getFloatVolatile(o, offset);
     }
 
     public static void putDouble(Object o, long offset, double value) {

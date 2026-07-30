@@ -154,4 +154,12 @@ public class Unsafe {
     public double getDoubleVolatile(Object o, long offset) {
         return 0;
     }
+
+    public float getFloatVolatile(Object o, long offset) {
+        return 0;
+    }
+
+    public float getFloat(Object o, long offset) {
+        return 0;
+    }
 }
