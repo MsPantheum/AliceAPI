@@ -8,6 +8,10 @@ import java.security.ProtectionDomain;
 @SuppressWarnings("all")
 public class Class<T> {
 
+    public Field getField(String name) {
+        return null;
+    }
+
     public Method getMethod(String name, Class<?>... parameterTypes)
             throws NoSuchMethodException, SecurityException {
         return null;

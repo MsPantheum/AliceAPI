@@ -3,10 +3,7 @@ package alice._native;
 import alice.Platform;
 import alice.injector.SymbolLookup;
 import alice.log.Logger;
-import alice.util.FileUtil;
-import alice.util.HDE64;
-import alice.util.ProcReader;
-import alice.util.Unsafe;
+import alice.util.*;
 import com.kichik.pecoff4j.PE;
 import com.kichik.pecoff4j.io.PEParser;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -16,6 +13,7 @@ import net.fornwall.jelf.ElfSectionHeader;
 import net.fornwall.jelf.ElfSymbol;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -496,5 +494,186 @@ public class InvocationUtil {
             }
             i += len;
         }
+    }
+
+    public static void trace(long from, long entry, int depth, int max_dump_size, boolean try_resolve_range, PrintStream out) {
+        if (depth >= 10) {
+            return;
+        }
+
+        int fallbackSize = max_dump_size > 0 ? max_dump_size : 1000;
+        long base = entry;
+        long requestedSize = fallbackSize;
+        if (try_resolve_range) {
+            FunctionInfo info = getFunctionInfo(entry);
+            if (info != null && info.end > info.start) {
+                base = info.start;
+                requestedSize = info.end - info.start;
+            }
+        }
+
+        byte[] code = readReadableBytes(base, requestedSize);
+        long end = base + code.length;
+        if (from != 0) {
+            out.printf("from=0x%x%n", from);
+        }
+        out.printf("base=0x%x%n", base);
+        out.printf("end=0x%x%n", end);
+        out.print("code=");
+        for (int i = 0; i < code.length; i++) {
+            if (i != 0) {
+                out.print(' ');
+            }
+            out.printf("0x%02x", code[i] & 0xff);
+        }
+        out.println();
+
+        if (code.length == 0) {
+            return;
+        }
+
+        List<Long> jumpTargets = findJumpTargets(base, code);
+        for (Long target : jumpTargets) {
+            if (target < base || target >= end) {
+                trace(entry, target, depth + 1, max_dump_size, try_resolve_range, out);
+            }
+        }
+    }
+
+    private static byte[] readReadableBytes(long start, long requestedSize) {
+        if (start == 0 || requestedSize <= 0) {
+            return new byte[0];
+        }
+
+        long limit = Math.min(requestedSize, Integer.MAX_VALUE - 15L);
+        Map<String, ArrayList<ProcReader.MemoryMapping>> mappings;
+        try {
+            mappings = ProcReader.parseProcMaps();
+        } catch (RuntimeException ignored) {
+            mappings = null;
+        }
+
+        long readableSize = 0;
+        while (readableSize < limit) {
+            long address = start + readableSize;
+            long readableEnd;
+            if (Platform.win32) {
+                if (!MemoryUtil.readable(address)) {
+                    break;
+                }
+                long pageSize = Unsafe.PAGE_SIZE;
+                readableEnd = (address & -pageSize) + pageSize;
+            } else {
+                ProcReader.MemoryMapping mapping = findMapping(address, mappings);
+                if (mapping == null || mapping.permissions == null || !mapping.permissions.contains("r")) {
+                    break;
+                }
+                readableEnd = Long.parseUnsignedLong(mapping.addressRangeEnd, 16);
+            }
+
+            long chunkSize = Math.min(limit - readableSize, readableEnd - address);
+            if (chunkSize <= 0) {
+                break;
+            }
+            readableSize += chunkSize;
+        }
+
+        byte[] bytes = new byte[(int) readableSize];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = Unsafe.getByte(start + i);
+        }
+        return bytes;
+    }
+
+    private static ProcReader.MemoryMapping findMapping(long address, Map<String, ArrayList<ProcReader.MemoryMapping>> mappings) {
+        if (mappings == null) {
+            return null;
+        }
+        for (ArrayList<ProcReader.MemoryMapping> libraryMappings : mappings.values()) {
+            for (ProcReader.MemoryMapping mapping : libraryMappings) {
+                long start = Long.parseUnsignedLong(mapping.addressRangeStart, 16);
+                long end = Long.parseUnsignedLong(mapping.addressRangeEnd, 16);
+                if (Long.compareUnsigned(address, start) >= 0 && Long.compareUnsigned(address, end) < 0) {
+                    return mapping;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static List<Long> findJumpTargets(long base, byte[] code) {
+        List<Long> targets = new ArrayList<>();
+        long copy = Unsafe.allocateMemory(code.length + 15L);
+        try {
+            Unsafe.writeBytes(copy, code);
+            for (int i = 0; i < 15; i++) {
+                Unsafe.putByte(copy + code.length + i, (byte) 0);
+            }
+
+            HDE64.Hde64s hs = new HDE64.Hde64s();
+            int offset = 0;
+            while (offset < code.length) {
+                int length = HDE64.hde64_disasm(copy, offset, hs);
+                if (length <= 0 || offset + length > code.length) {
+                    break;
+                }
+                if ((hs.flags & HDE64.F_ERROR) == 0) {
+                    Long target = resolveJumpTarget(base, code, offset, length, hs);
+                    if (target != null) {
+                        targets.add(target);
+                    }
+                }
+                offset += length;
+            }
+        } finally {
+            Unsafe.freeMemory(copy);
+        }
+        return targets;
+    }
+
+    private static Long resolveJumpTarget(long base, byte[] code, int offset, int length, HDE64.Hde64s hs) {
+        if ((hs.flags & HDE64.F_RELATIVE) != 0 && hs.opcode != 0xe8) {
+            return base + offset + length + signedRelativeImmediate(hs);
+        }
+
+        if (hs.opcode != 0xff || (hs.modrm_reg != 4 && hs.modrm_reg != 5) || hs.modrm_mod != 0) {
+            return null;
+        }
+
+        long pointerAddress;
+        if (hs.modrm_rm == 5 && hs.p_67 == 0) {
+            pointerAddress = base + offset + length + (int) hs.disp;
+        } else if (hs.modrm_rm == 5 || (hs.modrm_rm == 4 && hs.sib_base == 5)) {
+            pointerAddress = hs.disp & 0xffffffffL;
+        } else {
+            return null;
+        }
+        return readJumpPointer(pointerAddress, base, code);
+    }
+
+    private static Long readJumpPointer(long address, long base, byte[] code) {
+        long offset = address - base;
+        if (offset >= 0 && offset <= code.length - 8L) {
+            long value = 0;
+            for (int i = 0; i < 8; i++) {
+                value |= (long) (code[(int) offset + i] & 0xff) << (i * 8);
+            }
+            return value;
+        }
+        byte[] pointer = readReadableBytes(address, 8);
+        if (pointer.length != 8) {
+            return null;
+        }
+        return ByteBuffer.wrap(pointer).order(ByteOrder.LITTLE_ENDIAN).getLong();
+    }
+
+    private static long signedRelativeImmediate(HDE64.Hde64s hs) {
+        if ((hs.flags & HDE64.F_IMM8) != 0) {
+            return (byte) hs.imm;
+        }
+        if ((hs.flags & HDE64.F_IMM16) != 0) {
+            return (short) hs.imm;
+        }
+        return (int) hs.imm;
     }
 }

@@ -108,8 +108,7 @@ public final class Init {
         if (Platform.win32) {
             try {
                 System.loadLibrary("advapi32");
-            } catch (UnsatisfiedLinkError e) {
-                throw new ShouldNotReachHere();
+            } catch (UnsatisfiedLinkError ignored) {
             }
 
         }

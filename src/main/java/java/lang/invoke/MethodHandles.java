@@ -60,6 +60,10 @@ public class MethodHandles {
             return null;
         }
 
+        public MethodHandle findStaticGetter(Class<?> refc, String name, Class<?> type) throws NoSuchFieldException, IllegalAccessException {
+            return null;
+        }
+
         public MethodHandle unreflect(Method m) throws IllegalAccessException {
             return null;
         }
