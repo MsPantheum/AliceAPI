@@ -162,4 +162,8 @@ public class Unsafe {
     public float getFloat(Object o, long offset) {
         return 0;
     }
+
+    public void putFloat(Object o, long offset, float x) {
+
+    }
 }
