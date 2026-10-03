@@ -7,6 +7,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.stream.Stream;
 
 public class ImageReader implements AutoCloseable {
+    public static ImageReader open(Path imagePath, PreviewMode mode) throws IOException {
+        return null;
+    }
     public static ImageReader open(Path imagePath) throws IOException {
         return null;
     }

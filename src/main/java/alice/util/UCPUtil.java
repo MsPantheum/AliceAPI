@@ -6,14 +6,12 @@ import jdk.internal.loader.URLClassPath;
 import java.lang.invoke.VarHandle;
 import java.net.URL;
 import java.net.URLStreamHandler;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public final class UCPUtil {
     private static final long path_offset;
     private static final VarHandle path_handle;
-    private static final VarHandle unopenedUrls_handle;
     private static final long loaders_offset;
     private static final VarHandle loaders_handle;
     private static final long lmap_offset;
@@ -30,8 +28,13 @@ public final class UCPUtil {
                 ucp = URLClassPath.class;
                 JarLoader = Class.forName("jdk.internal.loader.URLClassPath$JarLoader");
                 path_offset = -1;
-                path_handle = ReflectionUtil.findVarHandle(ucp, "path", ArrayList.class);
-                unopenedUrls_handle = ReflectionUtil.findVarHandle(ucp, "unopenedUrls", ArrayDeque.class);
+                VarHandle tmp;
+                try {
+                    tmp = ReflectionUtil.findVarHandle(ucp, "path", ArrayList.class);
+                } catch (Throwable t) {
+                    tmp = ReflectionUtil.findVarHandle(ucp, "searchPath", ArrayList.class);
+                }
+                path_handle = tmp;
                 loaders_offset = -1;
                 loaders_handle = ReflectionUtil.findVarHandle(ucp, "loaders", ArrayList.class);
                 lmap_offset = -1;
@@ -43,7 +46,6 @@ public final class UCPUtil {
                 JarLoader = Class.forName("sun.misc.URLClassPath$JarLoader");
                 path_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "path"));
                 path_handle = null;
-                unopenedUrls_handle = null;
                 loaders_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "loaders"));
                 loaders_handle = null;
                 lmap_offset = Unsafe.objectFieldOffset(ReflectionUtil.getField(ucp, "lmap"));
@@ -120,15 +122,6 @@ public final class UCPUtil {
         } else {
             Unsafe.putObject(ucp, jarHandler_offset, handler);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    public static ArrayDeque<URL> getUnopenedUrls(URLClassPath ucp) {
-        return (ArrayDeque<URL>) unopenedUrls_handle.get(ucp);
-    }
-
-    public static void setUnopenedUrls(URLClassPath ucp, ArrayDeque<URL> neo) {
-        unopenedUrls_handle.set(ucp, neo);
     }
 
     public static boolean isJarLoader(Object o) {

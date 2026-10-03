@@ -3,6 +3,7 @@ package alice.util;
 import alice.Meow;
 import alice.Platform;
 import jdk.internal.jimage.ImageReader;
+import jdk.internal.jimage.PreviewMode;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -192,16 +193,23 @@ public final class FileUtil {
                         }
                     }
                 } else if (exists(SYSTEM_IMAGE)) {
-                    try (ImageReader reader = ImageReader.open(SYSTEM_IMAGE)) {
+                    ImageReader reader;
+                    try {
+                        reader = ImageReader.open(SYSTEM_IMAGE);
+                    } catch (NoSuchMethodError e) {
+                        reader = ImageReader.open(SYSTEM_IMAGE, PreviewMode.FOR_RUNTIME);
+                    }
+                    {
+                        final ImageReader finalReader = reader;
                         new Runnable() {
                             @Override
                             public void run() {
                                 ImageReader.Node node;
                                 try {
-                                    assert reader != null;
-                                    node = reader.findNode("/modules/jdk.hotspot.agent");
+                                    assert finalReader != null;
+                                    node = finalReader.findNode("/modules/jdk.hotspot.agent");
                                     if (node.isDirectory()) {
-                                        read(reader, node);
+                                        read(finalReader, node);
                                     } else {
                                         throw new IllegalStateException();
                                     }
