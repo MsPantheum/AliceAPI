@@ -14,6 +14,8 @@ import java.security.cert.Certificate;
 import java.util.function.BiFunction;
 import java.util.jar.Manifest;
 
+import static alice.injector.ClassPatcher.DISABLE_CLASS_PATCHER;
+
 @SuppressWarnings("DuplicatedCode")
 public class ResourceWrapper {
 
@@ -134,6 +136,9 @@ public class ResourceWrapper {
         };
 
         public static jdk.internal.loader.Resource processResource(jdk.internal.loader.Resource resource, String name) throws IOException {
+            if (DISABLE_CLASS_PATCHER && (name != null && name.startsWith("sun/jvm/hotspot"))) {
+                return resource;
+            }
             if (resource != null && ClassPatcher.shouldRunTransformers()) {
                 byte[] data = ClassPatcher.runTransformers(resource.getBytes(), name);
                 if (data == null) {

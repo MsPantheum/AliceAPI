@@ -155,7 +155,7 @@ public final class Bridge {
     }
 
     private static long resolve(String name) {
-        long function = SymbolLookup.lookup(name);
+        long function = SymbolLookup.lookupValue(name);
         if (function == 0) {
             throw new NoSuchFunctionException(name);
         }

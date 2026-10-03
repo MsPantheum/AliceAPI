@@ -10,22 +10,31 @@ import alice.util.BytecodeUtil;
 import alice.util.ClassUtil;
 import alice.util.Unsafe;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 import static org.objectweb.asm.Opcodes.ICONST_3;
 import static org.objectweb.asm.Opcodes.IRETURN;
 
 public class Test8 {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, URISyntaxException, ClassNotFoundException {
         System.out.println("Before redefinition: ".concat(String.valueOf(Meow.test())));
         Init.ensureInit();
         jvmtiCapabilities caps = new jvmtiCapabilities();
         caps.clear();
+        caps.can_generate_native_method_bind_events(true);
         caps.can_redefine_classes(true);
+        caps.can_redefine_any_class(true);
+        caps.can_generate_all_class_hook_events(true);
         int ret = AddCapabilities.invoke(caps.address);
         if (ret != 0) {
             throw new JNIException("Failed to add JVMTI capabilities!", ret);
         }
         byte[] raw_class = ClassUtil.dumpFromMemory(Meow.class);
-        byte[] patched = BytecodeUtil.patchMethod(raw_class, "test()I", mv -> {
+        byte[] patched;
+        patched = BytecodeUtil.patchMethod(raw_class, "test()I", mv -> {
             mv.visitInsn(ICONST_3);
             mv.visitInsn(IRETURN);
             mv.visitMaxs(1, 0);
@@ -49,5 +58,8 @@ public class Test8 {
             caps.release();
         }
         System.out.println("After redefinition: ".concat(String.valueOf(Meow.test())));
+        System.out.println("Test whether can redefine File...");
+        FuckJNIC.FUCK();
+        new File(new URL("file:///usr/bin").toURI());
     }
 }

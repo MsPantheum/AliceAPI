@@ -11,9 +11,9 @@ import java.util.Arrays;
 public class Test13 {
     public static void main(String[] args) throws IOException {
         Init.ensureInit();
-        long target = SymbolLookup.lookup("_ZL23jvm_define_class_commonP7JNIEnv_PKcP8_jobjectPKaiS4_S2_hP6Thread");
+        long target = SymbolLookup.lookupValue("_ZL23jvm_define_class_commonP7JNIEnv_PKcP8_jobjectPKaiS4_S2_hP6Thread");
         System.out.println("target=0x".concat(Long.toHexString(target)));
-        long start = SymbolLookup.lookup("JVM_DefineClass");
+        long start = SymbolLookup.lookupValue("JVM_DefineClass");
         InvocationUtil.FunctionInfo fi = InvocationUtil.getFunctionInfo(start);
         long size = fi.end - fi.start;
         System.out.println("size=0x".concat(Long.toHexString(size)));

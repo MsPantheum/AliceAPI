@@ -12,7 +12,7 @@ import java.util.Arrays;
 public class Test3 {
     public static void main(String[] args) {
         Init.ensureInit();
-        long true_target = Unsafe.getLong(SymbolLookup.lookup("libjvm.so", "_ZN12StubRoutines16_call_stub_entryE"));
+        long true_target = Unsafe.getLong(SymbolLookup.lookupValue("libjvm.so", "_ZN12StubRoutines16_call_stub_entryE"));
         TypeDataBase dataBase = HSDB.typeDataBase;
         System.out.println("Meow?");
         long meow = Converter.getAddressValue(dataBase.lookupType("StubRoutines").getAddressField("_call_stub_return_address").getValue());

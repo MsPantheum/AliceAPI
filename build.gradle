@@ -31,6 +31,7 @@ dependencies {
     implementation 'org.apache.commons:commons-compress:1.28.0'
     implementation 'org.tukaani:xz:1.12'
     implementation("com.kichik.pecoff4j:pecoff4j:0.4.1")
+    implementation("net.java.dev.jna:jna:5.19.1")
 }
 
 test {
@@ -43,7 +44,17 @@ shadowJar {
         exclude("java/**")
         exclude("javax/**")
         exclude("jdk/**")
-        exclude("com/sun/**")
+        exclude("com/sun/jdi/**")
+        exclude("com/sun/codemodel/**")
+        exclude("com/sun/istack/**")
+        exclude("com/sun/jarsigner/**")
+        exclude("com/sun/javadoc/**")
+        exclude("com/sun/java/**")
+        exclude("com/sun/management/**")
+        exclude("com/sun/source/**")
+        exclude("com/sun/tools/**")
+        exclude("com/sun/xml/**")
+        //exclude("com/sun/**")
     }
 }
 

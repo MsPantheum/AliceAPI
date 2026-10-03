@@ -33,7 +33,7 @@ public final class JNI_GetCreatedJavaVMs {
         code_base = MemoryUtil.allocate(payload.length);
         AddressUtil.checkNull(code_base);
         Unsafe.writeBytes(code_base, payload);
-        long function = SymbolLookup.lookup("JNI_GetCreatedJavaVMs");
+        long function = SymbolLookup.lookupValue("JNI_GetCreatedJavaVMs");
         AddressUtil.checkNull(function);
         Unsafe.putLong(code_base + 22, function);
         InstanceKlass klass = ClassUtil.getKlass(JNI_GetCreatedJavaVMs.class);

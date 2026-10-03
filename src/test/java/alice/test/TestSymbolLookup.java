@@ -16,7 +16,7 @@ public class TestSymbolLookup {
         NativeLibrary lib = NativeLibrary.load(libjvm, false);
         assert lib != null;
         System.out.println("Base:"+lib.getBase());
-        long read1 = SymbolLookup.lookup("gHotSpotVMTypes");
+        long read1 = SymbolLookup.lookupValue("gHotSpotVMTypes");
         long read2 = lib.find("gHotSpotVMTypes");
         assert read1 == read2 : "Symbol not match!";
     }

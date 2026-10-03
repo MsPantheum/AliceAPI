@@ -5,6 +5,9 @@ import alice.Platform;
 import alice.log.Logger;
 import alice.util.FileUtil;
 import alice.util.ProcReader;
+import alice.util.SymbolInfo;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.apache.commons.lang3.Strings;
@@ -23,13 +26,29 @@ import static alice.util.ProcReader.parseProcMaps;
  */
 public final class SymbolLookup {
     private static final Object2LongOpenHashMap<String> bases = new Object2LongOpenHashMap<>();
-    private static final Object2LongOpenHashMap<String> cache = new Object2LongOpenHashMap<>();
-    private static final Map<Long, String> reverseCache = new HashMap<>();
+    private static final Map<String, Map<String, SymbolInfo>> cache = new HashMap<>();
+    private static final Long2ObjectMap<String> reverseCache = new Long2ObjectOpenHashMap<>();
     private static final Object2ObjectOpenHashMap<String, ExportDirectoryTable> exports = new Object2ObjectOpenHashMap<>();
 
-    private static void cacheSymbol(String name, long address) {
-        cache.put(name, address);
+    private static SymbolInfo cacheSymbol(String lib, String name, long address) {
+        SymbolInfo ret = new SymbolInfo(lib, name, address);
+        cache.computeIfAbsent(lib, key -> new HashMap<>()).put(name, ret);
         reverseCache.put(address, name);
+        return ret;
+    }
+
+    private static SymbolInfo lookupInCache(String lib, String name) {
+        if (lib != null) {
+            return cache.computeIfAbsent(lib, key -> new HashMap<>()).get(name);
+        } else {
+            for (Map<String, SymbolInfo> value : cache.values()) {
+                SymbolInfo ret = value.get(name);
+                if (ret != null) {
+                    return ret;
+                }
+            }
+        }
+        return null;
     }
 
     private static ExportDirectoryTable getExport(String lib) {
@@ -53,24 +72,35 @@ public final class SymbolLookup {
     }
 
     /**
+     * Look up the value of a symbol from all loaded libraries.
+     *
+     * @param symbol the symbol to lookup.
+     * @return the symbol value in the current process,0 if not found
+     */
+    public static long lookupValue(String symbol) {
+        SymbolInfo info = lookup(symbol);
+        return info != null ? info.address : 0;
+    }
+
+    /**
      * Look up a symbol from all loaded libraries.
      *
      * @param symbol the symbol to lookup.
-     * @return the symbol value in the current process.
+     * @return the symbol info in the current process.
      */
-    public static long lookup(String symbol) {
-        if (cache.containsKey(symbol)) {
-            return cache.getLong(symbol);
+    public static SymbolInfo lookup(String symbol) {
+        SymbolInfo _try = lookupInCache(null, symbol);
+        if (_try != null) {
+            return _try;
         }
-        final long[] ret = {0};
+        final SymbolInfo[] ret = {null};
         bases.keySet().forEach(lib -> {
             long base = bases.getLong(lib);
             if (!Platform.win32) {
                 if (isElf(lib)) {
-                    Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
+                    Map<String, ProcReader.ElfSymbolInfo> symbols = ProcReader.readElf(lib);
                     if (symbols.containsKey(symbol)) {
-                        ret[0] = base + symbols.get(symbol).offset;
-                        cacheSymbol(symbol, ret[0]);
+                        ret[0] = cacheSymbol(lib, symbol, base + symbols.get(symbol).offset);
                     }
                 }
             } else {
@@ -80,17 +110,18 @@ public final class SymbolLookup {
                         short ordinal = table.getExportOrdinal(i);
                         String name = table.getExportName(i);
                         long address = table.getExportAddress(ordinal);
+                        SymbolInfo current = cacheSymbol(lib, name, base + address);
                         if (name.equals(symbol)) {
-                            ret[0] = base + address;
+                            ret[0] = current;
                         }
-                        cacheSymbol(name, base + address);
+
                     }
                 }
             }
         });
 
-        if (ret[0] != 0) {
-            cacheSymbol(symbol, ret[0]);
+        if (ret[0] != null) {
+            //cacheSymbol(symbol, ret[0]);
             return ret[0];
         }
 
@@ -107,13 +138,10 @@ public final class SymbolLookup {
                         bases.put(path, base);
                         if (!Platform.win32) {
                             if (isElf(path)) {
-
-                                Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(path);
+                                Map<String, ProcReader.ElfSymbolInfo> symbols = ProcReader.readElf(path);
                                 if (symbols.containsKey(symbol)) {
-                                    ret[0] = base + symbols.get(symbol).offset;
-                                    cacheSymbol(symbol, ret[0]);
+                                    ret[0] = cacheSymbol(path, symbol, base + symbols.get(symbol).offset);
                                 }
-
                             }
                         } else {
                             ExportDirectoryTable table = getExport(path);
@@ -122,11 +150,10 @@ public final class SymbolLookup {
                                     short ordinal = table.getExportOrdinal(i);
                                     String name = table.getExportName(i);
                                     long address = table.getExportAddress(ordinal);
+                                    SymbolInfo current = cacheSymbol(path, name, base + address);
                                     if (name.equals(symbol)) {
-                                        ret[0] = base + address;
-
+                                        ret[0] = current;
                                     }
-                                    cacheSymbol(name, base + address);
                                 }
                             }
                         }
@@ -136,9 +163,6 @@ public final class SymbolLookup {
                 }
             }
         });
-        if (ret[0] != 0) {
-            cacheSymbol(symbol, ret[0]);
-        }
         return ret[0];
     }
 
@@ -207,53 +231,67 @@ public final class SymbolLookup {
     }
 
     /**
+     * Look up the value of a symbol from a specific dynamic library.<br>
+     * If param lib is null, it will search in all libraries.
+     *
+     * @param lib    the dynamic library to use
+     * @param symbol the symbol to lookup
+     * @return the symbol value in the current process,0 if not found.
+     */
+    public static long lookupValue(String lib, String symbol) {
+        SymbolInfo info = lookup(lib, symbol);
+        return info != null ? info.address : 0;
+    }
+
+    /**
      * Look up a symbol from a specific dynamic library.<br>
      * If param lib is null, it will search in all libraries.
      *
      * @param lib    the dynamic library to use
      * @param symbol the symbol to lookup
-     * @return the symbol value in the current process
+     * @return the symbol info in the current process
      */
-    public static long lookup(String lib, String symbol) {
+    public static SymbolInfo lookup(String lib, String symbol) {
         if (lib == null) {
             return lookup(symbol);
         }
         if (!Paths.get(lib).isAbsolute()) {
             lib = toAbsoluteLibPath(lib);
         }
-        if (cache.containsKey(symbol)) {
-            return cache.getLong(symbol);
+        SymbolInfo _try = lookupInCache(lib, symbol);
+        if (_try != null) {
+            return _try;
         }
         if (!Platform.win32 && !isElf(lib)) {
             System.err.println("Not an elf file:" + lib);
-            return 0;
+            return null;
         }
         long base = lookupLibBase(lib);
         if (base == 0) {
-            return 0;
+            return null;
         }
         if (!Platform.win32) {
-            Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
+            Map<String, ProcReader.ElfSymbolInfo> symbols = ProcReader.readElf(lib);
             if (symbols.containsKey(symbol)) {
                 long ret = symbols.get(symbol).offset + base;
-                cacheSymbol(symbol, ret);
-                return ret;
+                return cacheSymbol(lib, symbol, ret);
             }
         } else {
             ExportDirectoryTable table = getExport(lib);
-            long ret = 0;
+            SymbolInfo ret = null;
             for (int i = 0; i < Objects.requireNonNull(table).getNumberOfNamePointers(); i++) {
                 short ordinal = table.getExportOrdinal(i);
                 String name = table.getExportName(i);
                 long address = table.getExportAddress(ordinal);
+                SymbolInfo current = cacheSymbol(lib, name, base + address);
                 if (name.equals(symbol)) {
-                    ret = base + address;
+                    ret = current;
                 }
-                cacheSymbol(name, base + address);
+
             }
             return ret;
         }
-        return 0;
+        return null;
     }
 
     /**
@@ -280,10 +318,10 @@ public final class SymbolLookup {
             return null;
         }
         if (!Platform.win32) {
-            Map<String, ProcReader.SymbolInfo> symbols = ProcReader.readElf(lib);
-            for (Map.Entry<String, ProcReader.SymbolInfo> entry : symbols.entrySet()) {
+            Map<String, ProcReader.ElfSymbolInfo> symbols = ProcReader.readElf(lib);
+            for (Map.Entry<String, ProcReader.ElfSymbolInfo> entry : symbols.entrySet()) {
                 long symbolAddress = entry.getValue().offset + base;
-                cacheSymbol(entry.getKey(), symbolAddress);
+                cacheSymbol(lib, entry.getKey(), symbolAddress);
                 if (symbolAddress == address) {
                     return entry.getKey();
                 }
@@ -297,13 +335,32 @@ public final class SymbolLookup {
                 short ordinal = table.getExportOrdinal(i);
                 String name = table.getExportName(i);
                 long symbolAddress = base + table.getExportAddress(ordinal);
-                cacheSymbol(name, symbolAddress);
+                cacheSymbol(lib, name, symbolAddress);
                 if (symbolAddress == address) {
                     return name;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Rebuild the cache of loaded library base addresses and return them.
+     *
+     * @return an unmodifiable snapshot of bases of all the resolved dynamic libraries.
+     */
+    public static Map<String, Long> getAllBases() {
+        Object2LongOpenHashMap<String> rebuiltBases = new Object2LongOpenHashMap<>();
+        parseProcMaps().forEach((lib, mappings) -> {
+            long base = getBase(mappings);
+            if (base != 0) {
+                rebuiltBases.put(lib, base);
+            }
+        });
+
+        bases.clear();
+        bases.putAll(rebuiltBases);
+        return Collections.unmodifiableMap(new HashMap<>(bases));
     }
 
     public static long lookupLibBase(String lib) {
@@ -347,7 +404,7 @@ public final class SymbolLookup {
             }
             case 1: {
                 String symbol = args[0];
-                System.out.println("0x".concat(Long.toHexString(lookup(symbol))));
+                System.out.println("0x".concat(Long.toHexString(lookup(symbol).address)));
                 return;
             }
             default: {
@@ -359,7 +416,7 @@ public final class SymbolLookup {
                     lib = System.mapLibraryName(lib);
                 }
                 String symbol = args[1];
-                System.out.println("0x".concat(Long.toHexString(lookup(lib, symbol))));
+                System.out.println("0x".concat(Long.toHexString(Objects.requireNonNull(lookup(lib, symbol)).address)));
             }
         }
     }

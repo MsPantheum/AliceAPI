@@ -82,7 +82,7 @@ public class VirtualQuery {
         if (USE_SYSCALL) {
             Unsafe.putInt(codeBase + SYSCALL_NUMBER_OFFSET, NT_QUERY_VIRTUAL_MEMORY);
         } else {
-            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookup("VirtualQuery"));
+            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookupValue("VirtualQuery"));
         }
     }
 

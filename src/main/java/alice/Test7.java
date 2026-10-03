@@ -15,6 +15,6 @@ public class Test7 {
         String target = args[0];
         String length_raw = args.length > 1 ? args[1] : null;
         long length = length_raw != null ? (length_raw.startsWith("0x") ? Long.parseLong(length_raw, 16) : Long.parseLong(length_raw)) : (InvocationUtil.getFunctionInfo(target).end - InvocationUtil.getFunctionInfo(target).start);
-        MethodInjector.dump(SymbolLookup.lookup(target), length, new PrintStream(Files.newOutputStream(Paths.get("dump_results"))));
+        MethodInjector.dump(SymbolLookup.lookupValue(target), length, new PrintStream(Files.newOutputStream(Paths.get("dump_results"))));
     }
 }

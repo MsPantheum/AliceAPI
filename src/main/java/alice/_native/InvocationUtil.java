@@ -149,7 +149,7 @@ public class InvocationUtil {
     }
 
     private static FunctionInfo cacheWindowsExport(String name) {
-        long start = SymbolLookup.lookup(name);
+        long start = SymbolLookup.lookupValue(name);
         if (start == 0) {
             return null;
         }
@@ -468,7 +468,7 @@ public class InvocationUtil {
     }
 
     public static int resolveSyscall(String name) {
-        return resolveSyscall(SymbolLookup.lookup(name));
+        return resolveSyscall(SymbolLookup.lookupValue(name));
     }
 
     public static int resolveSyscall(long target) {

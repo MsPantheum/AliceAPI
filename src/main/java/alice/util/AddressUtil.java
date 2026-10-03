@@ -51,8 +51,8 @@ public final class AddressUtil {
         }
     }
 
-    private static final long _narrow_oop_base = Platform.jigsaw ? CompressedOops.getBase() : Universe.getNarrowOopBase();
-    private static final int _narrow_oop_shift = Platform.jigsaw ? CompressedOops.getShift() : Universe.getNarrowOopShift();
+    public static final long _narrow_oop_base = Platform.jigsaw ? CompressedOops.getBase() : Universe.getNarrowOopBase();
+    public static final int _narrow_oop_shift = Platform.jigsaw ? CompressedOops.getShift() : Universe.getNarrowOopShift();
 
     private static long decodeNarrowOop(int narrow) {
         return ((narrow & 0xffffffffL) << _narrow_oop_shift) + _narrow_oop_base;

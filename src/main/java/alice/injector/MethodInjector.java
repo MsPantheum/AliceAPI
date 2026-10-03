@@ -22,6 +22,9 @@ public final class MethodInjector implements Opcodes {
 
     private static final long _from_compiled_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_compiled_entry").getOffset();
     private static final long _from_interpreted_entry_offset = typeDataBase.lookupType("Method").getAddressField("_from_interpreted_entry").getOffset();
+    private static final long _access_flags_offset = typeDataBase.lookupType("Method").getField("_access_flags").getOffset();
+    private static final long Method_SIZE = typeDataBase.lookupType("Method").getSize();
+    private static final long ConstMethod_SIZE = typeDataBase.lookupType("ConstMethod").getSize();
 
     public static long getInterpretedEntry(Class<?> target, String name, String desc) {
         return getInterpretedEntry(ClassUtil.<InstanceKlass>getKlass(target).findMethod(name, desc));
@@ -86,6 +89,10 @@ public final class MethodInjector implements Opcodes {
     }
 
     public static long inject(byte[] payload, Class<?> target, String name, String desc, boolean skipVerify) {
+        return inject(payload, target, name, desc, skipVerify, null);
+    }
+
+    public static long inject(byte[] payload, Class<?> target, String name, String desc, boolean skipVerify, byte[] backup) {
         long address = getCompiledEntry(target, name, desc);
         checkNull(address);
         if (!skipVerify) {
@@ -102,6 +109,9 @@ public final class MethodInjector implements Opcodes {
             }
         }
         for (int j = 0; j < payload.length; j++) {
+            if (backup != null) {
+                backup[j] = Unsafe.getByte(address + j);
+            }
             Unsafe.putByte(address + j, payload[j]);
         }
         return address;
@@ -141,17 +151,12 @@ public final class MethodInjector implements Opcodes {
         return getPointer2InterpretedEntry(mi.holder, mi.name, mi.descriptor);
     }
 
-    private static final long _access_flags_offset = typeDataBase.lookupType("Method").getField("_access_flags").getOffset();
-
     public static void antiOptimization(Method method) {
         int access = (int) (method.getAccessFlags() & JVM_ACC_WRITTEN_FLAGS);
         access = access | JVM_ACC_NOT_C1_COMPILABLE | JVM_ACC_NOT_C2_COMPILABLE | JVM_ACC_NOT_C2_OSR_COMPILABLE;
 
         Unsafe.putInt(getAddressValue(method) + _access_flags_offset, access);
     }
-
-    private static final long Method_SIZE = typeDataBase.lookupType("Method").getSize();
-    private static final long ConstMethod_SIZE = typeDataBase.lookupType("ConstMethod").getSize();
 
     public static long getNativePointer(Method method) {
         if (!method.isNative()) {

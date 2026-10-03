@@ -1,5 +1,6 @@
 package java.lang;
 
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -70,6 +71,10 @@ public class Class<T> {
     public native Class<?> getComponentType();
 
     public String getSimpleName() {
+        return null;
+    }
+
+    public InputStream getResourceAsStream(String name) {
         return null;
     }
 }

@@ -51,7 +51,7 @@ public class DebuggerLocalPatcher {
                         MethodVisitor mv = super.visitMethod(Opcodes.ACC_PRIVATE, name, descriptor, signature, exceptions);
                         mv.visitVarInsn(Opcodes.ALOAD, 1);
                         mv.visitVarInsn(Opcodes.ALOAD, 2);
-                        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "alice/injector/SymbolLookup", "lookup", "(Ljava/lang/String;Ljava/lang/String;)J", false);
+                        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "alice/injector/SymbolLookup", "lookupValue", "(Ljava/lang/String;Ljava/lang/String;)J", false);
                         mv.visitInsn(Opcodes.LRETURN);
                         mv.visitMaxs(2, 3);
                         return null;

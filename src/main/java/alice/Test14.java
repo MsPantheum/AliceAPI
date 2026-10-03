@@ -17,7 +17,7 @@ import static alice._native.ASMUtil.Register.RAX;
 public class Test14 {
     public static void main(String[] args) throws IOException {
         Init.ensureInit();
-        long target = SymbolLookup.lookup("JVM_Sleep");
+        long target = SymbolLookup.lookupValue("JVM_Sleep");
         int call_number = InvocationUtil.resolveSyscall("NtProtectVirtualMemory");
         ByteArrayList tmp = new ByteArrayList();
         ASMUtil.subRsp(tmp, 0x30);

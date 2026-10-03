@@ -334,4 +334,10 @@ public class jvmtiEventCallbacks extends NativeObject {
     public void VMObjectAlloc(long VMObjectAlloc) {
         Unsafe.putLong(address + VMObjectAlloc_offset, VMObjectAlloc);
     }
+
+    public void clear() {
+        for (long offset = 0; offset < SIZE; offset += Integer.BYTES) {
+            Unsafe.putInt(address + offset, 0);
+        }
+    }
 }

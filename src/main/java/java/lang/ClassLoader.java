@@ -1,5 +1,6 @@
 package java.lang;
 
+import java.io.InputStream;
 import java.net.URL;
 
 @SuppressWarnings("all")
@@ -25,4 +26,9 @@ public abstract class ClassLoader {
     public URL getResource(String name) {
         return null;
     }
+
+    public static InputStream getSystemResourceAsStream(String name) {
+        return null;
+    }
+
 }

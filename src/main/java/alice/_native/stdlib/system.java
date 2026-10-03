@@ -46,7 +46,7 @@ public final class system {
         AddressUtil.checkNull(code_base);
         MemoryUtil.setMemoryRWX(code_base, 1);
         Unsafe.writeBytes(code_base, payload);
-        Unsafe.putLong(code_base + 24, SymbolLookup.lookup("system"));
+        Unsafe.putLong(code_base + 24, SymbolLookup.lookupValue("system"));
         InstanceKlass klass = ClassUtil.getKlass(system.class);
         Method method = klass.findMethod("holder", "()I");
         MethodInjector.setNativePointer(method, code_base);

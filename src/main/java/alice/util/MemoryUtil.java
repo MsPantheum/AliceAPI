@@ -30,8 +30,8 @@ public final class MemoryUtil {
         return Platform.jigsaw ? Unsafe.getUncompressedObject(value) : (T) Ptr2Obj.getFromPtr(value);
     }
 
-    private static final long _narrow_klass_base = Platform.jigsaw ? CompressedKlassPointers.getBase() : Universe.getNarrowKlassBase();
-    private static final int _narrow_klass_shift = Platform.jigsaw ? CompressedKlassPointers.getShift() : Universe.getNarrowKlassShift();
+    public static final long _narrow_klass_base = Platform.jigsaw ? CompressedKlassPointers.getBase() : Universe.getNarrowKlassBase();
+    public static final int _narrow_klass_shift = Platform.jigsaw ? CompressedKlassPointers.getShift() : Universe.getNarrowKlassShift();
 
     public static long decodeNarrowKlass(int narrow) {
         return ((long) narrow << _narrow_klass_shift) + _narrow_klass_base;

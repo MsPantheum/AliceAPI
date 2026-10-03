@@ -80,7 +80,7 @@ public final class VirtualFree {
         if (USE_SYSCALL) {
             Unsafe.putInt(codeBase + SYSCALL_NUMBER_OFFSET, NT_FREE_VIRTUAL_MEMORY);
         } else {
-            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookup("VirtualFree"));
+            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookupValue("VirtualFree"));
         }
     }
 

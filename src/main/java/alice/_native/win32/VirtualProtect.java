@@ -3,6 +3,7 @@ package alice._native.win32;
 import alice._native.ASMUtil;
 import alice._native.InvocationUtil;
 import alice.exception.NativeException;
+import alice.exception.ShouldNotReachHere;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
@@ -80,7 +81,7 @@ public final class VirtualProtect {
         if (USE_SYSCALL) {
             Unsafe.putInt(codeBase + SYSCALL_NUMBER_OFFSET, NT_PROTECT_VIRTUAL_MEMORY);
         } else {
-            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookup("VirtualProtect"));
+            Unsafe.putLong(codeBase + FALLBACK_FUNCTION_OFFSET, SymbolLookup.lookupValue("VirtualProtect"));
         }
     }
 
@@ -139,13 +140,15 @@ public final class VirtualProtect {
         }
     }
 
-    private static int invokeCode(long codeBase, long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect, boolean bootstrap) {
+    private static synchronized int invokeCode(long codeBase, long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect, boolean bootstrap) {
         return USE_SYSCALL
                 ? invokeSyscall(codeBase, lpAddress, dwSize, flNewProtect, lpflOldProtect, bootstrap)
                 : invokeFallback(codeBase, lpAddress, dwSize, flNewProtect, lpflOldProtect, bootstrap);
     }
 
     private static class Bootstrap {
+        private static boolean invalidated;
+
         @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment"})
         private static int holder() {
             for (int i = 9; i > 200; i++) {
@@ -206,6 +209,7 @@ public final class VirtualProtect {
         }
 
         private static final long code_base;
+        private static final byte[] backup;
 
         static {
             for (int i = 0; i < 20000; i++) {
@@ -214,12 +218,24 @@ public final class VirtualProtect {
             }
 
             byte[] payload = createPayload();
-            code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", false);
+            backup = new byte[payload.length];
+            code_base = MethodInjector.inject(payload, Bootstrap.class, "holder", "()I", true, backup);
             patchStaticTarget(code_base);
         }
 
-        private static int invoke(long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect) {
+        private synchronized static int invoke(long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect) {
+            if (invalidated) {
+                throw new ShouldNotReachHere();
+            }
             return invokeCode(code_base, lpAddress, dwSize, flNewProtect, lpflOldProtect, true);
+        }
+
+        private synchronized static void invalidate() {
+            if (invalidated) {
+                throw new ShouldNotReachHere();
+            }
+            Unsafe.writeBytes(code_base, backup);
+            invalidated = true;
         }
     }
 
@@ -238,6 +254,7 @@ public final class VirtualProtect {
         if (ret == 0) {
             throw new NativeException("VirtualProtect failed!", ret);
         }
+        Bootstrap.invalidate();
         InstanceKlass klass = ClassUtil.getKlass(VirtualProtect.class);
         Method method = klass.findMethod("holder", "()I");
         MethodInjector.setNativePointer(method, code_base);

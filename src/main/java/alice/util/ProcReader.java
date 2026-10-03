@@ -18,7 +18,7 @@ import java.util.Map;
 
 public final class ProcReader {
 
-    private static final Map<String, Map<String, SymbolInfo>> cache = new HashMap<>();
+    private static final Map<String, Map<String, ElfSymbolInfo>> cache = new HashMap<>();
 
     public static boolean isElf(String path) {
         try (InputStream is = Files.newInputStream(Paths.get(path))) {
@@ -30,13 +30,13 @@ public final class ProcReader {
         }
     }
 
-    public static Map<String, SymbolInfo> readElf(String path) {
+    public static Map<String, ElfSymbolInfo> readElf(String path) {
         if (cache.containsKey(path)) {
             return cache.get(path);
         }
         try {
             ElfFile elf = ElfFile.from(Files.newInputStream(Paths.get(path)));
-            Map<String, SymbolInfo> map = new HashMap<>();
+            Map<String, ElfSymbolInfo> map = new HashMap<>();
             ElfSymbolTableSection symbols = elf.getSymbolTableSection();
             iterateSymbols(map, symbols);
             symbols = elf.getDynamicSymbolTableSection();
@@ -49,11 +49,11 @@ public final class ProcReader {
         }
     }
 
-    private static void iterateSymbols(Map<String, SymbolInfo> map, ElfSymbolTableSection symbols) {
+    private static void iterateSymbols(Map<String, ElfSymbolInfo> map, ElfSymbolTableSection symbols) {
         if (symbols != null) {
             for (ElfSymbol symbol : symbols.symbols) {
                 if (symbol.getName() != null && symbol.st_shndx != 0x0) {
-                    map.put(symbol.getName(), new SymbolInfo(symbol.st_value, symbol.st_size, symbol.getType(), symbol.getName()));
+                    map.put(symbol.getName(), new ElfSymbolInfo(symbol.st_value, symbol.st_size, symbol.getType(), symbol.getName()));
                 }
             }
         }
@@ -267,13 +267,13 @@ public final class ProcReader {
         return mappings;
     }
 
-    public static class SymbolInfo {
+    public static class ElfSymbolInfo {
         public final long offset;
         public final long size;
         public final int type;
         public final String name;
 
-        public SymbolInfo(long offset, long size, int type, String name) {
+        public ElfSymbolInfo(long offset, long size, int type, String name) {
             this.offset = offset;
             this.type = type;
             this.name = name;
@@ -287,7 +287,7 @@ public final class ProcReader {
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof SymbolInfo && name.equals(((SymbolInfo) obj).name);
+            return obj instanceof ElfSymbolInfo && name.equals(((ElfSymbolInfo) obj).name);
         }
 
         @Override

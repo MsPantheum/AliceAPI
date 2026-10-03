@@ -3,6 +3,7 @@ package alice._native.linux;
 import alice.Platform;
 import alice._native.ASMUtil;
 import alice.exception.NativeException;
+import alice.exception.ShouldNotReachHere;
 import alice.injector.MethodInjector;
 import alice.util.AddressUtil;
 import alice.util.ClassUtil;
@@ -33,8 +34,96 @@ public final class mmap {
     private static final int FREEBSD_SYS_MMAP = 477;
     private static final int BSD_MAP_ANON = 0x1000;
     private static final int LINUX_MAP_ANONYMOUS = 0x20;
+    private static final long code_base;
+
+    static {
+        byte[] payload = new byte[TRAMPOLINE_SIZE];
+        emitPayload(payload);
+        code_base = Bootstrap.invoke();
+        if (isMapFailed(code_base)) {
+            throw new NativeException(Bootstrap.mmapFailureDetails(), -1);
+        }
+        Unsafe.writeBytes(code_base, payload);
+        int mprotect = Bootstrap.mprotect(code_base, payload.length, PROT_READ | PROT_WRITE | PROT_EXEC);
+        if (mprotect != 0) {
+            throw new NativeException("mprotect failed!", mprotect);
+        }
+        InstanceKlass klass = ClassUtil.getKlass(mmap.class);
+        Method method = klass.findMethod("holder", "()J");
+        MethodInjector.setNativePointer(method, code_base);
+        Bootstrap.invalidate();//Restore it so JVM won't complain later
+    }
+
+    @SuppressWarnings(value = {"DuplicatedCode"})
+    private static native long holder();
+
+    public synchronized static long invoke(long __addr, long __len, int __prot, int __flags, int __fd, long __offset) {
+        Unsafe.putLong(code_base + ARG0_OFFSET, __addr);
+        Unsafe.putLong(code_base + ARG1_OFFSET, __len);
+        Unsafe.putLong(code_base + ARG5_OFFSET, __offset);
+        if (Platform.bsd) {
+            Unsafe.putInt(code_base + SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
+        } else {
+            Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MMAP);
+        }
+        Unsafe.putInt(code_base + ARG2_OFFSET, __prot);
+        Unsafe.putInt(code_base + ARG3_OFFSET, __flags);
+        Unsafe.putInt(code_base + ARG4_OFFSET, __fd);
+        long result = holder();
+        return isMapFailed(result) ? MAP_FAILED : result;
+    }
+
+    private static boolean isMapFailed(long address) {
+        return address == MAP_FAILED || address == 0xffffffffL || address < 0;
+    }
+
+    private static void emitPayload(byte[] payload) {
+        int p = 0;
+        p = ASMUtil.movabs(payload, p, RDI); // __addr
+        p = ASMUtil.movabs(payload, p, RSI); // __len
+        p = ASMUtil.movabs(payload, p, R9); // __offset
+        p = ASMUtil.movImm32(payload, p, RAX, 0); // syscall number
+        p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
+        p = ASMUtil.movImm32(payload, p, R10, 0); // __flags
+        p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
+        if (Platform.bsd) {
+            emitFreeBsdSyscallReturn(payload, p);
+        } else {
+            payload[p++] = (byte) 0x0f; // syscall
+            payload[p++] = (byte) 0x05;
+            ASMUtil.ret(payload, p);
+        }
+    }
+
+    private static void emitFreeBsdSyscallReturn(byte[] payload, int index) {
+        int p = index;
+        payload[p++] = (byte) 0x0f; // syscall
+        payload[p++] = (byte) 0x05;
+        payload[p++] = (byte) 0x73; // jnc ret
+        payload[p++] = (byte) 0x03;
+        payload[p++] = (byte) 0x48; // neg rax
+        payload[p++] = (byte) 0xf7;
+        payload[p++] = (byte) 0xd8;
+        payload[p] = (byte) 0xc3; // ret
+    }
 
     private static class Bootstrap {
+        private static final long code_base;
+        private static final byte[] backup = new byte[TRAMPOLINE_SIZE];
+        private static long lastMmapResult;
+        private static int lastMmapFlags;
+        private static boolean invalidated = false;
+
+        static {
+            for (int i = 0; i < 40000; i++) {
+                holder();
+            }
+            byte[] payload = new byte[TRAMPOLINE_SIZE];
+            emitPayload(payload);
+            code_base = MethodInjector.inject(payload, mmap.Bootstrap.class, "holder", "()J", true, backup);
+            AddressUtil.checkNull(code_base);
+        }
+
         @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "ConstantValue", "lossy-conversions", "UnusedAssignment", "ResultOfMethodCallIgnored"})
         private static long holder() {
             for (int i = 9; i > 200; i++) {
@@ -98,20 +187,6 @@ public final class mmap {
             return j;
         }
 
-        private static final long code_base;
-        private static long lastMmapResult;
-        private static int lastMmapFlags;
-
-        static {
-            for (int i = 0; i < 40000; i++) {
-                holder();
-            }
-            byte[] payload = new byte[TRAMPOLINE_SIZE];
-            emitPayload(payload);
-            code_base = MethodInjector.inject(payload, mmap.Bootstrap.class, "holder", "()J", true);
-            AddressUtil.checkNull(code_base);
-        }
-
         private synchronized static long invoke() {
             long result = invoke(MAP_PRIVATE | MAP_ANONYMOUS);
             if (!isMapFailed(result) || !Platform.bsd) {
@@ -130,7 +205,7 @@ public final class mmap {
             } else {
                 Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MMAP);
             }
-            Unsafe.putInt(code_base + ARG2_OFFSET, PROT_READ | PROT_WRITE);
+            Unsafe.putInt(code_base + ARG2_OFFSET, PROT_READ | PROT_WRITE | PROT_EXEC);
             Unsafe.putInt(code_base + ARG3_OFFSET, flags);
             Unsafe.putInt(code_base + ARG4_OFFSET, -1);
             lastMmapFlags = flags;
@@ -139,6 +214,9 @@ public final class mmap {
         }
 
         private synchronized static int mprotect(long address, long size, int prot) {
+            if (invalidated) {
+                throw new ShouldNotReachHere();
+            }
             long page = AddressUtil.align_page(address);
             Unsafe.putLong(code_base + ARG0_OFFSET, page);
             Unsafe.putLong(code_base + ARG1_OFFSET, size + (address - page));
@@ -156,11 +234,7 @@ public final class mmap {
 
         private static String mmapFailureDetails() {
             int errno = getErrno();
-            return "mmap failed! result=0x" + Long.toHexString(lastMmapResult)
-                    + ", errno=" + errno
-                    + ", flags=0x" + Integer.toHexString(lastMmapFlags)
-                    + ", MAP_ANONYMOUS=0x" + Integer.toHexString(MAP_ANONYMOUS)
-                    + ", os.name=" + System.getProperty("os.name");
+            return "mmap failed! result=0x" + Long.toHexString(lastMmapResult) + ", errno=" + errno + ", flags=0x" + Integer.toHexString(lastMmapFlags) + ", MAP_ANONYMOUS=0x" + Integer.toHexString(MAP_ANONYMOUS) + ", os.name=" + System.getProperty("os.name");
         }
 
         private static int getErrno() {
@@ -169,87 +243,15 @@ public final class mmap {
             }
             return 0;
         }
-    }
 
-
-    @SuppressWarnings(value = {"DuplicatedCode"})
-    private static native long holder();
-
-    private static final long code_base;
-
-    static {
-        byte[] payload = new byte[TRAMPOLINE_SIZE];
-        emitPayload(payload);
-        code_base = Bootstrap.invoke();
-        if (isMapFailed(code_base)) {
-            throw new NativeException(Bootstrap.mmapFailureDetails(), -1);
+        private static void invalidate() {
+            if (invalidated) {
+                throw new ShouldNotReachHere();
+            }
+            Unsafe.writeBytes(code_base, backup);
+            //MethodInjector.inject(backup, mmap.Bootstrap.class, "holder", "()J", true, null);
+            invalidated = true;
         }
-        Unsafe.writeBytes(code_base, payload);
-        int mprotect = Bootstrap.mprotect(code_base, payload.length, PROT_READ | PROT_EXEC);
-        if (mprotect != 0) {
-            throw new NativeException("mprotect failed!", mprotect);
-        }
-        InstanceKlass klass = ClassUtil.getKlass(mmap.class);
-        Method method = klass.findMethod("holder", "()J");
-        MethodInjector.setNativePointer(method, code_base);
-    }
-
-    public synchronized static long invoke(long __addr, long __len, int __prot, int __flags, int __fd, long __offset) {
-        int mprotect = Bootstrap.mprotect(code_base, TRAMPOLINE_SIZE, PROT_READ | PROT_WRITE);
-        if (mprotect != 0) {
-            throw new NativeException("mprotect failed!", mprotect);
-        }
-        Unsafe.putLong(code_base + ARG0_OFFSET, __addr);
-        Unsafe.putLong(code_base + ARG1_OFFSET, __len);
-        Unsafe.putLong(code_base + ARG5_OFFSET, __offset);
-        if (Platform.bsd) {
-            Unsafe.putInt(code_base + SYSCALL_OFFSET, FREEBSD_SYS_MMAP);
-        } else {
-            Unsafe.putInt(code_base + SYSCALL_OFFSET, LINUX_SYS_MMAP);
-        }
-        Unsafe.putInt(code_base + ARG2_OFFSET, __prot);
-        Unsafe.putInt(code_base + ARG3_OFFSET, __flags);
-        Unsafe.putInt(code_base + ARG4_OFFSET, __fd);
-        mprotect = Bootstrap.mprotect(code_base, TRAMPOLINE_SIZE, PROT_READ | PROT_EXEC);
-        if (mprotect != 0) {
-            throw new NativeException("mprotect failed!", mprotect);
-        }
-        long result = holder();
-        return isMapFailed(result) ? MAP_FAILED : result;
-    }
-
-    private static boolean isMapFailed(long address) {
-        return address == MAP_FAILED || address == 0xffffffffL || address < 0;
-    }
-
-    private static void emitPayload(byte[] payload) {
-        int p = 0;
-        p = ASMUtil.movabs(payload, p, RDI); // __addr
-        p = ASMUtil.movabs(payload, p, RSI); // __len
-        p = ASMUtil.movabs(payload, p, R9); // __offset
-        p = ASMUtil.movImm32(payload, p, RAX, 0); // syscall number
-        p = ASMUtil.movImm32(payload, p, RDX, 0); // __prot
-        p = ASMUtil.movImm32(payload, p, R10, 0); // __flags
-        p = ASMUtil.movImm32(payload, p, R8, 0); // __fd
-        if (Platform.bsd) {
-            emitFreeBsdSyscallReturn(payload, p);
-        } else {
-            payload[p++] = (byte) 0x0f; // syscall
-            payload[p++] = (byte) 0x05;
-            ASMUtil.ret(payload, p);
-        }
-    }
-
-    private static void emitFreeBsdSyscallReturn(byte[] payload, int index) {
-        int p = index;
-        payload[p++] = (byte) 0x0f; // syscall
-        payload[p++] = (byte) 0x05;
-        payload[p++] = (byte) 0x73; // jnc ret
-        payload[p++] = (byte) 0x03;
-        payload[p++] = (byte) 0x48; // neg rax
-        payload[p++] = (byte) 0xf7;
-        payload[p++] = (byte) 0xd8;
-        payload[p] = (byte) 0xc3; // ret
     }
 
 }

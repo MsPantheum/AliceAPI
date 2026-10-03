@@ -9,41 +9,44 @@ import sun.jvm.hotspot.oops.Method;
 
 import static alice._native.ASMUtil.Register.*;
 
-final class JNINativeCall {
+public final class JNINativeCall {
 
-    static final int EXCEPTION_OCCURRED = 15;
-    static final int EXCEPTION_CLEAR = 17;
-    static final int NEW_GLOBAL_REF = 21;
-    static final int DELETE_GLOBAL_REF = 22;
-    static final int DELETE_LOCAL_REF = 23;
-    static final int NEW_LOCAL_REF = 25;
-    static final int FIND_CLASS = 6;
-    static final int GET_METHOD_ID = 33;
-    static final int CALL_OBJECT_METHOD_A = 36;
-    static final int CALL_BOOLEAN_METHOD_A = 39;
-    static final int CALL_BYTE_METHOD_A = 42;
-    static final int CALL_CHAR_METHOD_A = 45;
-    static final int CALL_SHORT_METHOD_A = 48;
-    static final int CALL_INT_METHOD_A = 51;
-    static final int CALL_LONG_METHOD_A = 54;
-    static final int CALL_FLOAT_METHOD_A = 57;
-    static final int CALL_DOUBLE_METHOD_A = 60;
-    static final int CALL_VOID_METHOD_A = 63;
-    static final int GET_OBJECT_CLASS = 31;
-    static final int GET_STATIC_METHOD_ID = 113;
-    static final int CALL_STATIC_OBJECT_METHOD_A = 116;
-    static final int CALL_STATIC_BOOLEAN_METHOD_A = 119;
-    static final int CALL_STATIC_BYTE_METHOD_A = 122;
-    static final int CALL_STATIC_CHAR_METHOD_A = 125;
-    static final int CALL_STATIC_SHORT_METHOD_A = 128;
-    static final int CALL_STATIC_INT_METHOD_A = 131;
-    static final int CALL_STATIC_LONG_METHOD_A = 134;
-    static final int CALL_STATIC_FLOAT_METHOD_A = 137;
-    static final int CALL_STATIC_DOUBLE_METHOD_A = 140;
-    static final int CALL_STATIC_VOID_METHOD_A = 143;
-    static final int NEW_STRING_UTF = 167;
-    static final int GET_STRING_UTF_CHARS = 169;
-    static final int RELEASE_STRING_UTF_CHARS = 170;
+    public static final int THROW = 13;
+    public static final int THROW_NEW = 14;
+    public static final int EXCEPTION_OCCURRED = 15;
+    public static final int EXCEPTION_DESCRIBE = 16;
+    public static final int EXCEPTION_CLEAR = 17;
+    public static final int NEW_GLOBAL_REF = 21;
+    public static final int DELETE_GLOBAL_REF = 22;
+    public static final int DELETE_LOCAL_REF = 23;
+    public static final int NEW_LOCAL_REF = 25;
+    public static final int FIND_CLASS = 6;
+    public static final int GET_METHOD_ID = 33;
+    public static final int CALL_OBJECT_METHOD_A = 36;
+    public static final int CALL_BOOLEAN_METHOD_A = 39;
+    public static final int CALL_BYTE_METHOD_A = 42;
+    public static final int CALL_CHAR_METHOD_A = 45;
+    public static final int CALL_SHORT_METHOD_A = 48;
+    public static final int CALL_INT_METHOD_A = 51;
+    public static final int CALL_LONG_METHOD_A = 54;
+    public static final int CALL_FLOAT_METHOD_A = 57;
+    public static final int CALL_DOUBLE_METHOD_A = 60;
+    public static final int CALL_VOID_METHOD_A = 63;
+    public static final int GET_OBJECT_CLASS = 31;
+    public static final int GET_STATIC_METHOD_ID = 113;
+    public static final int CALL_STATIC_OBJECT_METHOD_A = 116;
+    public static final int CALL_STATIC_BOOLEAN_METHOD_A = 119;
+    public static final int CALL_STATIC_BYTE_METHOD_A = 122;
+    public static final int CALL_STATIC_CHAR_METHOD_A = 125;
+    public static final int CALL_STATIC_SHORT_METHOD_A = 128;
+    public static final int CALL_STATIC_INT_METHOD_A = 131;
+    public static final int CALL_STATIC_LONG_METHOD_A = 134;
+    public static final int CALL_STATIC_FLOAT_METHOD_A = 137;
+    public static final int CALL_STATIC_DOUBLE_METHOD_A = 140;
+    public static final int CALL_STATIC_VOID_METHOD_A = 143;
+    public static final int NEW_STRING_UTF = 167;
+    public static final int GET_STRING_UTF_CHARS = 169;
+    public static final int RELEASE_STRING_UTF_CHARS = 170;
 
     private static final boolean SYSTEM_V = Platform.abi == Platform.ABI.SYSTEM_V;
 
@@ -61,7 +64,7 @@ final class JNINativeCall {
         Unsafe.writeBytes(codeBase, payload);
 
         long env = JNIUtil.getJNIEnv();
-        long function = Unsafe.getLong(Unsafe.getLong(env) + (long) Unsafe.ADDRESS_SIZE * functionIndex);
+        long function = function(env, functionIndex);
         AddressUtil.checkNull(function);
         Unsafe.putLong(codeBase + functionOffset(extraArgumentCount), function);
 
@@ -69,6 +72,10 @@ final class JNINativeCall {
         Method method = klass.findMethod("holder", holderDescriptor);
         MethodInjector.setNativePointer(method, codeBase);
         return codeBase;
+    }
+
+    public static long function(long env, int index) {
+        return Unsafe.getLong(Unsafe.getLong(env) + (long) Unsafe.ADDRESS_SIZE * index);
     }
 
     static void setEnv(long codeBase, long env) {

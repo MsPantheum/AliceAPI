@@ -46,6 +46,8 @@ import java.util.jar.Manifest;
 
 public final class ClassPatcher implements Opcodes {
 
+    public static boolean DISABLE_CLASS_PATCHER = false;
+
     private static final Function<String, URL> urlProcessor = (name) -> {
         try {
             return mayProvide(name);
@@ -68,6 +70,9 @@ public final class ClassPatcher implements Opcodes {
     }
 
     public static URL processURL(URL url, String name) throws IOException {
+        if (DISABLE_CLASS_PATCHER && (name != null && name.startsWith("sun/jvm/hotspot"))) {
+            return url;
+        }
         byte[] raw = null;
         if (url != null) {
             raw = IOUtil.getByteArray(url.openStream());

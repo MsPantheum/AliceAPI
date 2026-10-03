@@ -136,7 +136,7 @@ public final class BytecodeUtil implements Opcodes {
         for (int i : size) {
             pushInt(mv, i);
         }
-        StringBuilder name = new StringBuilder(type.getInternalName());
+        StringBuilder name = new StringBuilder(type.getDescriptor());
         for (int i = 0; i < dimension; i++) {
             name.insert(0, '[');
         }
@@ -205,8 +205,7 @@ public final class BytecodeUtil implements Opcodes {
 
     public static void boxing(MethodVisitor mv, Type type) {
         String class_name = primitive2Boxed(type);
-        class_name = "java/lang/" + Character.toUpperCase(class_name.charAt(0)) + class_name.substring(1);
-        mv.visitMethodInsn(INVOKESTATIC, class_name, "valueOf", '(' + type.getInternalName() + ")L" + class_name + ';', false);
+        mv.visitMethodInsn(INVOKESTATIC, class_name, "valueOf", "(".concat(type.getDescriptor()).concat(")L").concat(class_name).concat(";"), false);
     }
 
     public static void unboxing(MethodVisitor mv, Type type) {
@@ -250,26 +249,25 @@ public final class BytecodeUtil implements Opcodes {
     }
 
     private static String primitive2Boxed(Type type) {
-        String name = type.getInternalName();
-        switch (name) {
-            case "byte":
+        switch (type.getSort()) {
+            case Type.BYTE:
                 return "java/lang/Byte";
-            case "short":
+            case Type.SHORT:
                 return "java/lang/Short";
-            case "int":
+            case Type.INT:
                 return "java/lang/Integer";
-            case "long":
+            case Type.LONG:
                 return "java/lang/Long";
-            case "float":
+            case Type.FLOAT:
                 return "java/lang/Float";
-            case "double":
+            case Type.DOUBLE:
                 return "java/lang/Double";
-            case "char":
+            case Type.CHAR:
                 return "java/lang/Character";
-            case "boolean":
+            case Type.BOOLEAN:
                 return "java/lang/Boolean";
             default:
-                throw new IllegalArgumentException(name.concat(" isn't a primitive type!"));
+                throw new IllegalArgumentException(type.toString().concat(" isn't a primitive type!"));
         }
     }
 
@@ -338,16 +336,16 @@ public final class BytecodeUtil implements Opcodes {
             mv.visitInsn(ICONST_0);
             boxing(mv, Type.CHAR_TYPE);
         });
-        valueProviders.put("java/util/Iterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyIterator", "Ljava/util/Iterator;", false));
-        valueProviders.put("java/util/ListIterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyListIterator", "Ljava/util/ListIterator;", false));
-        valueProviders.put("java/util/NavigableMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyNavigableMap", "Ljava/util/NavigableMap;", false));
-        valueProviders.put("java/util/SortedMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySortedMap", "Ljava/util/SortedMap;", false));
-        valueProviders.put("java/util/Map", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyMap", "Ljava/util/Map;", false));
-        valueProviders.put("java/util/List", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyList", "Ljava/util/List;", false));
-        valueProviders.put("java/util/NavigableSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyNavigableSet", "Ljava/util/NavigableSet;", false));
-        valueProviders.put("java/util/SortedSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySortedSet", "Ljava/util/SortedSet;", false));
-        valueProviders.put("java/util/Set", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptySet", "Ljava/util/Set;", false));
-        valueProviders.put("java/util/Enumeration", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Collections", "emptyEnumeration", "Ljava/util/Enumeration;", false));
+        valueProviders.put("java/util/Iterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyIterator", "Ljava/util/Iterator;", false));
+        valueProviders.put("java/util/ListIterator", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyListIterator", "Ljava/util/ListIterator;", false));
+        valueProviders.put("java/util/NavigableMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyNavigableMap", "Ljava/util/NavigableMap;", false));
+        valueProviders.put("java/util/SortedMap", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptySortedMap", "Ljava/util/SortedMap;", false));
+        valueProviders.put("java/util/Map", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyMap", "Ljava/util/Map;", false));
+        valueProviders.put("java/util/List", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyList", "Ljava/util/List;", false));
+        valueProviders.put("java/util/NavigableSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyNavigableSet", "Ljava/util/NavigableSet;", false));
+        valueProviders.put("java/util/SortedSet", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptySortedSet", "Ljava/util/SortedSet;", false));
+        valueProviders.put("java/util/Set", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptySet", "Ljava/util/Set;", false));
+        valueProviders.put("java/util/Enumeration", mv -> mv.visitMethodInsn(INVOKESTATIC, "java/util/Collections", "emptyEnumeration", "Ljava/util/Enumeration;", false));
 
     }
 
@@ -379,9 +377,9 @@ public final class BytecodeUtil implements Opcodes {
             }
             case Type.ARRAY: {
                 if (type.getDimensions() == 1) {
-                    createArray(mv, 0, type);
+                    createArray(mv, 0, type.getElementType());
                 } else {
-                    createArray(mv, type.getDimensions(), new int[type.getDimensions()], type);
+                    createArray(mv, type.getDimensions(), new int[type.getDimensions()], type.getElementType());
                 }
                 break;
             }

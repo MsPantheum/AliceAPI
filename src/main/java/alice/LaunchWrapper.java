@@ -3,6 +3,7 @@ package alice;
 import alice.log.Logger;
 import alice.util.ClassLoaderUtil;
 import alice.util.DebugUtil;
+import alice.util.ProcessUtil;
 import alice.util.ReflectionUtil;
 
 import java.lang.invoke.MethodHandle;
@@ -14,6 +15,7 @@ import java.lang.invoke.MethodType;
  */
 public final class LaunchWrapper {
 
+    private static final boolean CRASH_EXPECTED = "true".equals(System.getProperty("alice.debug.expected_crash"));
     public static boolean running = true;
 
     public static void main(String[] args) {
@@ -32,9 +34,23 @@ public final class LaunchWrapper {
             main.invoke((String[]) args);
             Logger.MAIN.info("Main thread exiting...");
         } catch (Throwable t) {
-            t.printStackTrace(System.out);
-            DebugUtil.printThrowableFully(t);
-            throw new RuntimeException("Your application just crashed.");
+            if (!CRASH_EXPECTED) {
+                t.printStackTrace(System.out);
+                DebugUtil.printThrowableFully(t);
+                throw new RuntimeException("Your application just crashed.");
+            }
+        }
+        if (CRASH_EXPECTED) {
+            System.out.println(ProcessUtil.getPID());
+            String tempDir = System.getProperty("java.io.tmpdir");
+            System.out.println("Temporary Directory: ".concat(tempDir));
+            while (true) {
+                try {
+                    Thread.sleep(Long.MAX_VALUE);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
