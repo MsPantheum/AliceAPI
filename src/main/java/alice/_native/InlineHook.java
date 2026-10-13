@@ -23,6 +23,61 @@ public final class InlineHook {
 
     private static final Long2ObjectOpenHashMap<Hook> HOOKS = new Long2ObjectOpenHashMap<>();
 
+    public synchronized static boolean simpleHook(long ori, long neo, Processor processor) {
+        checkNull(ori, neo);
+        Hook hook = HOOKS.get(ori);
+        if (hook != null) {
+            return hook.simpleHook();
+        }
+        int success = Platform.win32 ? VirtualProtect.invoke(ori, 1, 0x40, 0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert Platform.win32 == (success != 0);
+        hook = new Hook(ori, neo, processor);
+        HOOKS.put(ori, hook);
+        hook.simpleHook();
+        return true;
+    }
+
+    public synchronized static boolean simpleHook(long ori, long neo) {
+        return simpleHook(ori, neo, null);
+    }
+
+    public synchronized static long hookWithTrampoline(long ori, long neo) {
+        checkNull(ori, neo);
+        Hook hook = HOOKS.get(ori);
+        if (hook != null) {
+            return hook.hookWithTrampoline();
+        }
+
+        int success = Platform.win32 ? VirtualProtect.invoke(ori, 1, PAGE_EXECUTE_READWRITE, 0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert Platform.win32 == (success != 0);
+        hook = new Hook(ori, neo);
+        HOOKS.put(ori, hook);
+        return hook.hookWithTrampoline();
+    }
+
+    public synchronized static long hookWithTrampoline(long ori, long neo, long p2trampoline) {
+        checkNull(ori, neo);
+        Hook hook = HOOKS.get(ori);
+        if (hook != null) {
+            return hook.hookWithTrampoline(p2trampoline);
+        }
+
+        int success = Platform.win32 ? VirtualProtect.invoke(ori, 1, PAGE_EXECUTE_READWRITE, 0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
+        assert success == 0;
+        hook = new Hook(ori, neo);
+        HOOKS.put(ori, hook);
+        return hook.hookWithTrampoline(p2trampoline);
+    }
+
+    public synchronized static boolean unhook(long ori) {
+        checkNull(ori);
+        Hook hook = HOOKS.get(ori);
+        if (hook != null) {
+            return hook.unhook();
+        }
+        return false;
+    }
+
     @FunctionalInterface
     public interface Processor {
         long process(long address);
@@ -31,9 +86,8 @@ public final class InlineHook {
     private static class Hook {
         private final long ori;
         private final long neo;
-        private byte[] backup;
         private final Processor prepare;
-
+        private byte[] backup;
         private boolean hooked;
         private long trampoline = 0;
 
@@ -48,7 +102,46 @@ public final class InlineHook {
             this(ori, neo, null);
         }
 
+        private static void createJump(long target, long offset, long jump_target) {
+            long p = target + offset;
+            Unsafe.putByte(p++, (byte) 0xff);
+            Unsafe.putByte(p++, (byte) 0x25);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putLong(p, jump_target);
+        }
 
+        private static void createCall(long target, long offset, long call_target) {
+            long p = target + offset;
+            Unsafe.putByte(p++, (byte) 0xff);
+            Unsafe.putByte(p++, (byte) 0x15);
+            Unsafe.putByte(p++, (byte) 0x02);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0x00);
+            Unsafe.putByte(p++, (byte) 0xeb);
+            Unsafe.putByte(p++, (byte) 0x08);
+            Unsafe.putLong(p, call_target);
+        }
+
+        private static void createConditionalAbsoluteJump(long target, long offset, int condition, long jump_target) {
+            long p = target + offset;
+            Unsafe.putByte(p++, (byte) (0x70 | ((condition ^ 1) & 0x0f)));
+            Unsafe.putByte(p, (byte) 0x0e);
+            createJump(target, offset + 2, jump_target);
+        }
+
+        private static long signedRelativeImmediate(HDE64.Hde64s hs) {
+            if ((hs.flags & HDE64.F_IMM8) != 0) {
+                return (byte) hs.imm;
+            }
+            if ((hs.flags & HDE64.F_IMM16) != 0) {
+                return (short) hs.imm;
+            }
+            return (int) hs.imm;
+        }
 
         private long hookWithTrampoline(long p2trampoline) {
             if (hooked) {
@@ -56,9 +149,8 @@ public final class InlineHook {
             }
             HDE64.Hde64s hs = new HDE64.Hde64s();
             trampoline = MemoryUtil.allocateNear(ori, 128);
-            if(trampoline==0){
-                trampoline = Platform.win32 ? VirtualAlloc.invoke(0,128,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE) : mmap.invoke(0,128,PROT_READ | PROT_WRITE | PROT_EXEC,
-                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            if (trampoline == 0) {
+                trampoline = Platform.win32 ? VirtualAlloc.invoke(0, 128, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE) : mmap.invoke(0, 128, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             }
             Logger.MAIN.trace("Trampoline=");
             Logger.MAIN.trace(Long.toHexString(trampoline));
@@ -165,47 +257,6 @@ public final class InlineHook {
             return trampoline;
         }
 
-        private static void createJump(long target, long offset, long jump_target) {
-            long p = target + offset;
-            Unsafe.putByte(p++, (byte) 0xff);
-            Unsafe.putByte(p++, (byte) 0x25);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putLong(p, jump_target);
-        }
-
-        private static void createCall(long target, long offset, long call_target) {
-            long p = target + offset;
-            Unsafe.putByte(p++, (byte) 0xff);
-            Unsafe.putByte(p++, (byte) 0x15);
-            Unsafe.putByte(p++, (byte) 0x02);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0x00);
-            Unsafe.putByte(p++, (byte) 0xeb);
-            Unsafe.putByte(p++, (byte) 0x08);
-            Unsafe.putLong(p, call_target);
-        }
-
-        private static void createConditionalAbsoluteJump(long target, long offset, int condition, long jump_target) {
-            long p = target + offset;
-            Unsafe.putByte(p++, (byte) (0x70 | ((condition ^ 1) & 0x0f)));
-            Unsafe.putByte(p, (byte) 0x0e);
-            createJump(target, offset + 2, jump_target);
-        }
-
-        private static long signedRelativeImmediate(HDE64.Hde64s hs) {
-            if ((hs.flags & HDE64.F_IMM8) != 0) {
-                return (byte) hs.imm;
-            }
-            if ((hs.flags & HDE64.F_IMM16) != 0) {
-                return (short) hs.imm;
-            }
-            return (int) hs.imm;
-        }
-
         private long hookWithTrampoline() {
             return hookWithTrampoline(0);
         }
@@ -240,60 +291,5 @@ public final class InlineHook {
             }
             return false;
         }
-    }
-
-    public synchronized static boolean simpleHook(long ori, long neo, Processor processor) {
-        checkNull(ori, neo);
-        Hook hook = HOOKS.get(ori);
-        if (hook != null) {
-            return hook.simpleHook();
-        }
-        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,0x40,0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        assert Platform.win32 == (success != 0);
-        hook = new Hook(ori, neo, processor);
-        HOOKS.put(ori, hook);
-        hook.simpleHook();
-        return true;
-    }
-
-    public synchronized static boolean simpleHook(long ori, long neo) {
-        return simpleHook(ori, neo, null);
-    }
-
-    public synchronized static long hookWithTrampoline(long ori, long neo) {
-        checkNull(ori, neo);
-        Hook hook = HOOKS.get(ori);
-        if (hook != null) {
-            return hook.hookWithTrampoline();
-        }
-
-        int success = Platform.win32 ? VirtualProtect.invoke(ori,1,PAGE_EXECUTE_READWRITE,0) : mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        assert Platform.win32 == (success != 0);
-        hook = new Hook(ori, neo);
-        HOOKS.put(ori, hook);
-        return hook.hookWithTrampoline();
-    }
-
-    public synchronized static long hookWithTrampoline(long ori, long neo, long p2trampoline) {
-        checkNull(ori, neo);
-        Hook hook = HOOKS.get(ori);
-        if (hook != null) {
-            return hook.hookWithTrampoline(p2trampoline);
-        }
-
-        int success = mprotect.invoke(AddressUtil.align_page(ori), 1, PROT_READ | PROT_WRITE | PROT_EXEC);
-        assert success == 0;
-        hook = new Hook(ori, neo);
-        HOOKS.put(ori, hook);
-        return hook.hookWithTrampoline(p2trampoline);
-    }
-
-    public synchronized static boolean unhook(long ori) {
-        checkNull(ori);
-        Hook hook = HOOKS.get(ori);
-        if (hook != null) {
-            return hook.unhook();
-        }
-        return false;
     }
 }

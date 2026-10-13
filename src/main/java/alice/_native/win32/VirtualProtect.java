@@ -3,7 +3,6 @@ package alice._native.win32;
 import alice._native.ASMUtil;
 import alice._native.InvocationUtil;
 import alice.exception.NativeException;
-import alice.exception.ShouldNotReachHere;
 import alice.injector.MethodInjector;
 import alice.injector.SymbolLookup;
 import alice.util.ClassUtil;
@@ -31,6 +30,10 @@ public final class VirtualProtect {
     private static final int SYSCALL_REGION_SIZE_OFFSET = 44;
     private static final int SYSCALL_NEW_PROTECT_OFFSET = 54;
     private static final int SYSCALL_NUMBER_OFFSET = 59;
+
+    private static final long SYSCALL_BASE_ADDRESS = Unsafe.allocateMemory(Long.BYTES);
+    private static final long SYSCALL_REGION_SIZE = Unsafe.allocateMemory(Long.BYTES);
+    private static final long DEFAULT_OLD_PROTECT = Unsafe.allocateMemory(Integer.BYTES);
 
     private static int ntSuccessToWinBool(byte[] payload, int index) {
         int p = index;
@@ -86,58 +89,25 @@ public final class VirtualProtect {
     }
 
     private static int invokeFallback(long codeBase, long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect, boolean bootstrap) {
-        boolean allocatedOldProtect = false;
-        try {
-            Unsafe.putLong(codeBase + FALLBACK_LP_ADDRESS_OFFSET, lpAddress);
-            Unsafe.putLong(codeBase + FALLBACK_DW_SIZE_OFFSET, dwSize);
-            Unsafe.putInt(codeBase + FALLBACK_NEW_PROTECT_OFFSET, flNewProtect);
-
-            if (lpflOldProtect == 0) {
-                allocatedOldProtect = true;
-                lpflOldProtect = Unsafe.allocateMemory(Integer.BYTES);
-            }
-
-            Unsafe.putLong(codeBase + FALLBACK_OLD_PROTECT_OFFSET, lpflOldProtect);
-            return bootstrap ? Bootstrap.holder() : holder();
-        } finally {
-            if (allocatedOldProtect) {
-                Unsafe.freeMemory(lpflOldProtect);
-            }
-        }
+        long oldProtectPtr = lpflOldProtect != 0 ? lpflOldProtect : DEFAULT_OLD_PROTECT;
+        Unsafe.putLong(codeBase + FALLBACK_LP_ADDRESS_OFFSET, lpAddress);
+        Unsafe.putLong(codeBase + FALLBACK_DW_SIZE_OFFSET, dwSize);
+        Unsafe.putInt(codeBase + FALLBACK_NEW_PROTECT_OFFSET, flNewProtect);
+        Unsafe.putLong(codeBase + FALLBACK_OLD_PROTECT_OFFSET, oldProtectPtr);
+        return bootstrap ? Bootstrap.holder() : holder();
     }
 
     private static int invokeSyscall(long codeBase, long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect, boolean bootstrap) {
-        long baseAddress = 0L;
-        long regionSize = 0L;
-        boolean allocatedOldProtect = false;
-        try {
-            baseAddress = Unsafe.allocateMemory(Long.BYTES);
-            regionSize = Unsafe.allocateMemory(Long.BYTES);
-            if (lpflOldProtect == 0) {
-                allocatedOldProtect = true;
-                lpflOldProtect = Unsafe.allocateMemory(Integer.BYTES);
-            }
+        long oldProtectPtr = lpflOldProtect != 0 ? lpflOldProtect : DEFAULT_OLD_PROTECT;
+        Unsafe.putLong(SYSCALL_BASE_ADDRESS, lpAddress);
+        Unsafe.putLong(SYSCALL_REGION_SIZE, dwSize);
 
-            Unsafe.putLong(baseAddress, lpAddress);
-            Unsafe.putLong(regionSize, dwSize);
-
-            Unsafe.putLong(codeBase + SYSCALL_OLD_PROTECT_OFFSET, lpflOldProtect);
-            Unsafe.putLong(codeBase + SYSCALL_BASE_ADDRESS_OFFSET, baseAddress);
-            Unsafe.putLong(codeBase + SYSCALL_REGION_SIZE_OFFSET, regionSize);
-            Unsafe.putInt(codeBase + SYSCALL_NEW_PROTECT_OFFSET, flNewProtect);
-            Unsafe.putInt(codeBase + SYSCALL_NUMBER_OFFSET, NT_PROTECT_VIRTUAL_MEMORY);
-            return bootstrap ? Bootstrap.holder() : holder();
-        } finally {
-            if (allocatedOldProtect) {
-                Unsafe.freeMemory(lpflOldProtect);
-            }
-            if (baseAddress != 0L) {
-                Unsafe.freeMemory(baseAddress);
-            }
-            if (regionSize != 0L) {
-                Unsafe.freeMemory(regionSize);
-            }
-        }
+        Unsafe.putLong(codeBase + SYSCALL_OLD_PROTECT_OFFSET, oldProtectPtr);
+        Unsafe.putLong(codeBase + SYSCALL_BASE_ADDRESS_OFFSET, SYSCALL_BASE_ADDRESS);
+        Unsafe.putLong(codeBase + SYSCALL_REGION_SIZE_OFFSET, SYSCALL_REGION_SIZE);
+        Unsafe.putInt(codeBase + SYSCALL_NEW_PROTECT_OFFSET, flNewProtect);
+        Unsafe.putInt(codeBase + SYSCALL_NUMBER_OFFSET, NT_PROTECT_VIRTUAL_MEMORY);
+        return bootstrap ? Bootstrap.holder() : holder();
     }
 
     private static synchronized int invokeCode(long codeBase, long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect, boolean bootstrap) {
@@ -225,14 +195,14 @@ public final class VirtualProtect {
 
         private synchronized static int invoke(long lpAddress, long dwSize, int flNewProtect, long lpflOldProtect) {
             if (invalidated) {
-                throw new ShouldNotReachHere();
+                throw new IllegalStateException();
             }
             return invokeCode(code_base, lpAddress, dwSize, flNewProtect, lpflOldProtect, true);
         }
 
-        private synchronized static void invalidate() {
+        private static void invalidate() {
             if (invalidated) {
-                throw new ShouldNotReachHere();
+                throw new IllegalStateException();
             }
             Unsafe.writeBytes(code_base, backup);
             invalidated = true;

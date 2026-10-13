@@ -1,6 +1,8 @@
 package alice.injector;
 
 import alice.Platform;
+import alice._native.linux.munmap;
+import alice._native.win32.VirtualFree;
 import alice.exception.ShouldNotReachHere;
 import alice.util.*;
 import org.objectweb.asm.ClassWriter;
@@ -11,12 +13,15 @@ import sun.jvm.hotspot.oops.InstanceKlass;
 import sun.jvm.hotspot.oops.Method;
 
 import java.io.PrintStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 import static alice.HSDB.typeDataBase;
 import static alice.util.AddressUtil.checkNull;
 import static alice.util.Converter.getAddressValue;
 import static alice.util.constants.AccessFlags.*;
+import static alice.util.constants.Constants.MEM_RELEASE;
 
 public final class MethodInjector implements Opcodes {
 
@@ -213,26 +218,139 @@ public final class MethodInjector implements Opcodes {
     }
 
     private static Object runShellcodeNative0(byte[] shellcode, Class<?> returnType) {
-        String descriptor = MethodType.methodType(returnType).toMethodDescriptorString();
-        ClassWriter cw = new ClassWriter(0);
-        cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
-        cw.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_NATIVE, "invoke", descriptor, null, null);
-        byte[] data = cw.toByteArray();
-        Class<?> holder;
-        if (!Platform.jigsaw) {
-            holder = Unsafe.defineAnonymousClass(Object.class, data, null);
-        } else {
-            holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
-        }
-        InstanceKlass klass = ClassUtil.getKlass(holder);
-        Method method = klass.findMethod("invoke", descriptor);
-        long codes = MemoryUtil.allocate(shellcode.length);
-        Unsafe.writeBytes(codes, shellcode);
-        setNativePointer(method, codes);
+        NativeHandle handle = createNativeHandle(shellcode, returnType);
         try {
-            return ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(returnType)).invoke();
-        } catch (Throwable e) {
-            throw new ShouldNotReachHere();
+            return handle.invoke();
+        } finally {
+            handle.close();
+        }
+    }
+
+    /**
+     * Creates a native invocation target once. The generated holder class and
+     * its native method are retained by the returned object, so repeated calls
+     * reuse the same temporary class instead of defining one per invocation.
+     */
+    public static NativeHandle createNativeHandle(byte[] shellcode, Class<?> returnType) {
+        return new NativeHandle(shellcode, returnType);
+    }
+
+    public static final class NativeHandle implements AutoCloseable {
+        private final Class<?> holder;
+        private final MethodHandle invocation;
+        private final MethodHandle guardedInvocation;
+        private final long code;
+        private final int capacity;
+        private boolean closed;
+
+        private NativeHandle(byte[] shellcode, Class<?> returnType) {
+            if (shellcode == null || shellcode.length == 0) {
+                throw new IllegalArgumentException("shellcode must not be empty");
+            }
+            if (returnType != void.class && returnType != boolean.class && returnType != byte.class
+                    && returnType != short.class && returnType != char.class && returnType != int.class
+                    && returnType != long.class && returnType != float.class && returnType != double.class) {
+                throw new IllegalArgumentException("returnType must be primitive or void");
+            }
+            String descriptor = MethodType.methodType(returnType).toMethodDescriptorString();
+            ClassWriter cw = new ClassWriter(0);
+            cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL, "alice/generated/ShellcodeHolder", null, "java/lang/Object", null);
+            cw.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_NATIVE, "invoke", descriptor, null, null);
+            byte[] data = cw.toByteArray();
+            if (!Platform.jigsaw) {
+                holder = Unsafe.defineAnonymousClass(Object.class, data, null);
+            } else {
+                holder = ClassUtil.defineClass0(null, MethodInjector.class, "alice.generated.ShellcodeHolder", data, 0, data.length, Object.class.getProtectionDomain(), false, 0x2, null);
+            }
+            InstanceKlass klass = ClassUtil.getKlass(holder);
+            Method method = klass.findMethod("invoke", descriptor);
+            capacity = Math.max(shellcode.length, 512);
+            code = MemoryUtil.allocate(capacity);
+            if (code == 0 || code == -1) {
+                throw new OutOfMemoryError("Unable to allocate native invocation code");
+            }
+            try {
+                Unsafe.writeBytes(code, shellcode);
+                setNativePointer(method, code);
+                invocation = ReflectionUtil.findStatic(holder, "invoke", MethodType.methodType(returnType));
+                // Keep the lifetime check and monitor even when callers retain
+                // a MethodHandle after close or invoke it from another thread.
+                guardedInvocation = MethodHandles.lookup()
+                        .findVirtual(NativeHandle.class, "invoke", MethodType.methodType(Object.class))
+                        .bindTo(this).asType(MethodType.methodType(returnType));
+            } catch (ReflectiveOperationException e) {
+                freeCode();
+                throw new IllegalStateException("Cannot bind native invocation", e);
+            } catch (RuntimeException | Error e) {
+                freeCode();
+                throw e;
+            }
+        }
+
+        /**
+         * Invokes the prepared native method without defining another class.
+         */
+        public synchronized Object invoke() {
+            ensureOpen();
+            try {
+                return invocation.invoke();
+            } catch (RuntimeException | Error e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new IllegalStateException("Native invocation failed", e);
+            }
+        }
+
+        /**
+         * Replaces the code in this target while retaining its holder class.
+         */
+        public synchronized Object invoke(byte[] shellcode) {
+            ensureOpen();
+            update(shellcode);
+            return invoke();
+        }
+
+        /**
+         * Replaces the native code without invoking it.
+         */
+        public synchronized void update(byte[] shellcode) {
+            ensureOpen();
+            if (shellcode == null || shellcode.length == 0 || shellcode.length > capacity) {
+                throw new IllegalArgumentException("shellcode does not fit the reusable native handle");
+            }
+            Unsafe.writeBytes(code, shellcode);
+        }
+
+        public Class<?> getHolderClass() {
+            return holder;
+        }
+
+        public synchronized MethodHandle getMethodHandle() {
+            ensureOpen();
+            return guardedInvocation;
+        }
+
+        private void ensureOpen() {
+            if (closed) {
+                throw new IllegalStateException("Native handle is closed");
+            }
+        }
+
+        @Override
+        public synchronized void close() {
+            if (!closed) {
+                freeCode();
+                closed = true;
+            }
+        }
+
+        private void freeCode() {
+            boolean freed = Platform.win32
+                    ? VirtualFree.invoke(code, 0, MEM_RELEASE) != 0
+                    : munmap.invoke(code, capacity) == 0;
+            if (!freed) {
+                throw new IllegalStateException("Unable to release native invocation code");
+            }
         }
     }
 
